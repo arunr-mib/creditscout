@@ -1,0 +1,22 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+*.log
+npm-debug.log*
+
+# Supabase
+.supabase/
+supabase/.temp/
+
+# Eval outputs
+evals/out/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/
