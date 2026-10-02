@@ -125,6 +125,8 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 | `search_past_cases` | Supabase query tool | Agent-initiated memory search | matching lessons / casefile summaries |
 
    Every tool call appends a step `{n, tool, input_summary, output_summary, ts}` to `casefiles.trace` (for the live UI).
+
+   **Anthropic node settings** (confirmed available in n8n 2.41.6 node definitions; verify in the Cloud instance): model via **By ID**; `Prompt Caching: 1h` — the main cost lever, the system prompt and agreement text repeat on every step; `Thinking Mode: adaptive` with `Effort: medium` to start; `Force Tool Call on First Iteration: off`; agent max iterations 8 (`policy.max_steps`).
 4. **Guardrail** (Code node) — §6.1.
 5. **Policy** (Code node) — §6.2.
 6. Update casefile: final fields, `status = pending_review` (or `failed`).
@@ -312,8 +314,8 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 | Generated n8n JSON needs node-version fixes | Build and test one workflow at a time; owner imports, Claude reads executions and fixes |
 | Agent path too uniform (looks like a pipeline) | Facility twists designed to force different paths; F1 vs F5 trace comparison in demo |
 | Model hallucinated figures or quotes | Code guardrails force abstain; tested with fabricated outputs |
-| n8n AI Agent node forces a specific tool | Claude Opus 5.5 and Sonnet 5.5 reject forced `tool_choice` with a 400. Configure the node to let the model choose and name the tool in the prompt instead. Verify with a throwaway workflow before building. |
-| n8n model list predates these models, or its node cannot expose prompt caching | Check whether the node accepts a typed model id, and whether cache controls are available — caching is the main cost lever (roughly a 3x reduction). Verify before relying on either. |
+| n8n AI Agent node forces a specific tool | **Resolved** (node definitions, n8n 2.41.6): forcing is behind the `Force Tool Call on First Iteration` option, default `false`. Leave it off — both chosen models reject forced `tool_choice` with a 400. |
+| n8n model list predates these models | **Resolved**: the model field accepts `mode: 'id'` ("Choose from the list, or specify an ID"). Node default is `claude-sonnet-5`, so set `claude-opus-5-5` / `claude-sonnet-5-5` via **By ID**. |
 | Eval run slow or flaky | 24 cases, retries per case, runner resumable; 6-case subset during development |
 | Time | Gmail trigger and MCP are stretch; cut order: MCP → Gmail → Foundry upload (keep local metrics) |
 | Credentials / privacy | Owner enters all keys; dedicated demo Gmail only; synthetic data only |
