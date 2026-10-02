@@ -57,7 +57,7 @@ Commercial credit analysts monitor 30+ borrower facilities and investigate poten
 
 | Layer | Technology | Course tie-in |
 |---|---|---|
-| Orchestration (reasoning layer) | **n8n Cloud** AI Agent node, Anthropic Claude chat model | Wk 4 multi-agent (Lab 4.5) |
+| Orchestration (reasoning layer) | **n8n Cloud** AI Agent node, Claude Opus 5.5 (`claude-opus-5-5`) | Wk 4 multi-agent (Lab 4.5) |
 | Specialist tools | n8n AI Agent tool sub-agents + Code nodes | Wk 2/4 |
 | Retrieval | **Supabase Vector Store** (pgvector), section-level chunks | Wk 2 RAG |
 | Deterministic calculation | n8n **Code node** (JavaScript); identical source file in repo with unit tests | mentor: "calc tool" |
@@ -114,7 +114,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 
 1. Create `casefiles` row (`status = investigating`).
 2. **Load memory:** facility's prior exceptions/casefiles; build an *exception profile* string (reported vs required DSCR, document types on file, industry); similarity search over past casefile summaries and review lessons; take top 3 lessons.
-3. **CreditScout Orchestrator** (AI Agent node, Claude, max iterations from `policy.max_steps`). System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
+3. **CreditScout Orchestrator** (AI Agent node, Claude Opus 5.5, max iterations from `policy.max_steps`). The three sub-agent tools (`document_agent`, `definition_agent`, `research_agent`) run Claude Sonnet 5.5 (`claude-sonnet-5-5`) — they read and quote rather than judge, and every quote they return is verified by the §6.1 guardrail. System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
 
 | Tool | Type | Purpose | Returns |
 |---|---|---|---|
@@ -230,7 +230,7 @@ Code guardrail checks, in order; every forced change is recorded in `guardrail_n
 | `variance_tolerance` | 0.05 | If |our DSCR − reported DSCR| > tolerance, the gap must be explained by a cited finding before `resolve` |
 | `escalate_if_breach_margin_over` | 0.15 | True breach deeper than this always escalates |
 | `prohibited_actions` | waive covenant, amend terms, contact borrower | Any recommendation text proposing these → **escalate** with note |
-| `max_steps` | 10 | Agent iteration cap |
+| `max_steps` | 8 | Agent iteration cap. Expected paths (§4.3) run 2–6 steps, so 8 leaves headroom while capping runaway cases. |
 | `require_human_review` | true (locked) | Displayed as locked in Governance page |
 
 ### 6.3 Errors
@@ -260,7 +260,7 @@ Not included: login, multi-user, mobile.
 
 ### 8.2 Runner
 
-`evals/run.mjs` (Node, same toolchain as the calculator tests): for each case → set up documents → POST `/investigate` → poll until terminal → score. Two passes: **cold** (memory cleared for the eval `run_id`) and **warm** (lessons from scripted analyst overrides loaded). Outputs: `results.csv`, `report.md`, `foundry.jsonl` (`query`, `response`, `context`, `ground_truth`) for upload to Azure AI Foundry Evaluations (groundedness, gpt-4.1 judge), and an `eval_runs` row for the in-app scoreboard.
+`evals/run.mjs` (Node, same toolchain as the calculator tests): for each case → set up documents → POST `/investigate` → poll until terminal → score. Two passes: **cold** (memory cleared for the eval `run_id`) and **warm** (lessons from scripted analyst overrides loaded). During development the runner is used against a **6-case subset** (one per facility) — enough to catch regressions; all 24 cases run twice only when producing reportable numbers. Outputs: `results.csv`, `report.md`, `foundry.jsonl` (`query`, `response`, `context`, `ground_truth`) for upload to Azure AI Foundry Evaluations (groundedness, gpt-4.1 judge), and an `eval_runs` row for the in-app scoreboard.
 
 ### 8.3 Engineering tests
 
@@ -312,7 +312,9 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 | Generated n8n JSON needs node-version fixes | Build and test one workflow at a time; owner imports, Claude reads executions and fixes |
 | Agent path too uniform (looks like a pipeline) | Facility twists designed to force different paths; F1 vs F5 trace comparison in demo |
 | Model hallucinated figures or quotes | Code guardrails force abstain; tested with fabricated outputs |
-| Eval run slow or flaky | 24 cases, retries per case, runner resumable |
+| n8n AI Agent node forces a specific tool | Claude Opus 5.5 and Sonnet 5.5 reject forced `tool_choice` with a 400. Configure the node to let the model choose and name the tool in the prompt instead. Verify with a throwaway workflow before building. |
+| n8n model list predates these models, or its node cannot expose prompt caching | Check whether the node accepts a typed model id, and whether cache controls are available — caching is the main cost lever (roughly a 3x reduction). Verify before relying on either. |
+| Eval run slow or flaky | 24 cases, retries per case, runner resumable; 6-case subset during development |
 | Time | Gmail trigger and MCP are stretch; cut order: MCP → Gmail → Foundry upload (keep local metrics) |
 | Credentials / privacy | Owner enters all keys; dedicated demo Gmail only; synthetic data only |
 
@@ -322,7 +324,7 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 
 - New standalone repo `~/Documents/projects/creditscout`; unrelated to atomic_helper.
 - n8n Cloud orchestrator over Azure Foundry agent (time, owner familiarity, course pairing); Foundry used for evals; Foundry Agent Service is the stated production path.
-- Claude as agent model (aligned with Anthropic certification track).
+- Claude as agent model (aligned with Anthropic certification track): Claude Opus 5.5 orchestrates (the abstain/resolve judgement drives the headline false-resolve metric), Claude Sonnet 5.5 runs the retrieval sub-agents at half the token price. Whether Sonnet 5.5 can also orchestrate without hurting accuracy is an open measurement, run on the eval set — a finding worth reporting either way.
 - Supabase (plain Postgres + pgvector) for data, vectors, memory.
 - Text PDFs in scope; OCR out. Citations by document + section.
 - Pattern tag: model suggests, analyst confirms.
