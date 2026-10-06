@@ -1,7 +1,7 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06
 **Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
@@ -143,17 +143,17 @@ The owner has not decided to make it public. Don't decide for them.
 
 ## 6. Where the build stands
 
-Build sequence is `docs/engineering/engineering-doc.md` §9 — ten stages, each producing something runnable. Commits are tagged `feat(stage-N):`.
+Build sequence is `docs/engineering/engineering-doc.md` §9 — ten stages, each producing something runnable. Commits are tagged `feat(stage-N):`. **323 tests green**, `tsc` clean, `next build` passes.
 
 | Stage | What | State |
 |---|---|---|
 | 0 | Supabase schema + RLS | ✅ live on cloud, anon-write verified blocked |
-| 1 | `calc/dscr.js`, `guardrails/*.js` + tests | ✅ 49 tests green, no model, no network |
-| 2 | Synthetic documents F1/F3/F5 + expected-values template | ⏳ **next** |
+| 1 | `calc/dscr.js`, `guardrails/*.js` + tests | ✅ reviewed, seven findings fixed |
+| 2 | Synthetic documents F1/F3/F5 + expected-values template | ✅ 16 documents, seeded, twist live |
 | 3 | Next.js scaffold + design tokens + Supabase clients | ✅ builds, serves, no key leaks |
-| 4 | `/api/ingest` + chunking + embeddings | ⬜ |
-| 5 | Foundry agent + tool routes | ◐ spike passed; route handlers pending |
-| 6 | Flow A — propose + approve covenant terms | ⬜ |
+| 4 | `/api/ingest` + chunking + embeddings | ✅ **98 chunks live**, facility isolation proved over 360 calls |
+| 5 | Agent tool routes + OpenAPI | ✅ S-2 closed, fail-closed auth, `calc_id` chain intact |
+| 6 | Covenant setup — propose + approve | ◐ **6a backend in fix round 4**; 6b screen briefed, not started |
 | 7 | Flow B part 1 — `/api/tests/run`, code only | ⬜ |
 | 8 | Flow B part 2 — investigation, guardrail, policy | ⬜ |
 | 9 | UI screens + review + memory | ⬜ |
@@ -161,9 +161,21 @@ Build sequence is `docs/engineering/engineering-doc.md` §9 — ten stages, each
 
 **Stage 7 produces a working product with no agent at all** — ingest, approved terms, deterministic calculation, exception detection. If everything downstream collapses, that is still a demonstrable system, and it is what the kill switch degrades to in production.
 
-**Two security findings are open** (`docs/parking-lot.md` §7a): S-1, covenant terms have no code guardrail — fix in F6, reusing `verifyTermsProvenance`; S-2, `CREDITSCOUT_TOOL_KEY` can fail open when unset — the route must reject rather than compare two undefineds. `/security-foundation` must be re-run before deploy; three of its six areas had no code to assess.
+### What is live in the cloud database
 
----
+3 facilities · 16 documents · 98 `doc_chunks` · 3 **approved v1** `covenant_terms` · 1 stray `proposed` v2 on F3 from verification (governs nothing) · 1 stray `calc_log` row from verification (no casefile) · `doc_chunks` and memory search both callable.
+
+**Both of F1's and F5's Amendment No. 2 are on file as documents with no matching terms row.** That is the covenant boarding lag, and it is the twist the whole demo rests on. Nothing — not the seed, not a fixture, not a verification script — may approve a v2 for those two facilities.
+
+### Security findings
+
+| # | State |
+|---|---|
+| **S-1** covenant terms unverified against their citations | **Closed in substance** by the provenance gate in `lib/terms.ts` + `guardrails/guardrail.js`; one residual scope hole in fix round 4 (see §9.2) |
+| **S-2** `CREDITSCOUT_TOOL_KEY` fail-open | ✅ **Closed.** Fails closed on unset, empty and short keys; SHA-256 digests compared with `timingSafeEqual`; all three tool routes check before reading the body |
+| S-3 / S-4 | Still unassessable until deploy. **`/security-foundation` must be re-run before stage 10.** |
+
+Known, deliberate limitation: **four-eyes is recorded, not enforced.** `approved_by` is a self-asserted string, nothing records who proposed, and the routes have no user auth, so nothing stops a proposer approving their own proposal. Auth is out of scope per spec §2. Say this plainly in the demo — maker-checker is a governance control, and claiming enforcement the code does not have is the kind of thing a credit risk officer probes first.
 
 ## 7. Environment state
 
@@ -177,7 +189,9 @@ Verified with live calls, not assumed.
 | Azure Foundry project | ✅ `creditscout` under account `contractreviewagent-resource`, resource group `AI_Learning`, eastus2 |
 | Azure embeddings | ✅ `text-embedding-3-small`, **1536 dimensions** (the schema depends on this number) |
 | Azure chat models | ✅ `gpt-4.1-mini` and `gpt-5-mini` deployed; Connected Agents round trip spiked green |
-| CLIs | ✅ `az` 2.90 (+ `ml` ext), `supabase` 2.119, `uv`, `gh`, `docker`, Node 24.8 |
+| CLIs | ✅ `az` 2.90 (+ `ml` ext), `supabase` 2.119, `uv`, `gh`, `docker`, Node 24.8 (`engines` requires ≥22.18 — the `.ts` files run directly) |
+| Supabase **CLI** token | ❌ **`SUPABASE_ACCESS_TOKEN` is dead** and regenerating it fails with the same `FGA Authentication Error`. Not blocking: migrations go to the owner as SQL for the dashboard editor, and everything else uses the service-role key. |
+| Migrations | 0001–0005 applied at stage 0; **0006** `match_lessons` applied via the Management API before the token died; **0007** `covenant_terms_one_approved_per_facility` applied by the owner through the dashboard, 2026-10-06. 0006 and 0007 may not appear in `supabase_migrations.schema_migrations`. |
 
 **Not set up, deliberately:** local Supabase (see 4.3), n8n (dropped). Vercel deployment is in scope but not yet done — stage 10.
 
@@ -199,7 +213,46 @@ These are real and were hit during setup.
 
 ---
 
-## 9. Hard constraints for anyone writing code here
+## 9. What the build has taught — do not relearn these
+
+### 9.1 The guardrail fails in both directions, and the second one is invisible
+
+The documented trap is a guardrail that accepts only *calculated* figures: it abstains on every well-formed explanation, because legitimate explanations quote figures from the covenant. The zero-false-resolve metric then reads perfect while the product does nothing.
+
+Stage 6 produced one error of each kind in consecutive rounds. A fix for a false accept (`1.00` passing as the threshold for "not less than 1.25 to 1.00") introduced a false abstain ("EBITDA fell from 2,400,000 to 1,900,000" lost the leading `1` and abstained on a phantom `900000`). **Every rule in `guardrails/guardrail.js` must state in a comment what it refuses and what it must keep allowing, and cover both with tests.** A rule with only negative tests is half-tested.
+
+### 9.2 Whoever chooses the scope defines the truth
+
+The provenance gate asks "does this term's value appear in the evidence?" — and the answer depends entirely on what counts as the evidence. Three rounds each narrowed that scope, and the same bug reappeared one level up:
+
+| Judged against | How it leaked |
+|---|---|
+| the quote | the proposer truncates its quote |
+| the enclosing sentence | legal prose defeats sentence detection — `;`, `"Inc."`, first-occurrence matching |
+| the cited chunk | the proposer picks the chunk |
+
+**The model is the thing being checked; it must not select the evidence it is checked against.** Round 4's fix is for the server to locate the defining clause itself. If you are tempted to add one more special case to a scope heuristic, that is the signal the scope is wrong.
+
+### 9.3 An approval gate that refuses correct work is worse than the bug it prevents
+
+If the gate blocks terms that are right, the analyst cannot board a covenant at all, and the pressure moves to editing terms until the checker is satisfied — corrupting the artefact four-eyes exists to protect. Always test the refusal path **and** the acceptance path against the real corpus. A gate also needs a repair path: terms refused for a list-shaped reason could not be fixed, because the edit path only changed single values.
+
+### 9.4 Carried into stage 8 — read before writing the casefile guardrail
+
+- **Citations are matched by exact trimmed string**, not through `resolveCitation`. A claim citing `Amd 2 §3(a)` against a chunk returned as `Amd 2 §3` is dropped and forces an abstain — correct work, thrown away. Compare through the resolver.
+- **Parenthesised figures are read as negatives**, so `"minimum (1.25x)"` abstains and `"(1.25 to 1.00)"` yields no figures. Same false-abstain class, predates stage 6.
+- **The owner's ruling on model-supplied terms:** the calculator tool accepts terms the model supplies, because the F1 twist requires the agent to re-map them mid-investigation. The guardrail compares the terms a calculation was logged against with the stored approved version and **flags any difference as a note on the casefile** — it does not block. The analyst sees "this number was computed on terms that differ from the boarded version" beside the recommendation.
+- **Document search must pass `doc_types` for definition lookups.** Without it F1's compliance certificate outranks the credit agreement for "debt service coverage ratio minimum", and the definition agent reads the borrower's own figure instead of the covenant.
+- **`resolveCitation` returns a null document for a citation with no prefix.** Never fall back to matching on section alone.
+- **Memory search crosses facilities; document search never does.** A lesson is the lender's own judgement; document text is one borrower's confidential agreement. Memory also filters on `run_id`, or a cold eval pass sees warm lessons and the memory-effect metric measures nothing.
+
+### 9.5 Process notes that saved real time
+
+- **Stale docs mislead reviewers, repeatedly.** Three separate reviewers acted on n8n references after n8n was dropped; one instructed a fix be re-pasted into a Code node that had not existed for a day. Swept in `78ba2ed`; plan 1 now carries a stale banner because its code skeletons read well enough that people kept implementing from it.
+- **Reviewers earn their cost here.** Every stage so far has had at least one finding that mattered, found by *reproducing* rather than reasoning — a 200-and-approved where a 422 was claimed, a test that passed because the model was never called, a regression introduced by the previous round's fix.
+- **Live verification must not mutate the demo.** Propose-only against the cloud; the approve path is proved against an in-memory fake client that enforces the same unique index.
+
+## 10. Hard constraints for anyone writing code here
 
 `CLAUDE.md` carries the authoritative list and is loaded automatically. In short:
 
@@ -214,19 +267,19 @@ These are real and were hit during setup.
 
 ---
 
-## 10. Open items — only the owner can close these
+## 11. Open items — only the owner can close these
 
-1. **Do the three twists ring true?** (§5 above, spec §14.1.) Stage 2 builds documents around them. Draft-then-react is the agreed approach — react to the generated documents.
-2. **Expected DSCR values** — fill and sign off `data/expected-values-template.csv` once stage 2 generates it. The eval runner refuses to run while any row says `NO`.
-3. **The eval labels**, once drafted (spec §14.2).
-4. **The sixth eval case.** Five come from the quarterly tests the data produces; the parking lot allows six. The obvious candidate is a documents-missing variation that exercises `abstain`, which nothing else in the cut-down set reaches.
-5. **Whether `max_steps: 8` is right.** Now a `policy` row, so changing it is a database update, not a redeploy.
-6. **Whether full `gpt-4.1` gets deployed** for the judge. Billable.
-7. **Making the repo public.** Not decided.
+1. **Do the three twists ring true?** (§5 above.) The documents exist now — read `data/facilities/F1|F3|F5/` and react to the real text rather than the description. This is the one thing no agent can judge.
+2. **Expected DSCR values** — fill and sign off `data/expected-values-template.csv`. Five rows, both expected columns empty, every row `NO`. Computed in a spreadsheet, not copied from anything this code produces. The eval runner must refuse to run while any row says `NO`.
+3. **The sixth eval case.** Five fall out of the quarterly tests the data produces; the parking lot allows six. A documents-missing variation is the candidate, since nothing else in the cut-down set reaches `abstain`.
+4. **The eval labels**, once drafted (spec §14.2).
+5. **`SUPABASE_ACCESS_TOKEN`** — dead, and regenerating it fails on Supabase's side. Only needed for CLI work; the SQL-editor route replaces it. Retry whenever, no rush.
+6. **Whether `max_steps: 8` is right.** Now a `policy` row, so changing it is a database update, not a redeploy.
+7. **Whether full `gpt-4.1` gets deployed** for the judge. Billable.
+8. **Making the repo public.** Not decided.
+9. **How four-eyes is described in the pitch** (§6). It is recorded, not enforced, and that distinction is worth stating before someone asks.
 
----
-
-## 11. Working notes for agents
+## 12. Working notes for agents
 
 - **The owner owns the spec.** Propose changes; don't rewrite it unasked. Every spec edit so far was explicitly approved.
 - **Execution is subagent-driven** (`superpowers:subagent-driven-development`) — the owner chose it; don't re-ask per plan.
