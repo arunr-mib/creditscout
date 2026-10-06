@@ -78,16 +78,84 @@ function statedRatios(text) {
   return out;
 }
 
+/**
+ * IDENTIFIERS ARE NOT FIGURES. Each rule removes a number that names something
+ * rather than measures it, before any figure is read. Every rule is narrow and
+ * decided by CONTEXT — the words around the digits — never by the size of the
+ * number, because an identifier rule is also a way to make a figure invisible:
+ * one written too wide is a bypass, which is worse than the false abstain it
+ * cures. So each states what it refuses (stops reading as a figure) and what it
+ * must keep allowing (still reads as one), and both are tested.
+ *
+ * Two of these the orchestrator's own prompt makes the model write: "report it
+ * with its calc_id", and "re-board the covenant terms as version 2". A live F1
+ * run abstained on its own calc_id, read as twelve figures (76, 4, 1, 2, -75…).
+ */
+const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)";
+/** A day of the month — 1 to 31, optional ordinal suffix. Nothing larger is a day. */
+const DAY = "(?:3[01]|[12]\\d|0?[1-9])(?:st|nd|rd|th)?";
+/** A calc id as the calculator mints and the trace prints it: hex and hyphens, six or more, at least one hex letter or hyphen. */
+const HEX_ID = "(?=[0-9a-f-]*[a-f-])[0-9a-f][0-9a-f-]{5,}(?!\\w)";
+
+const IDENTIFIERS = [
+  // ---- calc ids --------------------------------------------------------
+  // REFUSES: a UUID anywhere ("76f4c1f2-75e3-437d-9254-71fd7fa74f53"), and the
+  //   id right after "calc_id" / "calc id" / "calculation id", short form
+  //   included ("calc_id 76f4c1f2"), or a list of them ("calc_ids 967d2b8f and
+  //   76f4c1f2"). The prompt tells the model to report figures with their ids.
+  // KEEPS ALLOWING: the figure after an id ("calc_id 76f4c1f2 gives 1.28"),
+  //   and an all-digit number after the words ("calc_id: 1250000") — a calc id
+  //   is hex, so a token with no hex letter and no hyphen is read as a figure.
+  //   That fails closed on the rare all-digit id rather than hiding a number.
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+  new RegExp(`\\bcalc(?:ulation)?[\\s_-]?ids?\\b[\\s:=#\`'"(]*${HEX_ID}(?:[\`'")]*\\s*(?:,|and|&|/)\\s*[\`'"(]*${HEX_ID})*`, "gi"),
+
+  // ---- dates -----------------------------------------------------------
+  // REFUSES: ISO "2026-06-30" and "2026-06", and a day beside a month name in
+  //   either order: "April 1, 2026", "June 30", "1 April 2026", "30th of June",
+  //   "Sept. 3". Years are stripped below; the day is what used to survive.
+  // KEEPS ALLOWING: a figure near a month that is not its day — "the DSCR of
+  //   1.12 may fall" (month names are matched case-sensitively, so the verb is
+  //   not May), "in June EBITDA was 4,020,000", "June 1,250,000" (a day is
+  //   never followed by more digits), "1.12 March" (a day is never the tail of
+  //   a decimal), "12 months" (a month is a name, not the word "months").
+  /\b\d{4}-\d{2}-\d{2}\b/g,
+  /\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])\b/g,
+  new RegExp(`\\b${MONTH}\\.?\\s+${DAY}\\b(?![.,]\\d)`, "g"),
+  new RegExp(`(?<![\\w.,$-])${DAY}\\s+(?:of\\s+)?${MONTH}\\b`, "g"),
+
+  // ---- ordinals and references -----------------------------------------
+  // REFUSES: "version 2" (the prompt's own "re-board as version 2"), "v2",
+  //   "Waiver No. 3", "Amendment No. 2", "§7.11", "§7.11(b)(2)", "Section
+  //   1.01", "Section 7.11(b)(i)", "Art. 5", "Amd 2 §3(a)". Letter and roman
+  //   enumerators — "(a)", "(i)", "(b)(i)" — carry no digit, so they were never
+  //   figures; a digit sub-clause is consumed only as part of a reference.
+  // KEEPS ALLOWING: a count or a measure written before the noun or with no
+  //   reference word — "2 versions", "2 add-backs", "the margin is 2" — and
+  //   "No." that starts a sentence ("...rejected. No. 2 add-backs were
+  //   claimed" keeps its 2: "No. N" is a reference only after a noun).
+  //   Plurals, lists and ranges ("Sections 7.10 and 7.11", "§§1-2") are NOT
+  //   consumed: a listed section number is the same shape as a ratio, so
+  //   consuming lists would let "Section 7.11 and 1.47" hide the 1.47. They
+  //   abstain, fail-closed.
+  /\bversions?\s+\d+(?:\.\d+)*\b/gi,
+  /\bv\d+(?:\.\d+)*\b/gi,
+  /(?<=[A-Za-z]\s)No\.\s*\d+\b/g,
+  /§\s*\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
+  /\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
+];
+
 /** One figure-like token, with no surrounding parentheses: "$4.25m", "1,250,000", "-3", "1.25x". */
 const FIGURE = String.raw`\$?\s?-?\d[\d,]*(?:\.\d+)?(?:bn|mm|[kmbx])?`;
 
 /**
  * Pull every figure out of free text.
  *
- * Deliberately strips things that LOOK numeric but are not figures — section
- * references and years. Treating "§7.11" or "Q2 2026" as unverified figures
- * would abstain on correct work, which is the failure mode this whole file is
- * built to avoid.
+ * Deliberately strips things that LOOK numeric but are not figures:
+ * identifiers (`IDENTIFIERS` below — calc ids, dates, versions, references) and
+ * years. Treating "§7.11", "Q2 2026" or "calc_id 76f4c1f2" as unverified
+ * figures would abstain on correct work, which is the failure mode this whole
+ * file is built to avoid.
  *
  * `knownRatios` decides which "N to 1" pairs are ratios. Omitted, every one is:
  * the right mode for a DOCUMENT's text, where "1.25 to 1.00" is a ratio by its
@@ -119,18 +187,16 @@ const FIGURE = String.raw`\$?\s?-?\d[\d,]*(?:\.\d+)?(?:bn|mm|[kmbx])?`;
 export function extractFigures(text, knownRatios) {
   if (typeof text !== "string" || text === "") return [];
 
-  const cleaned = text
-    // section / article references: §7.11, Section 1.01, Art. 5, Amd 2 §3(a)
-    .replace(/§\s*\d+(\.\d+)*(\([a-z0-9]+\))?/gi, " ")
-    .replace(/\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*/gi, " ")
+  let cleaned = text;
+  for (const rule of IDENTIFIERS) cleaned = cleaned.replace(rule, " ");
+  cleaned = cleaned
     // The "1.00" in "1.25 to 1.00" (or "1.25:1") is the ratio's denominator, not a
     // figure of its own. Left in, a claim of "requires 1.00x" would verify against
     // any clause that states a minimum ratio in that form. See `knownRatios`.
     .replace(TO_ONE, (whole, n) =>
       knownRatios === undefined || knownRatios.some((k) => sameNumber(k, Number(n))) ? `${n} ` : whole,
     )
-    // ISO and common dates
-    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
+    // numeric dates (ISO dates are an identifier, above)
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, " ")
     // bare years and quarter labels
     .replace(/\bq[1-4]\s*(19|20)\d{2}\b/gi, " ")
@@ -286,19 +352,39 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   }
   for (const content of chunkByCitation.values()) knownRatios.push(...ratioFigures(content));
 
-  const stated = [
-    ...extractFigures(out.explanation || "", knownRatios),
-    ...out.claims.flatMap((c) => extractFigures(c.text || "", knownRatios)),
+  // EVERY field an analyst reads is checked, not only the explanation and the
+  // claims (owner ruling, 2026-10-06). The rule in CLAUDE.md is that every
+  // figure the analyst sees traces to a calculation or a quote; "missing
+  // evidence: a waiver covering the $500,000 add-back" is a figure the analyst
+  // reads, and so is a confidence basis that says "a DSCR of 1.31 passes".
+  //
+  // REFUSES: an untraceable figure in `confidence_basis` or in any
+  // `missing_evidence` entry, exactly as in the explanation.
+  // KEEPS ALLOWING: everything the explanation is allowed — logged figures,
+  // figures a cited chunk states, and identifiers (a missing document named
+  // as "Amendment No. 3", "the Q3 2026 certificate", "a waiver dated after
+  // 2026-06-30" carries no figure). The note names the field, so the analyst
+  // can see which sentence was the problem.
+  const fields = [
+    ["explanation", [out.explanation]],
+    ["claims", out.claims.map((c) => c.text)],
+    ["confidence_basis", [out.confidence_basis]],
+    ["missing_evidence", Array.isArray(out.missing_evidence) ? out.missing_evidence : []],
   ];
-
-  const untraceable = stated.filter((n) => !allowed.some((a) => sameNumber(a, n)));
+  const untraceableIn = [];
+  for (const [field, texts] of fields) {
+    const stated = texts.flatMap((t) => extractFigures(typeof t === "string" ? t : "", knownRatios));
+    const bad = stated.filter((n) => !allowed.some((a) => sameNumber(a, n)));
+    if (bad.length > 0) untraceableIn.push([field, [...new Set(bad)]]);
+  }
+  const untraceable = untraceableIn.flatMap(([, bad]) => bad);
 
   if (untraceable.length > 0) {
     notes.push(
       note(
         "figure_traceable",
         "abstain",
-        `unverified figure(s): ${[...new Set(untraceable)].join(", ")} — not in any calculation for this casefile and not quoted in a cited document`,
+        `unverified figure(s): ${[...new Set(untraceable)].join(", ")} — not in any calculation for this casefile and not quoted in a cited document (${untraceableIn.map(([field, bad]) => `${field}: ${bad.join(", ")}`).join("; ")})`,
       ),
     );
     out.recommendation = "abstain";

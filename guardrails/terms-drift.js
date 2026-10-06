@@ -146,6 +146,23 @@ function normaliseNumber(token) {
 
 const TO_ONE = /(?<![\d,.])(\d+(?:\.\d+)?)(\s*(?:to\b|:)\s*)1(?:\.0+)?(?!\d|[.,]\d)/gi;
 const FIGURE = String.raw`\$?\s?-?\d[\d,]*(?:\.\d+)?(?:bn|mm|[kmbx])?`;
+// The guardrail's IDENTIFIERS, verbatim: calc ids, dates, versions, references.
+const MONTH = "(?:January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sept|Sep|Oct|Nov|Dec)";
+const DAY = "(?:3[01]|[12]\\d|0?[1-9])(?:st|nd|rd|th)?";
+const HEX_ID = "(?=[0-9a-f-]*[a-f-])[0-9a-f][0-9a-f-]{5,}(?!\\w)";
+const IDENTIFIERS = [
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
+  new RegExp(`\\bcalc(?:ulation)?[\\s_-]?ids?\\b[\\s:=#\`'"(]*${HEX_ID}(?:[\`'")]*\\s*(?:,|and|&|/)\\s*[\`'"(]*${HEX_ID})*`, "gi"),
+  /\b\d{4}-\d{2}-\d{2}\b/g,
+  /\b(?:19|20)\d{2}-(?:0[1-9]|1[0-2])\b/g,
+  new RegExp(`\\b${MONTH}\\.?\\s+${DAY}\\b(?![.,]\\d)`, "g"),
+  new RegExp(`(?<![\\w.,$-])${DAY}\\s+(?:of\\s+)?${MONTH}\\b`, "g"),
+  /\bversions?\s+\d+(?:\.\d+)*\b/gi,
+  /\bv\d+(?:\.\d+)*\b/gi,
+  /(?<=[A-Za-z]\s)No\.\s*\d+\b/g,
+  /§\s*\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
+  /\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
+];
 
 /**
  * Every figure a DOCUMENT's text states — `extractFigures(text)` in the
@@ -154,11 +171,10 @@ const FIGURE = String.raw`\$?\s?-?\d[\d,]*(?:\.\d+)?(?:bn|mm|[kmbx])?`;
  */
 export function figuresIn(text) {
   if (typeof text !== "string" || text === "") return [];
-  const cleaned = text
-    .replace(/§\s*\d+(\.\d+)*(\([a-z0-9]+\))?/gi, " ")
-    .replace(/\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*/gi, " ")
+  let cleaned = text;
+  for (const rule of IDENTIFIERS) cleaned = cleaned.replace(rule, " ");
+  cleaned = cleaned
     .replace(TO_ONE, (whole, n) => `${n} `)
-    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, " ")
     .replace(/\bq[1-4]\s*(19|20)\d{2}\b/gi, " ")
     .replace(/\b(19|20)\d{2}\b/g, " ");

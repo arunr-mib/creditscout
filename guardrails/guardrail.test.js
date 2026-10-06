@@ -520,3 +520,123 @@ test("E-5: a bracketed PLAIN number keeps the accounting-negative reading and ab
   const cf = base({ explanation: "Coverage is (1.31) against the required 1.25x." });
   assert.equal(applyGuardrail(cf, CALCS, CHUNKS).casefile.recommendation, "abstain");
 });
+
+// --- identifiers are not figures --------------------------------------------
+// Each class: what it REFUSES to read as a figure, and what it must KEEP
+// reading as one. The keep-allowing half is the one that matters most: an
+// identifier rule written too wide makes a real figure invisible.
+
+test("calc ids refuse: a UUID, the id after calc_id / calc id / calculation id, short or full, alone or listed", () => {
+  for (const text of [
+    "76f4c1f2-75e3-437d-9254-71fd7fa74f53",
+    "(calc_id 76f4c1f2-75e3-437d-9254-71fd7fa74f53)",
+    "calc_id 76f4c1f2",
+    "calc id ebed3d9f",
+    "calculation id `2dd96a4c`",
+    'calc_id: "967d2b8f"',
+    "calc_ids 967d2b8f and 76f4c1f2",
+    "calc_ids 967d2b8f, 76f4c1f2",
+  ]) assert.deepEqual(extractFigures(text), [], text);
+});
+
+test("calc ids keep allowing: the figure after the id, and an all-digit number, which is not a hex id", () => {
+  assert.deepEqual(extractFigures("calc_id 76f4c1f2 gives 1.28 against 1.25"), [1.28, 1.25]);
+  assert.deepEqual(extractFigures("calc_id: 1250000"), [1250000]);
+  assert.deepEqual(extractFigures("calc_ids 967d2b8f, 1250000"), [1250000]);
+  assert.deepEqual(extractFigures("the calculation 1.28 passes"), [1.28]);
+  assert.deepEqual(extractFigures("EBITDA 4,020,000 less capex 300,000"), [4020000, 300000]);
+});
+
+test("dates refuse: ISO, year-month, and a day beside a month name in either order", () => {
+  for (const text of ["2026-06-30", "2026-06", "April 1, 2026", "effective April 1", "June 30", "1 April 2026", "30th of June", "Sept. 3", "March 15, 2024", "Jun 30th"]) {
+    assert.deepEqual(extractFigures(text), [], text);
+  }
+});
+
+test("dates keep allowing: a figure near a month that is not its day", () => {
+  assert.deepEqual(extractFigures("the DSCR of 1.12 may fall"), [1.12], "the verb 'may' is not May");
+  assert.deepEqual(extractFigures("in June EBITDA was 4,020,000"), [4020000]);
+  assert.deepEqual(extractFigures("June 1,250,000"), [1250000], "a day is never followed by more digits");
+  assert.deepEqual(extractFigures("coverage 1.12 March to June"), [1.12], "a day is never the tail of a decimal");
+  assert.deepEqual(extractFigures("12 months"), [12]);
+  assert.deepEqual(extractFigures("April 45 units"), [45], "nothing over 31 is a day");
+});
+
+test("ordinals and references refuse: version N, vN, Name No. N, sections, articles and their sub-clauses", () => {
+  for (const text of [
+    "re-board the covenant terms as version 2 for analyst approval",
+    "Version 1 terms",
+    "the v2 terms",
+    "Waiver No. 3",
+    "Amendment No. 2",
+    "§7.11(b)(2)",
+    "Section 7.11(b)(i)",
+    "Section 7.11(2)",
+    "Art. 5",
+    "Amd 2 §3(a)",
+    "(a) (i) (b)(i) (iv)",
+  ]) assert.deepEqual(extractFigures(text), [], text);
+});
+
+test("ordinals and references keep allowing: counts and measures, and a sentence that starts with No.", () => {
+  assert.deepEqual(extractFigures("2 versions of the terms"), [2]);
+  assert.deepEqual(extractFigures("2 add-backs"), [2]);
+  assert.deepEqual(extractFigures("the margin is 2"), [2]);
+  assert.deepEqual(extractFigures("The claim was rejected. No. 2 add-backs were claimed."), [2]);
+  assert.deepEqual(extractFigures("requires 1.25 to 1.00"), [1.25]);
+  assert.deepEqual(extractFigures("not to exceed $500,000"), [500000]);
+  assert.deepEqual(extractFigures("Section 7.11 requires 1.25x"), [1.25]);
+  // A list is not consumed: its second item has the shape of a ratio.
+  assert.deepEqual(extractFigures("Section 7.11 and 1.47"), [1.47]);
+});
+
+test("the live F1 explanation: its calc_id and its ISO date are not figures; only the uncited 620,000 abstains", () => {
+  // Verbatim from casefile b1d0cf6e. Before the identifier rules the note read
+  // "620000, 76, 4, 1, 2, -75, 3, -437, -9254, -71, 7, 74, 53".
+  const explanation =
+    "The Credit Agreement §7.11 requires a minimum DSCR of 1.25. Amendment No. 2 §3(a), effective 2026-04-01, allows an add-back of restructuring charges up to $500,000. The financials for the trailing twelve months ended 2026-06-30 report Consolidated EBITDA of 4,020,000, unfinanced capex of 300,000, cash taxes of 250,000, scheduled principal of 2,000,000, cash interest of 1,100,000, and restructuring charges of 620,000, capped at 500,000 per the amendment. Applying these terms in dscr_calculator (calc_id 76f4c1f2-75e3-437d-9254-71fd7fa74f53) yields a DSCR of 1.28, which meets the covenant requirement and resolves the exception.";
+  const calc = { calc_id: "76f4c1f2", outputs: { dscr: 1.28, threshold: 1.25, pass: true, margin: 0.03, components: { base: 4020000, addbacks: { "restructuring charges": { claimed: 500000, applied: 500000, cap: 500000 } }, deductions: { unfinanced_capex: 300000, cash_taxes: 250000 }, denominator_parts: { scheduled_principal: 2000000, cash_interest: 1100000 } } } };
+  const chunks = [{ citation: "Amd 2 §3(a)", content: "the Borrower may add back restructuring charges, in an aggregate amount not to exceed $500,000 for any test period." }];
+  const cf = base({ explanation, claims: [{ text: "Amendment No. 2 permits it.", citation: "Amd 2 §3(a)", quote: "not to exceed $500,000" }] });
+  const { casefile, notes } = applyGuardrail(cf, [calc], chunks);
+  assert.equal(casefile.recommendation, "abstain");
+  assert.match(notes.find((n) => n.check === "figure_traceable").detail, /^unverified figure\(s\): 620000 — /);
+});
+
+// --- every analyst-facing field is figure-checked ----------------------------
+
+test("REFUSES: an untraceable figure in confidence_basis or missing_evidence abstains, and the note names the field", () => {
+  const inBasis = applyGuardrail(base({ confidence_basis: "A DSCR of 1.47 passes." }), CALCS, CHUNKS);
+  assert.equal(inBasis.casefile.recommendation, "abstain");
+  assert.match(inBasis.notes.find((n) => n.check === "figure_traceable").detail, /confidence_basis: 1\.47/);
+  const inMissing = applyGuardrail(base({ missing_evidence: ["A waiver covering the $750,000 add-back"] }), CALCS, CHUNKS);
+  assert.equal(inMissing.casefile.recommendation, "abstain");
+  assert.match(inMissing.notes.find((n) => n.check === "figure_traceable").detail, /missing_evidence: 750000/);
+});
+
+test("KEEPS ALLOWING: logged and quoted figures, and identifiers, in confidence_basis and missing_evidence", () => {
+  const cf = base({
+    confidence_basis: "Recomputed DSCR of 1.31 against the required 1.25x, with the $500,000 cap applied (calc_id 76f4c1f2).",
+    missing_evidence: [
+      "Amendment No. 3, if one exists",
+      "the Q3 2026 compliance certificate",
+      "a waiver countersigned by the lender, dated on or before 2026-06-30 or June 30, 2026",
+      "an executed amendment to Section 7.11(b)(i) covering the $500,000 add-back",
+    ],
+    claims: [...base().claims, { text: "Capped at $500,000", citation: "Amd 2 §3(a)", quote: "in an aggregate amount not to exceed $500,000" }],
+  });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, CHUNKS);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+});
+
+test("REFUSES: an untraceable figure that appears ONLY in a surviving claim's text abstains too", () => {
+  // The claim's quote is verbatim, so the claim survives; its TEXT states a
+  // figure nothing supports. Text an analyst reads is checked wherever it sits.
+  const cf = base({
+    claims: [{ text: "The covenant requires 1.25x and coverage was 1.47 last year", citation: "CA §7.11", quote: "Debt Service Coverage Ratio of not less than 1.25x" }],
+  });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, CHUNKS);
+  assert.equal(casefile.claims.length, 1);
+  assert.equal(casefile.recommendation, "abstain");
+  assert.match(notes.find((n) => n.check === "figure_traceable").detail, /claims: 1\.47/);
+});

@@ -281,6 +281,9 @@ function corpus() {
     "The covenant floor is (0.50 to 1.00) and coverage is 1.12.",
     "minimum (1.25x); net loss (1,200); (the floor is 0.50); $4.25m; 2.5k; 1.31:1; 1.25 times",
     "EBITDA fell from 2,400,000 to 1,900,000 in Q2 2026 per §7.11(b) and Section 1.01 on 2026-06-30",
+    // figures equal to a threshold value but NOT stated as a ratio
+    "a commitment fee of 0.50 percent; 1.25 percent margin; 1.12 million units; 2.5 basis points; 1.31 per share; 1.2 of the 1.25",
+    "Applying calc_id 76f4c1f2-75e3-437d-9254-71fd7fa74f53, version 2, effective April 1, 2026, gives 1.28",
   ];
 }
 
