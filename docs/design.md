@@ -1,0 +1,273 @@
+# CreditScout — Design System
+
+**The single source of truth for everything visual.** Read this before building
+any screen. Never work from memory, and never invent a colour, spacing value or
+radius that isn't here.
+
+**Date:** 2026-10-05 · **Stack:** Next.js + Tailwind CSS
+
+---
+
+## 1. The one rule that makes this product legible
+
+> **Hue carries meaning. It is never decoration.**
+
+CreditScout's entire claim is that a reasoning layer decides and a calculation
+layer computes. An analyst has to be able to see which is which **without
+reading a word**. That is what the colour system is for.
+
+| Hue | Means | Never used for |
+|---|---|---|
+| **Teal** | A model did this — an agent step, a retrieved quote, a judgment | Anything deterministic |
+| **Amber** | **Code did this** — a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
+| **Slate / white** | A human did this, or must | System output |
+| **Rose** | A breach, a failure, an escalation | General emphasis |
+| **Green** | Compliant, passing | Success toasts (use slate) |
+
+If you catch yourself reaching for amber because a number "feels important",
+stop. Amber means *a deterministic function produced this value and it is logged
+under a `calc_id`*. Diluting it breaks the product's core affordance.
+
+**Every calculated figure in the UI carries its provenance**, e.g.
+`1.31 ⟡ computed by code · calc_a3f9`. A figure without provenance is a bug, not
+a style choice.
+
+---
+
+## 2. Colour tokens
+
+Dark theme only. There is no light theme in the MVP — don't build one.
+
+### Surfaces
+
+| Token | Hex | Use |
+|---|---|---|
+| `bg` | `#0A1628` | Page background |
+| `surface` | `#11243D` | Cards, panels |
+| `surface-raised` | `#1E293B` | Modals, popovers, hovered rows |
+| `border` | `#1E293B` | Default borders |
+| `border-strong` | `#334155` | Dividers that must read |
+
+### Text
+
+| Token | Hex | Use | Min size |
+|---|---|---|---|
+| `text` | `#F8FAFC` | Headings, primary values | — |
+| `text-secondary` | `#CBD5E1` | Body copy | — |
+| `text-muted` | `#94A3B8` | Labels, captions, metadata | 12px |
+
+### Semantic
+
+| Token | Hex | Bg pair | Meaning |
+|---|---|---|---|
+| `model` | `#2DD4BF` | `#0F3B3A` | Agent / model step |
+| `model-bright` | `#5EEAD4` | — | Model headings, active trace step |
+| `code` | `#F59E0B` | `#3B2A0A` | **Deterministic computation** |
+| `code-bright` | `#FBBF24` | — | Calculation headings, `calc_id` badges |
+| `human` | `#E2E8F0` | `#1E293B` | Approval, review, analyst action |
+| `danger` | `#F87171` | `#3F1D1D` | Breach, failed test, escalate |
+| `success` | `#86EFAC` | `#0F3B2A` | Compliant, passing |
+
+### Accessibility
+
+- Body text must hit **4.5:1** against its surface; UI elements and large text
+  **3:1**. The pairs above clear it, but re-check any new combination.
+- **Never encode meaning in colour alone.** Every semantic colour is paired with
+  an icon or a text label — teal steps carry an agent name, amber values carry
+  `computed by code`, breaches carry the word *breach*. A colour-blind analyst
+  must read the same information.
+- Focus ring: `2px solid #5EEAD4`, `offset 2px`. Visible on every interactive
+  element. Do not remove it.
+
+---
+
+## 3. Typography
+
+| Role | Font | Size / Line | Weight |
+|---|---|---|---|
+| Page title | Inter | 28 / 34 | 700 |
+| Section heading | Inter | 20 / 28 | 600 |
+| Card title | Inter | 16 / 24 | 600 |
+| Body | Inter | 14 / 22 | 400 |
+| Label / caption | Inter | 12 / 16 | 500, `text-muted` |
+| **Numeric values** | **JetBrains Mono** | 14 / 20 | 500 |
+| **Clause quotes** | **JetBrains Mono** | 13 / 21 | 400 |
+
+**Two rules that aren't negotiable:**
+
+1. **Every financial figure, ratio and `calc_id` is monospace.** Tabular figures
+   so columns align; an analyst scans columns of ratios and misalignment costs
+   real time.
+2. **Every verbatim clause quote is monospace**, so a quote is visually distinct
+   from the model's prose about it. This is how the eye separates *evidence*
+   from *interpretation*.
+
+---
+
+## 4. Spacing, radius, elevation
+
+**4px base scale.** Use only: `4, 8, 12, 16, 24, 32, 48, 64`. No arbitrary values.
+
+| Radius | Value | Use |
+|---|---|---|
+| `sm` | 4px | Badges, chips |
+| `md` | 8px | Cards, inputs, buttons |
+| `lg` | 12px | Modals, side panels |
+
+**Elevation is borders, not shadows.** On a dark background shadows read as mud.
+Depth comes from surface lightness plus a `border-strong` edge.
+
+Layout: 1280px max content width, 24px page gutter, 16px grid gap.
+
+---
+
+## 5. Components
+
+### 5.1 Recommendation badge
+
+| Recommendation | Colour | Icon |
+|---|---|---|
+| `resolve` | `success` | ✓ |
+| `request` | `human` | ? |
+| `escalate` | `danger` | ↑ |
+| `abstain` | `text-muted` | — |
+
+Pill, `radius-sm`, 12px uppercase, letter-spacing 0.5px. **`abstain` is
+deliberately grey, not red** — abstaining is correct behaviour, not a failure,
+and colouring it as an error would train analysts to see caution as malfunction.
+
+### 5.2 Calculated value
+
+```
+┌──────────────────────────────────┐
+│  DSCR   1.31  ⟡ code · calc_a3f9 │   ← amber value, mono, badge
+└──────────────────────────────────┘
+```
+Value in `code-bright` monospace; badge in `code` on `#3B2A0A` at 11px. The
+`calc_id` is clickable and opens the calculation log for that computation.
+
+### 5.3 Citation chip
+
+Inline, teal, `radius-sm`, 12px: `CA §7.11 ↗`. Clicking opens the clause panel.
+Hover raises background to `#0F3B3A`. **A claim without a chip must not render** —
+if the data lacks a citation that is a guardrail failure and should surface as
+one, not render silently.
+
+### 5.4 Clause panel
+
+Right-hand drawer, 480px, `surface-raised`, `radius-lg`. Document title and
+section as header; full chunk text in monospace; **the quoted span highlighted
+with `#0F3B3A` background and a 2px `model` left border**. The analyst's job here
+is a two-second verification — the highlight is the whole point.
+
+### 5.5 Step trace
+
+Vertical timeline, one row per step, polled every 1s.
+
+```
+ ①  definition_agent        teal      2.3s
+ │   mapped DSCR terms from CA §1.01
+ ②  dscr_calculator         AMBER     0.1s
+ │   1.12 — below 1.25 threshold
+ ③  research_agent          teal      4.1s
+ │   found Amendment No. 2 §3(a)
+ ④  dscr_calculator         AMBER     0.1s
+     1.31 — passes
+```
+
+Agent steps teal, calculator steps amber. **The alternation is the product
+demo** — it shows reasoning and computation interleaving, which is the thesis
+made visible. Active step pulses `model-bright`; completed steps settle to
+`text-secondary`.
+
+### 5.6 Guardrail notice
+
+`code`-bordered callout with a 3px left border on `#3B2A0A`:
+
+> **⟡ Guardrail · forced abstain** — "1.47" appears in the explanation but
+> matches no calculation in this casefile and no quoted figure.
+
+Amber because **a guardrail is code**. Always visible, never collapsed by
+default. These are the moments that prove the system polices itself — hiding
+them would be hiding the best evidence the product has.
+
+### 5.7 Buttons
+
+| Variant | Fill | Text | Use |
+|---|---|---|---|
+| Primary | `#2DD4BF` | `#0A1628` | Approve, Investigate, Run test |
+| Secondary | transparent, `border-strong` | `text` | Override, Request docs |
+| Danger | transparent, `danger` border | `danger` | Escalate |
+
+Height 36px, padding 16px, `radius-md`, 14px/500. Disabled: 40% opacity,
+`cursor: not-allowed`.
+
+### 5.8 Data table
+
+`surface` background, `border` row dividers, 40px rows, 12px uppercase muted
+headers. Numeric columns **right-aligned, monospace, tabular-nums**. Hover
+`surface-raised`. Status via badge, never via row tint.
+
+### 5.9 Locked policy value
+
+```
+require_human_review   true   🔒 locked
+```
+`text-muted` with a lock glyph and `cursor: not-allowed`. **Renders as
+structurally impossible to change, not merely disabled** — this is a regulatory
+boundary and the UI should say so.
+
+---
+
+## 6. Motion
+
+| Interaction | Duration | Easing |
+|---|---|---|
+| Hover / focus | 120ms | `ease-out` |
+| Panel open | 200ms | `cubic-bezier(0.16,1,0.3,1)` |
+| New trace step | 240ms fade + 8px rise | `ease-out` |
+
+Nothing animates longer than 240ms. **No skeleton shimmer on the trace** — a
+running investigation shows real steps arriving; faking progress with a shimmer
+would misrepresent what the system is doing, which is the one thing this product
+cannot do.
+
+Respect `prefers-reduced-motion`: drop transforms, keep opacity.
+
+---
+
+## 7. Screen layouts
+
+| Screen | Layout |
+|---|---|
+| **Portfolio queue** | KPI strip (4 tiles) → data table of borrowers. Columns: borrower, period, **our DSCR**, reported DSCR, variance, status, "seen similar" badge |
+| **Covenant setup** | Split: proposed terms left, source clause right. Approve / Edit footer, pinned |
+| **Investigation** | Step trace left (60%), casefile placeholder right (40%), filling as it completes |
+| **Casefile review** | Recommendation badge → explanation → calculation table → claims with citation chips → guardrail notices → action bar pinned bottom |
+| **Governance** | Policy table (read-only, human-review locked) + eval scoreboard, cold vs warm |
+
+---
+
+## 8. Writing style in the UI
+
+- **Never say "AI thinks" or "AI believes".** Say what happened: "Agent retrieved
+  CA §7.11", "Code computed 1.31".
+- Recommendations are recommendations. Never "Resolved" — always "Recommends
+  resolve".
+- Numbers never appear without provenance.
+- Empty states state the next action: "No exceptions this quarter. Upload a
+  package to run the next test."
+- Errors state what failed and what to do: "Investigation failed at step 4 —
+  Foundry run timed out. Retry."
+
+---
+
+## 9. What not to do
+
+- Don't add a light theme.
+- Don't use amber for anything that isn't code output.
+- Don't introduce a new hue. If something needs emphasis, use weight or size.
+- Don't hide guardrail notices behind a disclosure.
+- Don't render a number without its `calc_id` or its quote.
+- Don't use shadows for elevation.
+- Don't animate longer than 240ms, and don't fake progress.
