@@ -2,7 +2,7 @@
   "name": "creditscout",
   "version": "0.0.0",
   "private": true,
-  "description": "Covenant exception investigation agent — DSCR decision support",
+  "description": "Covenant exception investigation agent \u2014 DSCR decision support",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -11,8 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test calc/ guardrails/",
-    "test:calc": "node --test calc/",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\"",
+    "test:calc": "node --test \"calc/*.test.js\"",
     "eval": "node evals/run.mjs"
   },
   "dependencies": {
