@@ -341,3 +341,160 @@ The `⟡` glyph is decorative and carries `aria-hidden="true"` — the meaning i
 the words *computed by code* / *not computed*, which is what a screen reader
 announces. This satisfies §2's rule that meaning is never carried by colour or
 icon alone.
+
+---
+
+## 12. Component specifications — the remaining set
+
+*Added after a `/design-system audit` found 15 components named in
+`implementation-specs.md` with no visual spec. Every one below uses named tokens
+only. Where a component carries a product rule, the rule is stated with it —
+those are the ones that get invented wrongly under time pressure.*
+
+### 12.1 `TestResultCard` — one quarterly test
+
+`surface` card, `rounded-md`, `border-border`. The spine of the portfolio screen.
+
+```
+Harbor Logistics · Q2 2026
+OUR DSCR  1.12 ⟡ computed by code · calc_7b2     THEIRS  1.12     Δ 0.00
+┌─ BREACH ─ below 1.25 threshold by 0.13
+```
+
+| Element | Token | Rule |
+|---|---|---|
+| **Our** DSCR | `text-code-bright` mono + provenance badge | Always first, always left of theirs. **Ours decides; theirs is evidence.** |
+| Their DSCR | `text-text-secondary` mono | Never amber — a borrower is not our calculation |
+| Verdict · compliant | `text-success` | |
+| Verdict · variance | `text-text` + `VarianceBadge` | Not an alarm. The conclusion stands. |
+| Verdict · breach | `text-danger`, `border-danger` left edge 3px | |
+| Verdict · not computed | `text-text-muted`, em dash | Per §11. **Never `0.00`.** |
+
+**Rule:** when our number and theirs disagree, the card shows **both**, never just ours. Hiding the disagreement hides the product's value.
+
+### 12.2 `VarianceBadge`
+
+Inline pill, `rounded-sm`, `text-badge` mono. Shows the **signed** delta.
+
+| State | Token | Shows |
+|---|---|---|
+| Within tolerance | `text-text-muted` | `Δ 0.02` |
+| Beyond tolerance | `text-code` on `bg-code-bg` | `Δ +0.09 variance logged` |
+| No borrower figure | not rendered | — |
+
+**Rule:** the sign is never dropped. `+` means the borrower overstated, which is the direction that matters.
+
+### 12.3 `SeenSimilarBadge`
+
+Teal pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
+
+**Rule:** renders only when at least one lesson matched. **Never renders empty or as "0 prior cases"** — an empty memory badge implies the feature is broken rather than new.
+
+### 12.4 `UploadPackage`
+
+Dropzone, `border-strong` dashed, `rounded-md`, `p-6`.
+
+| State | Visual |
+|---|---|
+| Idle | `text-text-muted`, "Drop the quarterly package" |
+| Dragover | border → `border-model`, bg → `bg-model-bg` |
+| Uploading | step-duration progress, no shimmer |
+| Success | slate toast, `12 sections indexed` — **not green**; green means *compliant* |
+| Rejected | `text-danger` with the reason, e.g. "scanned PDF — text-based only" |
+
+### 12.5 `DocumentList`
+
+Table: title · type · effective date · boarded?
+
+**Rule — this one carries the F1 mechanic.** An amendment whose `effective_date` is not reflected in the approved `covenant_terms` must render a **`not boarded`** flag in `text-code` on `bg-code-bg`. That lag is the thing the agent is about to catch, and an analyst should be able to see it too.
+
+### 12.6 `TermRow`
+
+One executable covenant term. Label `text-label text-text-muted` · value `font-mono text-num text-text` · `CitationChip`.
+
+| State | Visual |
+|---|---|
+| Proposed | default |
+| Analyst-corrected | `border-l-2 border-human`, label suffix `edited` |
+| **Missing citation** | `text-danger` chip reading `no citation` |
+
+**Rule:** a term with no citation blocks approval. It must look wrong, not merely incomplete.
+
+### 12.7 `TermsReview` · 12.8 `CovenantSetup`
+
+Split pane: terms left (60%), `ClausePanel` right (40%). Clicking a `CitationChip` highlights the quote in the right pane, `bg-model-bg` with a 2px `border-model` left edge. `CovenantSetup` is the page wrapper: `DocumentList` → `TermsReview` → `ApproveBar`.
+
+### 12.9 `ApproveBar`
+
+Pinned footer, `bg-surface-raised`, `border-t border-border-strong`.
+
+**Rule:** the Approve button is **disabled until every term carries a citation**, and the disabled state says why — `3 terms need a citation` — rather than being silently greyed. This is the four-eyes gate; it must explain itself.
+
+### 12.10 `RunTestButton`
+
+Primary (`bg-model`, `text-bg`). Disabled when the facility has no approved terms, with the reason inline: `approve covenant terms first`.
+
+**Rule:** never silently disabled. A dead button with no explanation is how an analyst concludes the product is broken.
+
+### 12.11 `ReviewActions`
+
+Approve (primary) · Override (secondary) · Request docs (secondary). `gap-3`, pinned bottom of `CasefileView`.
+
+### 12.12 `OverrideDialog`
+
+Modal, `surface-raised`, `rounded-lg`, `max-w-content/2`. Three required fields in order: **reason** (textarea) → **confirm the suggested tag** → **corrected outcome**.
+
+**Rule:** submit is disabled until the reason is non-empty. **The reason is stored verbatim and becomes the lesson** — it is the product's learning input, not an audit nicety. The dialog should say so: *"Your reasoning is retained and retrieved on similar cases."*
+
+### 12.13 `CasefileView`
+
+Vertical stack: `RecommendationBadge` → explanation (`text-body`) → `CalcTable` → claims with `CitationChip`s → `GuardrailNotice`s → `ReviewActions`.
+
+**Rule:** guardrail notices render **above** the actions and are never collapsed. They are the strongest evidence the system polices itself.
+
+### 12.14 `CalcTable`
+
+Rows of calculation components. Numeric column right-aligned, `font-mono`, `tabular-nums`.
+
+| Column | Token |
+|---|---|
+| Component name | `text-text-secondary` |
+| Value | `text-code-bright` mono |
+| Source | `CitationChip` (quoted figure) or `calc_id` badge (computed) |
+
+**Rule:** every row shows whether the figure was **quoted** or **computed**. That distinction is the guardrail's entire basis and the analyst should see it too.
+
+### 12.15 `TraceStep`
+
+One row of the step trace. Number · tool name · duration · one-line summary.
+
+| Step type | Token |
+|---|---|
+| Agent / specialist | `text-model`, teal left rule |
+| **Calculator** | `text-code`, amber left rule |
+| Active | `text-model-bright`, subtle pulse |
+| Complete | settles to `text-text-secondary` |
+
+**Rule:** the teal/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
+
+### 12.16 `Scoreboard`
+
+Metric rows: name · target · actual. Actual `text-success` when met, `text-danger` when missed. Cold and warm columns side by side.
+
+**Rule:** the false-resolve row renders `0` in `text-success` or any non-zero in `text-danger` **with no softening**. It is a gate, not a trend.
+
+### 12.17 `GovernancePanel`
+
+Read-only policy table. `text-label` keys, `font-mono` values.
+
+### 12.18 `LockedPolicyValue`
+
+Its own component — promoted out of `GovernancePanel` because a regulatory boundary should not be a styling detail.
+
+```
+require_human_review   true   🔒 locked
+```
+
+`text-text-muted`, lock glyph `aria-hidden` with `aria-label="locked, cannot be changed"`, `cursor-not-allowed`, no interactive affordance at all.
+
+**Rule:** renders as **structurally impossible to change**, not merely disabled. There is no edit control to grey out — there is no edit control.
