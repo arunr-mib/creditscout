@@ -23,6 +23,9 @@ Where two features touch. These are where silent breakage happens.
 | I-6 | F8 ↔ F9 | `casefiles.trace` append shape `{n, tool, input_summary, output_summary, ts}` | The live trace renders blank |
 | I-7 | F9 ↔ F10 | `reviews.lesson_embedding` written on override, read by `search-past-cases` | The memory effect — the demo centrepiece — silently does nothing |
 | I-8 | F3 ↔ F9 | Tailwind token names from `docs/design.md` | Screens drift; amber stops meaning "code" |
+| I-9 | F5 ↔ F8 | **Orchestrator model must support `connected_agent`** | `gpt-5-mini` is rejected at agent-creation time. Changing the orchestrator model to a non-compatible one breaks the whole multi-agent design at startup, not at runtime. |
+| I-10 | F7 ↔ F10 | **`tests` has no `run_id`** | Eval runs and demo data share the `tests` table. Without separation an eval pass pollutes the demo portfolio. **See Ambiguity A-2 — needs a decision.** |
+| I-11 | F8 ↔ F1 | The guardrail needs the cited chunks to verify quotes | `applyGuardrail(casefile, calcLogEntries, citedChunks)` — the **sync route** must fetch chunks for every citation the agent returned before calling it. If it passes an empty array, every claim fails verification and everything abstains. |
 
 ---
 
@@ -184,9 +187,14 @@ guardrails/policy.js
 
 ---
 
-# F3 — App shell and design tokens
+# F3 — App shell and design tokens ✅ BUILT 2026-10-05
 
-*Stage 3 · depends on F0 · run via `/frontend-setup`*
+*Stage 3 · depends on F0 · built via `/frontend-setup`*
+
+**As-built notes:** `package.json` keeps `"type": "module"` so `calc/*.js` and
+`guardrails/*.js` can use plain ESM `export`. Next.js config files are `.mjs`.
+`tsconfig.json` **excludes** `calc`, `guardrails` and `evals` — they are plain
+JavaScript run by `node --test` and must not be type-checked as app code.
 
 ### Product & UX
 - **Description:** Styled, empty, runnable Next.js shell with the design system compiled in.
@@ -205,10 +213,12 @@ guardrails/policy.js
 - **Components:** `app/layout.tsx` (fonts, theme) · `components/CalcValue.tsx` as the reference component proving the amber/provenance pattern.
 - **Edge cases:** The service-role key must never reach the client. `lib/supabase/server.ts` must not be imported by any Client Component.
 - **Testing checklist:**
-  - [ ] `npm run dev` serves a styled shell
-  - [ ] `grep -r "NEXT_PUBLIC" .` shows no service-role key
-  - [ ] `CalcValue` renders `1.31 ⟡ computed by code · calc_a3f9` in amber mono
-  - [ ] Inter and JetBrains Mono both load; mono has `tabular-nums`
+  - [x] `npx next build` passes
+  - [x] Service-role key **absent** from `.next/static` — verified by grep, not assumed
+  - [x] No `NEXT_PUBLIC_*` service key anywhere
+  - [x] No raw hex colour in `app/` or `components/` — all via named tokens
+  - [x] `CalcValue` renders `1.31 ⟡ computed by code · calc_a3f9` in amber mono
+  - [x] Inter and JetBrains Mono load; `.font-mono` sets `tabular-nums`
 
 ---
 
@@ -250,7 +260,29 @@ guardrails/policy.js
 
 # F5 — Agent tool endpoints
 
-*Stage 5 · depends on F1, F4 · **highest risk — spike this first in wall-clock terms***
+*Stage 5 · depends on F1, F4 · **spiked and GREEN 2026-10-05***
+
+**Spike result — verified live against the owner's Foundry project:**
+
+| Verified | Result |
+|---|---|
+| Agent calls a function tool rather than computing | ✅ Called `dscr_calculator` with correct args; did **not** compute the ratio itself |
+| Agent reports the tool's number verbatim | ✅ Returned 1.31 / threshold 1.25 / margin 0.06 exactly as supplied |
+| `connected_agent` delegation works | ✅ Orchestrator delegated to a specialist; delegation is a discrete entry in the run-steps API |
+| Run steps are usable as the UI trace | ✅ `GET /threads/{tid}/runs/{rid}/steps` returns `tool_calls` with the tool name |
+
+**Platform constraint found — this is binding.** `gpt-5-mini` **cannot** carry
+`connected_agent` tools: the Assistants API rejects agent creation with
+*"This model only supports Responses API compatible tools."* The orchestrator
+must therefore run **`gpt-4.1-mini`**. Specialists hold no `connected_agent`
+tool, so they stay on `gpt-5-mini`. Both already deployed.
+
+**API surface confirmed:** base `${AZURE_AI_PROJECT_ENDPOINT}`,
+`api-version=2025-05-01`, bearer token from
+`az account get-access-token --resource https://ai.azure.com`. Agents are
+`POST /assistants`; a run is `POST /threads/runs`; a function tool pauses the run
+at `status: requires_action` and resumes via
+`POST /threads/{tid}/runs/{rid}/submit_tool_outputs`.
 
 ### Product & UX
 - **Description:** Three HTTPS endpoints the Foundry agent calls. This is where the model requests a calculation it cannot perform itself.
@@ -287,7 +319,8 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
   - [ ] Calculator tool writes exactly one `calc_log` row per call
   - [ ] `calc_id` returned matches the row written
   - [ ] Missing financial input → `{error}` body, HTTP 200
-  - [ ] **Spike gate:** a Foundry agent successfully calls the calculator and receives a number
+  - [x] **Spike gate passed:** a Foundry agent called the calculator and received a number
+  - [ ] OpenAPI tool variant works server-side (the spike used a function tool, which pauses the run; OpenAPI tools are called by Foundry directly — **confirm before relying on it**)
 
 ---
 
@@ -386,7 +419,9 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 - **Database schema:** Writes `casefiles`; updates `exceptions.status`.
 - **Database tasks:** Create casefile `investigating` with `foundry_thread_id`/`foundry_run_id`; append each completed step to `trace`; on completion write recommendation, claims, calc_ids, guardrail_notes and set `pending_review` or `failed`.
 - **Helper functions:**
-  - `lib/agent/orchestrator.ts` → `startInvestigation(exceptionId)`, `syncRun(casefileId)`
+  - `lib/agent/orchestrator.ts` → `startInvestigation(exceptionId): Promise<{casefileId: string}>`, `syncRun(casefileId): Promise<RunStatus>`
+  - `lib/agent/foundry.ts` → `createAgents()`, `startRun(agentId, context)`, `getRunSteps(threadId, runId)` — orchestrator on `gpt-4.1-mini`, specialists on `gpt-5-mini` (see F5)
+  - `lib/agent/trace.ts` → `mapRunStepsToTrace(steps): TraceEntry[]` — converts Foundry run steps into `{n, tool, input_summary, output_summary, ts}`. **`connected_agent` steps map to the specialist's name**, so the UI alternation (teal agent / amber calculator) falls out of the data.
   - `lib/agent/prompt.ts` → system prompt assembly with the rule set and memory lessons
   - `lib/memory.ts` → `buildExceptionProfile(exceptionId)`, `topLessons(facilityId, profile, 3)`
 - **API routes:** `POST /api/investigate` → `{casefile_id}` immediately · `POST /api/investigate/sync` (internal, shared secret) — polls Foundry, mirrors steps, runs guardrail then policy.
@@ -487,14 +522,30 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 ---
 
+## Ambiguities found in the engineering document
+
+The skill says report rather than guess. These are structural questions the
+engineering doc does not answer. **A-1 and A-2 need a decision before F7.**
+
+| # | Ambiguity | Why it matters | Recommendation |
+|---|---|---|---|
+| **A-1** | **Who triggers a quarterly test?** §7 defines `POST /api/tests/run` taking one `facility_id` + `test_period_end`, but never says whether the analyst runs it per borrower or runs a whole quarter at once. | The portfolio screen needs one button or many, and the demo reads very differently: "run the quarter" shows all three outcomes at once, which is the point of end-to-end. | **Add `POST /api/tests/run-quarter {test_period_end}`** that loops every facility with approved terms. Keeps the per-facility route for re-runs. |
+| **A-2** | **`tests` has no `run_id`.** `casefiles` has one to separate eval runs from demo data; `tests` does not. | An eval pass would write `tests` rows into the demo portfolio and trip the `UNIQUE (facility_id, test_period_end)` constraint against demo data. | **Add `run_id text` to `tests`** and include it in the unique constraint. Small schema change, better caught now than during the eval. |
+| **A-3** | **Does ingesting a certificate auto-trigger a test?** The certificate carries its own `test_period_end`. | Determines whether the demo is "upload → test runs" or "upload, then click run". | Keep them separate. Explicit is better on camera, and auto-running hides the independent-computation moment. |
+| **A-4** | **Who owns the `exceptions.status` transition** vs `casefiles.status`? Both carry `investigating` and `pending_review`. | Two sources of truth drift. | **`casefiles.status` is authoritative**; `exceptions.status` mirrors it. Or drop the overlapping values from `exceptions`. |
+| **A-5** | **Foundry thread reuse on retry** — same thread or a new one? | A retry on the same thread inherits the failed context, which may re-fail the same way. | New thread per attempt; keep `foundry_thread_id` as the latest. |
+| **A-6** | **`reported_dscr` when no certificate exists.** | §6.5 allows NULL but §4.1b's outcome table assumes a borrower figure. | NULL `reported_dscr` → `variance` NULL, `variance_flagged` false. The test still runs on our number. Already specified in F7; the engineering doc should say it too. |
+
+---
+
 ## Build order checklist
 
 - [ ] **F0** Schema + RLS — `supabase db push` green
 - [ ] **F1** Deterministic core — `npm test` green, no model, no network
 - [ ] **F2** Synthetic facilities + expected-values template *(gated on owner validating the twists)*
-- [ ] **F3** App shell + design tokens — `npm run dev` serves a styled shell
+- [x] **F3** App shell + design tokens — build passes, no key leaks, tokens only
 - [ ] **F4** Ingest — chunks land in the database
-- [ ] **F5** Agent tools + **Foundry spike** — agent calls the calculator and gets a number
+- [~] **F5** Agent tools — **spike passed**; route handlers still to build
 - [ ] **F6** Covenant setup — terms proposed, cited, approved, versioned
 - [ ] **F7** Quarterly test — all three facilities tested; F1 and F3 raise exceptions
 - [ ] **F8** Investigation — F1 resolves, F3 escalates
