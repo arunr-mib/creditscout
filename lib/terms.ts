@@ -471,7 +471,12 @@ export function checkTermsProvenance(
 
   // Everything the guardrail's number-walk cannot see: names and lists.
   const entry = (field: string) => (flagged.has(field) ? undefined : byField.get(field));
-  checkNamedTerms(terms, entry, flag);
+  const scope = (field: string): string | undefined => {
+    const e = entry(field);
+    if (!e || typeof e.quote !== "string") return undefined;
+    return enclosingSentence(content.get(String(e.citation).trim()) ?? "", e.quote);
+  };
+  checkNamedTerms(terms, entry, scope, flag);
 
   return { valid: violations.length === 0, violations };
 }
@@ -492,6 +497,24 @@ const UNCAPPED = /\b(without\s+(?:any\s+)?(?:limit|limitation|cap)|no\s+(?:limit
 /** Words that put a limit on an amount; a quote containing one cannot be the source of "uncapped". */
 const CAPPING = /\$\s?\d|not\s+to\s+exceed|shall\s+not\s+exceed|no\s+more\s+than|up\s+to|at\s+most/i;
 
+/**
+ * The sentence of `chunk` that contains `quote`, widened from the quote to the
+ * nearest sentence ends. Both are folded first, so whitespace is not a barrier.
+ * A sentence ends at "." or ";" followed by whitespace, except after "No" ("No.
+ * 2"); a decimal point is never followed by whitespace. If the quote is not in
+ * the chunk the quote itself is returned: that field is already a violation.
+ */
+export function enclosingSentence(chunk: string, quote: string): string {
+  const text = foldText(chunk);
+  const q = foldText(quote);
+  const at = q === "" ? -1 : text.indexOf(q);
+  if (at < 0) return q;
+  const ends = [...text.matchAll(/(?<!\bNo)[.;](?=\s|$)/g)].map((m) => m.index as number);
+  const before = ends.filter((e) => e < at).pop();
+  const after = ends.find((e) => e >= at + q.length - 1);
+  return text.slice(before === undefined ? 0 : before + 1, after === undefined ? text.length : after + 1).trim();
+}
+
 const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(quote).toLowerCase().includes(foldText(phrase).toLowerCase());
 
 /**
@@ -500,13 +523,16 @@ const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(
  * wrong, and a fabricated add-back name is the same class of lie as a fabricated
  * cap. So each is tied to the quote cited for it:
  *
- *   add-back name    appears in the quote cited for its cap
- *   cap: null        that quote says the add-back is uncapped, and states no limit
- *   deductions       the set the ratio definition's quote names, exactly: one
+ *   add-back name    appears in the sentence cited for its cap
+ *   cap: null        that sentence says the add-back is uncapped, and states no limit
+ *   deductions       the set the ratio definition's sentence names, exactly: one
  *                    it names that the terms drop is as wrong as one invented
- *   components       the same, against the Debt Service definition's quote
- *   numerator.base   appears in the ratio definition's quote
- *   basis            the threshold's quote states it ("trailing four-quarter")
+ *   components       the same, against the Debt Service definition's sentence
+ *   numerator.base   appears in the ratio definition's sentence
+ *   basis            the threshold's sentence states it ("trailing four-quarter")
+ *
+ * "Sentence" means the sentence of the cited chunk containing the quote, not the
+ * quote alone (see below).
  *   amendment doc    is the document its effective-date citation points into
  *
  * `entry(field)` is undefined when that field has no usable citation (absent, or
@@ -516,12 +542,14 @@ const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(
 function checkNamedTerms(
   terms: Obj,
   entry: (field: string) => Obj | undefined,
+  scope: (field: string) => string | undefined,
   flag: (field: string, reason: string) => void,
 ): void {
-  const quoteOf = (field: string): string | undefined => {
-    const q = entry(field)?.quote;
-    return typeof q === "string" ? q : undefined;
-  };
+  // Judged against the sentence the quote sits in, in the document, NOT the quote.
+  // A proposer that quotes half a definition would otherwise choose its own ground
+  // truth: cut the quote short and a dropped component is "not mentioned". The
+  // quote still has to be verbatim in the chunk (checked before this runs).
+  const quoteOf = scope;
 
   const nu = isObj(terms.numerator) ? terms.numerator : {};
   const addbacks = Array.isArray(nu.addbacks) ? nu.addbacks : [];
@@ -544,8 +572,8 @@ function checkNamedTerms(
     for (const [name, re] of Object.entries(words)) {
       const named = re.test(q);
       const included = listed.includes(name);
-      if (included && !named) problems.push(`terms include ${name} but the cited quote does not mention it`);
-      if (named && !included) problems.push(`the cited quote mentions ${name} but the terms leave it out`);
+      if (included && !named) problems.push(`terms include ${name} but the cited sentence does not mention it`);
+      if (named && !included) problems.push(`the cited sentence mentions ${name} but the terms leave it out`);
     }
     if (problems.length > 0) flag(field, problems.join("; "));
   };

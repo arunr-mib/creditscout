@@ -347,3 +347,55 @@ test("casefile path: 'requires 1.00x' is not traceable to a clause that says '1.
   });
   assert.equal(applyGuardrail(ok, CALCS, RATIO_CHUNKS).casefile.recommendation, "resolve");
 });
+
+// --- N1: the ratio rule must not eat figures that are not ratios -------------
+// A false abstain here reads as the model being cautious, and the zero-false-
+// resolve metric still reads perfect while the product stops doing anything.
+test("N1: 'to 1,900,000' is a figure, not a ratio denominator, and nothing is left behind", () => {
+  assert.deepEqual(extractFigures("EBITDA fell from 2,400,000 to 1,900,000"), [2400000, 1900000]);
+  assert.deepEqual(extractFigures("EBITDA rose 2,400,000 to 1,900,000"), [2400000, 1900000], "no 'from' needed: the left operand is a grouped number");
+  assert.deepEqual(extractFigures("from 12.5 to 1.5"), [12.5, 1.5]);
+  assert.deepEqual(extractFigures("1,250,000 to 1"), [1250000, 1], "a grouped left operand is not a ratio's");
+  assert.deepEqual(extractFigures("fees went from 3 to 1,200 over the term"), [3, 1200]);
+});
+
+test("N1: the casefile path still resolves an explanation that quotes a fall in EBITDA", () => {
+  const chunks = [
+    { citation: "Fin Q2 2026 §1", content: "Consolidated EBITDA: 1,900,000. Prior period Consolidated EBITDA: 2,400,000." },
+    ...RATIO_CHUNKS,
+  ];
+  const cf = base({
+    explanation: "EBITDA fell from 2,400,000 to 1,900,000, and the recomputed DSCR is 1.31 against the required 1.25x.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, chunks);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+});
+
+test("N1: C1 stays closed: the denominator of 1.25 to 1.00 is still not a usable figure, and 1.00x still abstains", () => {
+  assert.deepEqual(extractFigures("not less than 1.25 to 1.00"), [1.25]);
+  assert.equal(thresholdCheck(1.0, RATIO_CLAUSE).valid, false);
+  const bad = base({
+    explanation: "The covenant requires 1.00x and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  assert.equal(applyGuardrail(bad, CALCS, RATIO_CHUNKS).casefile.recommendation, "abstain");
+  const good = base({
+    explanation: "The covenant requires 1.25x and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  assert.equal(applyGuardrail(good, CALCS, RATIO_CHUNKS).casefile.recommendation, "resolve");
+});
+
+test("N2 (chosen): 'restored from 0.92 to 1.00' is a change in a figure, so BOTH figures must be traced and it abstains as it did before", () => {
+  assert.deepEqual(extractFigures("coverage was restored from 0.92 to 1.00"), [0.92, 1]);
+  const cf = base({
+    explanation: "Coverage was restored from 0.92 to 1.00, so the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  const { casefile } = applyGuardrail(cf, CALCS, RATIO_CHUNKS);
+  assert.equal(casefile.recommendation, "abstain");
+  // and it cannot be used to launder a threshold either
+  const r = thresholdCheck(1.0, "restored from 0.92 to 1.00", [{ citation: "CA §7.11", content: "restored from 0.92 to 1.00" }]);
+  assert.equal(r.valid, false);
+});

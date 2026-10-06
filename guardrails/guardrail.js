@@ -63,8 +63,22 @@ export function normaliseNumber(token) {
   return negative ? -value : value;
 }
 
-/** "1.25 to 1.00", "1.25 to 1", "1.25:1" -> the part after "to"/":" is captured away. */
-const RATIO_DENOMINATOR = /(\d+(?:\.\d+)?)(\s*(?:to|:)\s*)1(?:\.0+)?(?!\d|\.\d)/gi;
+/**
+ * The denominator of a STATED RATIO: "1.25 to 1.00", "1.25 to 1", "1.25:1". A
+ * ratio needs both operands, so the match requires a standalone left figure:
+ *
+ *   - not the tail of a grouped or decimal number, so "2,400,000 to 1,900,000"
+ *     never has its "1,900,000" read as a denominator "1" plus a phantom 900000.
+ *     The right operand is a lone 1 / 1.0 / 1.00 and must not run on into more
+ *     digits, or a ",ddd" / ".d" group.
+ *   - not after "from", so "restored from 0.92 to 1.00" is a CHANGE in a figure,
+ *     not a ratio. Both its figures stay to be traced; that sentence used to
+ *     abstain without a source and still does. (A ratio written after another
+ *     verb of change, such as "improved 0.92 to 1.00", is read as a ratio: the
+ *     rule is deliberately narrow, and the cost of misreading one is a figure
+ *     going unchecked, not a false abstain.)
+ */
+const RATIO_DENOMINATOR = /(?<![\d,.])(?<!\bfrom\s+)(\d+(?:\.\d+)?)(\s*(?:to\b|:)\s*)1(?:\.0+)?(?!\d|[.,]\d)/gi;
 
 /**
  * Pull every figure out of free text.
@@ -117,12 +131,17 @@ function normaliseText(s) {
     .trim();
 }
 
-/** The figures a quote states AS ratios: "1.25x", "1.25 times", "1.25 to 1.00", "1.25:1". */
+/** The figures a quote states AS ratios: "1.25x", "1.25 times", "1.25 to 1.00", "1.25:1". Same operand rules as RATIO_DENOMINATOR. */
 function ratioFigures(text) {
   const out = [];
-  const re = /(\d+(?:\.\d+)?)\s*(?:x\b|times\b|(?:to|:)\s*1(?:\.0+)?(?!\d|\.\d))/gi;
-  let m;
-  while ((m = re.exec(String(text))) !== null) out.push(Number(m[1]));
+  const forms = [
+    /(?<![\d,.])(\d+(?:\.\d+)?)\s*(?:x\b|times\b)/gi,
+    /(?<![\d,.])(?<!\bfrom\s+)(\d+(?:\.\d+)?)\s*(?:to\b|:)\s*1(?:\.0+)?(?!\d|[.,]\d)/gi,
+  ];
+  for (const re of forms) {
+    let m;
+    while ((m = re.exec(String(text))) !== null) out.push(Number(m[1]));
+  }
   return out;
 }
 
