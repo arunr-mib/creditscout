@@ -68,7 +68,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 |---|---|---|
 | 4.1 | 🟡 **Facilities F2, F4, F6** | F1/F3/F5 already cover resolve, escalate and the memory effect. F2 (period mismatch) and F4 (missing waiver) are the two that exercise `abstain`/`request` — restore these first, they carry a headline metric. |
 | 4.2 | 🟡 **Eval set 6 → 24 cases** | 6 is enough to measure and catch regressions. We report 6 as 6 and never claim 24. |
-| 4.3 | 🟡 **Covenant setup approval screen** | If pre-seeded in the demo, the flow is narrated rather than shown. Flow A survives; only the visual is lost. |
+| 4.3 | ✅ **Covenant setup approval screen** | **Resolved 2026-10-05: being built, not pre-seeded.** The four-eyes control is a headline of the design and the owner chose to show it. |
 | 4.4 | 🟡 **Governance & evals page** (4th screen, editable) | A static read-only panel carries the governance story. |
 | 4.5 | 🟡 **Foundry groundedness judge** | Local metrics carry the trust claim. Independent scoring is stronger but not load-bearing. |
 | 4.6 | 🟡 **Email intake** (US-011) | Workflow convenience; proves nothing about reasoning. |
@@ -84,7 +84,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 5.1 | ⚪ **Is $5/borrower/month under-priced?** | At ~6× ROI there's clear headroom; $8–12 would still land at 2.5–4×. Flat $5 is a deliberate land-and-expand choice. | After measured usage with a design partner |
 | 5.2 | ⚪ **Volume tiering and a platform minimum** | Parked — premature before anyone has used the product. | With 5.1 |
 | 5.3 | ⚪ **`max_steps: 8`** | Reasoned from 2–6 step expected paths. Now a `policy` row, so changing it is an update, not a redeploy. | After the first real investigations |
-| 5.4 | ⚪ **Orchestrator model** | `gpt-5.4` confirmed. Claude Opus 5.5 / Sonnet 5.5 also available in `eastus2` at standard rates. | After the eval — see 6.1 |
+| 5.4 | ✅ **Orchestrator model** | **Resolved 2026-10-05: `gpt-5-mini` everywhere.** No new deployment, no new billable resource. | Post-demo — see 6.1 |
 | 5.5 | ⚪ **Does a chat interface belong in CreditScout?** | No. The unit of work is an investigation, not a conversation. Raised and set aside. | If analysts ask for follow-up Q&A on a casefile |
 
 ---
@@ -93,7 +93,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 
 | # | Experiment | Why it's worth the cost |
 |---|---|---|
-| 6.1 | 🟡 **Orchestrator: frontier model vs mini** on the same eval set | If the cheap model holds accuracy, that halves cost *and* produces a model-selection finding most people never generate |
+| 6.1 | 🟡 **Does a stronger orchestrator beat `gpt-5-mini`?** The MVP runs mini everywhere (owner decision, 2026-10-05), so the experiment is now "does paying more buy accuracy?" rather than "can the cheap one cope?" | A negative result — mini holds accuracy because the guardrail is code — is the more interesting finding, and it is a model-selection artifact most people never produce |
 | 6.2 | 🟡 **Guardrail ablation** — run the eval with guardrails disabled | Quantifies how many false resolves the code layer actually catches. **This is the single most persuasive number for the pitch** and it isn't currently planned into the run. |
 | 6.3 | ⚪ Memory ablation (cold vs warm) | Already built into every eval run — no extra work |
 

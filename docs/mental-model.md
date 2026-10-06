@@ -216,6 +216,22 @@ passing number.
 F1 and F5 together are the demo: **the same problem, solved twice, the second
 time in half the steps because a human taught it something.**
 
+### F5 carries two extra quarters, so all three outcomes are shown
+
+The exception path is only one of the three quarterly outcomes. Without these,
+the demo never shows what happens to the other ~90% of borrowers.
+
+| Period | F5 scenario | Outcome |
+|---|---|---|
+| Q4 2025 | We compute 1.41 · borrower reports 1.41 · agree | **1 — compliant, no action** |
+| Q1 2026 | We compute 1.38 · borrower reports **1.29** (they omitted a permitted add-back) · both clear 1.25 | **2 — variance logged, not investigated** |
+| Q2 2026 | We compute 1.12 pre-amendment → exception → memory from F1 → resolves | **3 — breach → investigate** |
+
+Two extra financials + certificate pairs, no new facility. Q1 2026 is the one
+that earns the end-to-end redesign: **the borrower's arithmetic is wrong and
+their conclusion is still right** — invisible under the old design, and the
+cheapest possible proof that we compute independently.
+
 ---
 
 ## 5. Demo storyboard (3 minutes)

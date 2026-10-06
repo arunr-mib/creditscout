@@ -834,14 +834,21 @@ reportable numbers. This is a deliberate cost control.
 | Eval judge | `gpt-4.1` | Deliberately a different generation from the agents, so the judge is not grading its own kind. |
 | Embeddings | `text-embedding-3-small` | **1536 dimensions** — the vector schema depends on this. Already deployed. |
 
-**Justification and alternatives considered.** A single frontier model for every
-role was rejected on cost: the three retrieval agents account for most calls and
-do not make judgments. A single small model throughout was rejected on risk: the
-sufficiency judgment is the metric. Claude Opus 5.5 and Sonnet 5.5 are available
-in the same Azure region at standard rates and remain a live alternative — the
-model assignment is configuration, and **"can the cheaper model orchestrate
-without hurting accuracy?" is itself a planned experiment** whose answer is
-worth reporting either way.
+**Justification and alternatives considered.** A frontier model on the
+orchestrator was the initial recommendation, on the grounds that the
+evidence-sufficiency judgment drives the headline metric. It was **rejected for
+the MVP** for three reasons: `gpt-5-mini` is already deployed so there is no new
+billable resource, a single model means a single prompt surface to tune under a
+tight build, and — most importantly — **the guardrail is code, so a weaker model
+cannot produce an unverifiable number regardless of its judgment**. The
+architecture absorbs model weakness in a way a prompt-only design could not.
+
+This inverts the planned experiment in a useful way: instead of asking "can the
+cheap model cope?", the post-demo comparison asks **"does a stronger orchestrator
+buy enough accuracy to justify its cost?"** A negative result there is the more
+interesting finding. Claude Opus 5.5 / Sonnet 5.5 and the full GPT-5.x line are
+available in the same Azure region at standard rates; model assignment is
+configuration.
 
 ---
 

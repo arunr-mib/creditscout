@@ -135,6 +135,18 @@ guardrails/policy.js
 
 ### Product & UX
 - **Description:** Three synthetic facilities — F1 Harbor Logistics (amendment add-back), F3 Northgate Foods (true breach), F5 Coastal Marine (repeat of F1's pattern) — each with agreement, amendment/waiver, quarterly financials, compliance certificate.
+- **Plus two extra quarters on F5**, so the demo can show all three quarterly outcomes rather than only the third:
+
+| Period | F5 scenario | Outcome shown |
+|---|---|---|
+| Q4 2025 | Our number 1.41, borrower reports 1.41, agree | **1 — compliant, no action** |
+| Q1 2026 | Our number 1.38, borrower reports **1.29** (they omitted a permitted add-back). Both clear 1.25. | **2 — variance logged, no investigation** |
+| Q2 2026 | Our number 1.12 pre-amendment → exception → memory from F1 → resolves | **3 — breach → investigate** |
+
+  Two extra financials + certificate pairs, no new facility. The Q1 variance case
+  is what makes the "their maths is off but the conclusion stands" path real
+  rather than hypothetical, and it is the cheapest way to demonstrate that we
+  compute independently.
 - **User flow:** The analyst uploads these during the demo.
 - **Placement:** `data/facilities/F1|F3|F5/`.
 - **Design:** Documents look like credit agreements — definitions article, financial covenants article with DSCR at a `§7.11`-style section, events of default, notices.
@@ -154,6 +166,9 @@ guardrails/policy.js
   - [ ] All six financial inputs appear as labeled lines in each financials doc
   - [ ] `data/expected-values-template.csv` generated with `expected_dscr` blank and `owner_signed_off = NO`
   - [ ] F1's amendment is dated within the test period
+  - [ ] F5 Q4-2025 produces outcome 1 (compliant, variance within tolerance)
+  - [ ] F5 Q1-2026 produces outcome 2 — `variance_flagged = true`, `passed = true`, **no exception row**
+  - [ ] F5 Q2-2026 produces outcome 3 (exception)
 
 ---
 

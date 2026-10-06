@@ -112,8 +112,8 @@ DeepSeek, Cohere. Model choice costs no new infrastructure, only a deployment.
 
 | Role | Model | Why |
 |---|---|---|
-| Orchestrator | `gpt-5.4` | Makes the evidence-sufficiency judgement, which drives the headline zero-false-resolve metric. Don't economise here. |
-| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, every quote is code-verified anyway, and this is where most calls happen. **Already deployed — zero setup.** |
+| Orchestrator | **`gpt-5-mini`** | **Owner decision, 2026-10-05.** Already deployed, so no new billable deployment and no setup. The spec's reasoning for a stronger orchestrator still stands — but whether it is *needed* is an open measurement, not an assumption, and the eval set is what answers it. |
+| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, and every quote is code-verified anyway. |
 | Eval judge (§8.2) | `gpt-4.1` | Deliberately a different family/generation from the agents, so the judge is not grading its own kind. |
 | Embeddings | `text-embedding-3-small` | **1536 dimensions** — the schema's `vector(1536)` columns depend on this number. Already deployed. |
 
@@ -673,8 +673,8 @@ rules (§9), and the demo structure (§10).
    run once the first run exists.
 5. **§14.2 — the 24 eval labels**, once drafted.
 6. **Whether full `gpt-4.1` gets deployed for the judge.** Billable, owner's call.
-7. **Confirm the orchestrator model.** `gpt-5.4` is the recommendation; the
-   catalog is wide and nothing depends on it.
+7. ~~**Confirm the orchestrator model.**~~ **Resolved 2026-10-05:** `gpt-5-mini`
+   everywhere for the MVP. No new model deployment, no new billable resource.
 
 ---
 
