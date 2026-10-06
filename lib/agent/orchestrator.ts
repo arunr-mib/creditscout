@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildExceptionProfile, topLessons } from "../memory.ts";
-import { DEFAULT_RUN_ID } from "../retrieval.ts";
+import { DEFAULT_RUN_ID, type PastCaseHit } from "../retrieval.ts";
 import { termsInForce } from "../terms.ts";
 import { TOOL_KEY_HEADER } from "./auth.ts";
 import {
@@ -19,7 +19,7 @@ import {
 import { DEFAULT_BASE_URL } from "./openapi.ts";
 import { buildInvestigationPrompt, SPECIALIST_NAMES, type SpecialistName } from "./prompt.ts";
 import { SPECIALIST_RUNNERS, type SpecialistRunner } from "./specialists.ts";
-import { mapRunStepsToTrace, type TraceEntry } from "./trace.ts";
+import { localEntries, mapRunStepsToTrace, memoryUnavailableEntry, mergeTrace, type TraceEntry } from "./trace.ts";
 
 /**
  * The investigation loop: start a Foundry run against an exception, then drive
@@ -155,6 +155,7 @@ interface CasefileRow {
   steps_count: number;
   guardrail_notes: unknown;
   agent_output: string | null;
+  trace: unknown;
   run_id: string;
   foundry_thread_id: string | null;
   foundry_run_id: string | null;
@@ -166,7 +167,7 @@ interface CasefileRow {
 // reports the answer it managed to produce before the run was stopped. Left out,
 // every repeat sync said "its answer was captured" and returned nothing.
 const CASEFILE_COLUMNS =
-  "id, exception_id, status, steps_count, guardrail_notes, agent_output, run_id, foundry_thread_id, foundry_run_id, last_step_at, created_at";
+  "id, exception_id, status, steps_count, guardrail_notes, agent_output, trace, run_id, foundry_thread_id, foundry_run_id, last_step_at, created_at";
 
 /**
  * Only these may be driven forward. A casefile an analyst has already acted on
@@ -250,7 +251,26 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   }
   const casefile = claimed.data as { id: string };
 
-  const lessons = await (deps.lessons ?? topLessons)(bundle.facility.id, bundle.profile, 3, {}, DEFAULT_RUN_ID);
+  // A memory outage must not cost us the investigation — the agent can work
+  // cold — but it must not be silent either. The memory effect is a reported
+  // metric, so a run that quietly fell back to cold would still be MEASURED as
+  // warm: a confident-looking record of something that did not happen. The
+  // degradation goes into the trace, where the live view shows it and stage
+  // 10's runner can filter on it.
+  let lessons: PastCaseHit[] = [];
+  try {
+    lessons = await (deps.lessons ?? topLessons)(bundle.facility.id, bundle.profile, 3, {}, DEFAULT_RUN_ID);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.error("the lesson search failed; this investigation runs cold", err);
+    check(
+      await client
+        .from("casefiles")
+        .update({ trace: [memoryUnavailableEntry(reason, new Date(now()))] })
+        .eq("id", casefile.id),
+      "record memory unavailable",
+    );
+  }
 
   const prompt = buildInvestigationPrompt({
     casefileId: casefile.id,
@@ -564,14 +584,21 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
   const threadId = casefile.foundry_thread_id;
   const runId = casefile.foundry_run_id;
   let stepsSeen = casefile.steps_count;
+  // Entries we recorded before the run started. They have to survive mirroring,
+  // which overwrites the whole array.
+  const local = localEntries(casefile.trace);
   let run: Run;
+  // The RUN's steps. `steps_count` and the cap are both measured in these and
+  // never in the merged array: a locally recorded marker is not an agent step,
+  // and counting one would silently shrink the agent's budget by one whenever
+  // memory happened to be down.
   let trace: TraceEntry[] = [];
   let atCap = false;
 
   for (;;) {
     run = await getRun(threadId, runId, deps.foundry);
     trace = mapRunStepsToTrace(await getRunSteps(threadId, runId, deps.foundry));
-    stepsSeen = await mirror(client, casefileId, trace, stepsSeen, now);
+    stepsSeen = await mirror(client, casefileId, local, trace, stepsSeen, now);
 
     // The cap limits TOOL CALLS. It does not take away the right to conclude.
     //
@@ -682,15 +709,29 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
  * stall check reads, and refreshing it on every poll would mean no run is ever
  * stalled.
  */
-async function mirror(client: Db, casefileId: string, trace: TraceEntry[], seen: number, now: () => number): Promise<number> {
+async function mirror(
+  client: Db,
+  casefileId: string,
+  local: TraceEntry[],
+  trace: TraceEntry[],
+  seen: number,
+  now: () => number,
+): Promise<number> {
   // A completed step's summaries never change once mapped, so an unchanged
-  // length means an unchanged trace and there is nothing to write. Without this
+  // count means an unchanged trace and there is nothing to write. Without this
   // a poll loop rewrites the same array every second and-a-half.
   if (trace.length === seen) return seen;
   check(
     await client
       .from("casefiles")
-      .update({ trace, steps_count: trace.length, last_step_at: new Date(now()).toISOString() })
+      .update({
+        // Locally recorded entries are merged back in, because the mapping
+        // knows nothing about them and would otherwise erase them.
+        trace: mergeTrace(local, trace),
+        // Agent steps only. The cap is measured in these.
+        steps_count: trace.length,
+        last_step_at: new Date(now()).toISOString(),
+      })
       .eq("id", casefileId),
     "mirror trace",
   );

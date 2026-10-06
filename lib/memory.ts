@@ -171,9 +171,13 @@ export async function buildExceptionProfile(exceptionId: string, deps: MemoryDep
  * a cold eval pass cannot see warm lessons. Both filters live inside
  * `match_lessons`; this function must not try to add its own.
  *
- * A memory outage is not an investigation failure. If the search throws, the
- * investigation runs cold rather than not at all: a slower correct answer beats
- * no answer, and the lessons are an accelerant, not evidence.
+ * IT THROWS, and used to swallow. A memory outage must not kill an
+ * investigation — the agent can work cold — but deciding that is the caller's
+ * job, because the caller is the one holding a casefile to record the
+ * degradation on. Swallowing it here returned `[]`, which is indistinguishable
+ * from "no lessons on file", and the memory effect is a reported metric: a warm
+ * run that silently fell back to cold would still be measured as warm. See
+ * `startInvestigation`, which catches this and writes a visible trace entry.
  */
 export async function topLessons(
   facilityId: string,
@@ -182,10 +186,5 @@ export async function topLessons(
   deps: MemoryDeps = {},
   runId: string = DEFAULT_RUN_ID,
 ): Promise<PastCaseHit[]> {
-  try {
-    return await (deps.search ?? searchPastCases)({ facilityId, exceptionProfile: profile, k, runId });
-  } catch (err) {
-    console.error("topLessons failed; the investigation will run cold", err);
-    return [];
-  }
+  return (deps.search ?? searchPastCases)({ facilityId, exceptionProfile: profile, k, runId });
 }

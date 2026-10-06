@@ -30,6 +30,27 @@ export const SUMMARY_MAX = 240;
 /** The calculator. Named here because its summary is the one the demo reads out loud. */
 export const CALCULATOR_TOOL = "dscr_calculator";
 
+/**
+ * A step this application recorded, not one the agent took.
+ *
+ * `memory_unavailable` means the lesson search failed and the investigation ran
+ * with no past lessons at all. It is a STABLE NAME, not prose, because the
+ * cold-versus-warm comparison has to filter on it: a warm run whose memory
+ * search failed is not a warm run, and counting it as one would corrupt a
+ * number we intend to report. Stage 10's runner matches this constant.
+ */
+export const MEMORY_UNAVAILABLE_STEP = "memory_unavailable";
+
+/**
+ * Trace entries written by us rather than mapped from a Foundry run step.
+ *
+ * `mapRunStepsToTrace` is a pure function of the run's steps, so mirroring
+ * overwrites the whole array; anything in this set has to survive that, or a
+ * degradation recorded before the run started would be erased by the first
+ * sync.
+ */
+export const LOCAL_TRACE_TOOLS: readonly string[] = [MEMORY_UNAVAILABLE_STEP];
+
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -228,4 +249,58 @@ export function mapRunStepsToTrace(steps: unknown): TraceEntry[] {
     }
   }
   return out;
+}
+
+// --------------------------------------------------- locally recorded steps
+
+const isEntry = (v: unknown): v is TraceEntry =>
+  isObj(v) && typeof v.tool === "string" && typeof v.input_summary === "string" && typeof v.output_summary === "string";
+
+/**
+ * The entry that says this investigation had no memory available to it.
+ *
+ * Not an error and not a failure: the agent can work cold, and losing a whole
+ * investigation to a memory hiccup would trade a small loss for a total one.
+ * What it must not be is SILENT — the memory effect is a reported metric, so a
+ * run that quietly fell back to cold would still be measured as warm, which is
+ * a confident-looking record of something that did not happen.
+ */
+export function memoryUnavailableEntry(reason: string, at: Date): TraceEntry {
+  return {
+    n: 1,
+    tool: MEMORY_UNAVAILABLE_STEP,
+    input_summary: "top 3 lessons for this facility",
+    output_summary: truncate(`memory search failed: ${reason} \u2014 this investigation ran with no past lessons`),
+    ts: at.toISOString(),
+  };
+}
+
+/** The locally recorded entries already stored on a casefile, in order. */
+export function localEntries(trace: unknown): TraceEntry[] {
+  const list = Array.isArray(trace) ? trace : [];
+  return list.filter(isEntry).filter((e) => LOCAL_TRACE_TOOLS.includes(e.tool));
+}
+
+/**
+ * Locally recorded entries first, then the run's steps, renumbered from 1.
+ *
+ * Still idempotent, which is what lets two syncs race harmlessly: the result is
+ * a pure function of its two inputs, so both produce the same array rather than
+ * a doubled one. Local entries come first because they are recorded before the
+ * run starts.
+ */
+export function mergeTrace(local: TraceEntry[], mapped: TraceEntry[]): TraceEntry[] {
+  return [...local, ...mapped].map((entry, index) => ({ ...entry, n: index + 1 }));
+}
+
+/**
+ * Did this investigation run without memory?
+ *
+ * The question stage 10 asks of every casefile before counting it as a warm
+ * run. Exported so the eval runner matches a constant rather than guessing at a
+ * string.
+ */
+export function ranWithoutMemory(trace: unknown): boolean {
+  const list = Array.isArray(trace) ? trace : [];
+  return list.some((e) => isObj(e) && e.tool === MEMORY_UNAVAILABLE_STEP);
 }
