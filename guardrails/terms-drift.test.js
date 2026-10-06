@@ -284,6 +284,7 @@ function corpus() {
     // figures equal to a threshold value but NOT stated as a ratio
     "a commitment fee of 0.50 percent; 1.25 percent margin; 1.12 million units; 2.5 basis points; 1.31 per share; 1.2 of the 1.25",
     "Applying calc_id 76f4c1f2-75e3-437d-9254-71fd7fa74f53, version 2, effective April 1, 2026, gives 1.28",
+    "Under the borrower's version 1.47 and v1.31 coverage was higher than in version 3.",
   ];
 }
 

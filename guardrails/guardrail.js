@@ -138,8 +138,13 @@ const IDENTIFIERS = [
   //   consumed: a listed section number is the same shape as a ratio, so
   //   consuming lists would let "Section 7.11 and 1.47" hide the 1.47. They
   //   abstain, fail-closed.
-  /\bversions?\s+\d+(?:\.\d+)*\b/gi,
-  /\bv\d+(?:\.\d+)*\b/gi,
+  // A version number is an INTEGER. "version 1.47" and "v1.47" are a ratio
+  // wearing a hat, and stay figures: excluding them let "under the borrower's
+  // version 1.47 coverage was higher" enforce as resolve where the same
+  // sentence with a bare 1.47 abstains. "version 2." at a sentence end is
+  // still a version: only a digit after the point makes it a decimal.
+  /\bversions?\s+\d+\b(?![.,]\d)/gi,
+  /\bv\d+\b(?![.,]\d)/gi,
   /(?<=[A-Za-z]\s)No\.\s*\d+\b/g,
   /§\s*\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
   /\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*(\([a-z0-9]{1,4}\))*/gi,
@@ -399,17 +404,34 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   }
 
   // ---- check: resolve must be earned -------------------------------------
+  // Earned by the GOVERNING calculation passing — the LAST one in
+  // `calcLogEntries`, which the caller orders oldest first — not by ANY
+  // calculation passing (owner ruling, 2026-10-06). One definition of "the
+  // calculation the recommendation rests on" for every check: the policy's
+  // deep-breach rule and the terms comparison already judge the last one, and
+  // prompt rule 7 tells the model the same.
+  //
+  // REFUSES: a resolve resting on an earlier pass after a later fail. With
+  // `some`, an unbacked add-back that passed, then a baseline re-run that
+  // failed, then "resolve" went through with zero notes — the terms comparison
+  // looked at the failed baseline and found nothing to compare, and this
+  // check found a pass somewhere.
+  // KEEPS ALLOWING: F1's shape — the boarded terms fail, the amended terms pass
+  // last, resolve. The pass that governs is the one the recommendation cites.
   if (out.recommendation === "resolve") {
-    const hasPassingCalc = calcs.some((c) => c && c.outputs && c.outputs.pass === true);
+    const governing = calcs.filter((c) => c && c.outputs).slice(-1)[0];
+    const governingPasses = governing !== undefined && governing.outputs.pass === true;
     const hasCitedTerms = out.claims.length > 0;
 
-    if (!hasPassingCalc || !hasCitedTerms) {
+    if (!governingPasses || !hasCitedTerms) {
       notes.push(
         note(
           "resolve_requires_evidence",
           "escalate",
-          !hasPassingCalc
-            ? "resolve without a passing calculation"
+          !governingPasses
+            ? governing === undefined
+              ? "resolve without a passing calculation"
+              : `resolve, but the governing calculation${governing.calc_id ? ` (${governing.calc_id})` : ""} — the last one logged — does not pass; an earlier pass does not earn it`
             : "resolve without cited effective terms",
         ),
       );

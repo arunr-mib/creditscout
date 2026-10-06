@@ -640,3 +640,53 @@ test("REFUSES: an untraceable figure that appears ONLY in a surviving claim's te
   assert.equal(casefile.recommendation, "abstain");
   assert.match(notes.find((n) => n.check === "figure_traceable").detail, /claims: 1\.47/);
 });
+
+// --- I-1: a version number is an integer -------------------------------------
+
+test("I-1 refuses: an integer version is an identifier, at a sentence end too", () => {
+  for (const text of ["version 2", "Version 1 terms", "the v2 terms", "re-board the covenant terms as version 2.", "use v3."]) {
+    assert.deepEqual(extractFigures(text), [], text);
+  }
+});
+
+test("I-1 keeps allowing: a decimal after 'version' or 'v' is a figure, read exactly as written", () => {
+  assert.deepEqual(extractFigures("version 1.47"), [1.47]);
+  assert.deepEqual(extractFigures("v1.47"), [1.47]);
+  assert.deepEqual(extractFigures("version 1,250,000"), [1250000]);
+  // ...so the sentence the review used enforces exactly as its bare form does.
+  for (const explanation of [
+    "Recomputed DSCR is 1.31 against the required 1.25x. Under the borrower's version 1.47 coverage was higher.",
+    "Recomputed DSCR is 1.31 against the required 1.25x. Under the borrower's v1.47 coverage was higher.",
+    "Recomputed DSCR is 1.31 against the required 1.25x. Under the borrower's 1.47 coverage was higher.",
+  ]) {
+    const { casefile, notes } = applyGuardrail(base({ explanation }), CALCS, CHUNKS);
+    assert.equal(casefile.recommendation, "abstain", explanation);
+    assert.match(notes.find((n) => n.check === "figure_traceable").detail, /1\.47/, explanation);
+  }
+});
+
+// --- I-2: resolve is earned by the GOVERNING calculation ----------------------
+
+const PASS = { calc_id: "calc_pass", outputs: { dscr: 1.31, threshold: 1.25, pass: true, margin: 0.06 } };
+const FAIL = { calc_id: "calc_fail", outputs: { dscr: 1.12, threshold: 1.25, pass: false, margin: -0.13 } };
+const both = (patch) => base({ explanation: "Recomputed DSCR is 1.31 against the required 1.25x; the baseline was 1.12.", ...patch });
+
+test("I-2 refuses: a resolve resting on an earlier pass after a LATER fail is escalated", () => {
+  const { casefile, notes } = applyGuardrail(both(), [PASS, FAIL], CHUNKS);
+  assert.equal(casefile.recommendation, "escalate");
+  const n = notes.find((x) => x.check === "resolve_requires_evidence");
+  assert.equal(n.action, "escalate");
+  assert.match(n.detail, /governing calculation \(calc_fail\).*does not pass/);
+});
+
+test("I-2 keeps allowing: F1's shape — boarded fail, then amended pass last — resolves", () => {
+  const { casefile, notes } = applyGuardrail(both(), [FAIL, PASS], CHUNKS);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+  assert.equal(notes.length, 0);
+});
+
+test("I-2: with no calculation at all there is nothing to govern, and resolve is not earned", () => {
+  const { casefile, notes } = applyGuardrail(base({ explanation: "No figures." }), [], CHUNKS);
+  assert.equal(casefile.recommendation, "escalate");
+  assert.equal(notes.find((x) => x.check === "resolve_requires_evidence").detail, "resolve without a passing calculation");
+});
