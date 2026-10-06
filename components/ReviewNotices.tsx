@@ -66,6 +66,7 @@ export function ReviewNotices(props: {
             {b.title}
             {b.effectiveDate ? ` (effective ${b.effectiveDate})` : ""} is on file and is not part of the terms in force.
           </p>
+          {/* Judged by document title (see amendmentsNotBoarded): "boards it" claims the terms NAME the amendment, not that every provision of it is reflected. */}
           <p className="mt-1 text-body text-text-secondary">
             {b.inTerms
               ? "These proposed terms include it. Approving them boards it: every test from that date on uses the amended covenant."

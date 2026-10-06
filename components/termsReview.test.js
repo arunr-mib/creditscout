@@ -7,6 +7,8 @@ import {
   applyLocalEdits,
   blockers,
   buildRows,
+  clausesOnFile,
+  isHeadingOnly,
   classify,
   clauseFor,
   findQuote,
@@ -212,10 +214,11 @@ test("an analyst's edit citing a clause counts that clause as cited", () => {
   assert.equal(after.length, before.length - 1);
 });
 
-test("nothing is dropped: with no citations at all every clause is listed once", () => {
+test("nothing with text is dropped: with no citations at all every clause that has a body is listed once", () => {
   const seen = sourceClauses("F3");
-  const sections = new Set(seen.map((c) => `${c.doc_title}|${c.section}`));
-  assert.equal(uncitedClauses([], seen).length, sections.size);
+  const listed = uncitedClauses([], seen);
+  assert.equal(listed.length, clausesOnFile(seen));
+  assert.equal(new Set(listed.map((c) => `${c.doc_title}|${c.section}`)).size, listed.length, "each once");
 });
 
 test("a stored proposal's warnings match what the server computes for the same terms", () => {
@@ -354,4 +357,34 @@ test("on the real F3 agreement, \u00a77.11(b) and (c) rest on no term when only 
 test("a quote that is not in the clause rests on nothing, so every paragraph is unrested", () => {
   const text = "(a) one.\n(b) two.";
   assert.deepEqual(paragraphsOf(text, []).map((p) => p.rested), [false, false]);
+});
+
+// ------------------------------------- heading-only chunks are not clauses (N-1)
+
+test("a one-line heading is not an uncited clause; a heading with text under it is", () => {
+  assert.equal(isHeadingOnly("ARTICLE VII \u2014 FINANCIAL COVENANTS"), true);
+  assert.equal(isHeadingOnly("\u00a77.11 Debt Service Coverage Ratio."), true);
+  assert.equal(isHeadingOnly("\u00a77.11 Debt Service Coverage Ratio.\n(a) Minimum Ratio. Not less than."), false);
+  assert.equal(isHeadingOnly("CREDIT AGREEMENT dated as of September 20, 2023."), false, "a preamble is text");
+});
+
+test("headings are left out of the uncited list and its count, and the count of clauses on file", () => {
+  const universe = sourceClauses("F1");
+  const all = new Set(universe.map((c) => `${c.doc_title}|${c.section}`)).size;
+  const headings = universe.filter((c) => isHeadingOnly(c.content)).length;
+  assert.ok(headings > 0, "the real F1 corpus does contain heading-only chunks");
+  const uncited = uncitedClauses([], universe);
+  assert.equal(uncited.length, all - headings);
+  assert.ok(uncited.every((c) => !isHeadingOnly(c.content)));
+  assert.equal(clausesOnFile(universe), all - headings);
+});
+
+// ------------------------------------- the bar names where to look (item 3)
+
+test("the unrested-paragraph count names the clause, not only a number", () => {
+  const p = proposalFor(facility("F3"), 1);
+  const counts = unrestedParagraphs(p.source_citations, sourceClauses("F3"));
+  assert.ok(counts.paragraphs >= 1);
+  assert.ok(counts.where.includes("CA \u00a77.11"), JSON.stringify(counts.where));
+  assert.equal(counts.where.length, counts.clauses);
 });

@@ -380,6 +380,12 @@ export function amendmentDocs(terms: Terms | null | undefined): string[] {
  * lag (docs/design.md §12.5). Judged by title against the approved terms'
  * `effective_amendments`, never by date alone, because a date can be later than
  * an amendment and still not include it.
+ *
+ * KNOWN LIMIT (N-4): "boarded" here means the terms NAME the document. It does not
+ * mean every provision of the amendment is reflected in the terms: terms can cite
+ * Amendment No. 2 for one date and still miss a clause of it. The screen's wording
+ * ("boards it") is therefore stronger than what this check can show; the paragraph
+ * marks and the uncited list are what cover the rest.
  */
 export function amendmentsNotBoarded(documents: readonly DocumentLite[], boardedTitles: ReadonlySet<string>): DocumentLite[] {
   return documents.filter((d) => d.doc_type === "amendment" && !boardedTitles.has(d.title));
@@ -401,7 +407,16 @@ const ENUMERATOR = /^\s*(?:\(\s*[A-Za-z0-9]{1,5}\s*\)\s|§\s*\d|ARTICLE\s+[IVXLC
 /**
  * A clause split into the paragraphs the DOCUMENT draws (a blank line, or a line
  * that opens with an enumerator such as "(b)"), each marked by whether any term's
- * quote touches it. Cited-at-section-level hides this: citing §7.11 for its
+ * quote touches it.
+ *
+ * KNOWN LIMIT (N-2): a clause the document writes as ONE paragraph is judged as a
+ * whole. If a term's quote touches any part of it, the paragraph counts as rested
+ * on, so an omission INSIDE that paragraph (a second add-back in the same
+ * sentence block as the cited one) gets no mark. §1.01's definitions are written
+ * that way. The marker narrows what a person must read; it cannot replace reading
+ * the clause.
+ *
+ * Cited-at-section-level hides this: citing §7.11 for its
  * minimum ratio says nothing about whether §7.11(b) or (c) is rested on by
  * anything, and an add-back lives in exactly such a paragraph.
  */
@@ -447,8 +462,9 @@ export function quotesForClause(clause: Clause, citations: readonly { citation: 
 export function unrestedParagraphs(
   citations: readonly { citation: string; quote: string }[],
   clauses: readonly Clause[],
-): { clauses: number; paragraphs: number } {
+): { clauses: number; paragraphs: number; where: string[] } {
   const seen = new Set<string>();
+  const where: string[] = [];
   let nClauses = 0;
   let nParas = 0;
   for (const c of citations) {
@@ -459,10 +475,13 @@ export function unrestedParagraphs(
     seen.add(key);
     const spans = quotesForClause(clause, citations).map((q) => findQuote(clause.content, q)).filter((x): x is { start: number; end: number } => x !== null);
     const loose = paragraphsOf(clause.content, spans).filter((p) => !p.heading && !p.rested).length;
-    if (loose > 0) nClauses += 1;
+    if (loose > 0) {
+      nClauses += 1;
+      where.push(clause.citation);
+    }
     nParas += loose;
   }
-  return { clauses: nClauses, paragraphs: nParas };
+  return { clauses: nClauses, paragraphs: nParas, where };
 }
 
 // ---------------------------------------------------------------- blockers
@@ -558,6 +577,18 @@ const clauseKey = (doc: string | null, section: string | null) => `${doc ?? ""}|
  * Citing a section covers the whole section HERE; paragraph-level coverage inside
  * a cited clause is `paragraphsOf`, drawn in the clause panel.
  */
+/**
+ * A chunk that is only a heading ("ARTICLE VII — FINANCIAL COVENANTS"): one line,
+ * nothing under it. There is no provision in it to omit, so counting it as an
+ * uncited clause would inflate the number the analyst is deciding how hard to
+ * look by (F1: 18 uncited, about half of them one-line headings). Its text lives
+ * in the sections beneath it, which are listed in their own right.
+ */
+export function isHeadingOnly(content: string): boolean {
+  const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
+  return lines.length === 1 && lines[0].length < 120 && /^(?:ARTICLE\s+[IVXLCDM]+\b|§\s*\d)/.test(lines[0]);
+}
+
 export interface UncitedClause extends Clause {
   /** Whether the model was shown this clause; null when that was not recorded (a stored proposal). */
   shown: boolean | null;
@@ -584,7 +615,17 @@ export function uncitedClauses(
     const prior = merged.get(k);
     merged.set(k, prior ? { ...prior, content: `${prior.content}\n${s.content}` } : { ...s, shown: shownKeys ? shownKeys.has(k) : null });
   }
-  return [...merged.values()];
+  return [...merged.values()].filter((c) => !isHeadingOnly(c.content));
+}
+
+/** Distinct agreement and amendment clauses on file that have any text beyond a heading. */
+export function clausesOnFile(clauses: readonly Clause[]): number {
+  const keys = new Map<string, string>();
+  for (const c of clauses) {
+    const k = clauseKey(c.doc_title, c.section);
+    keys.set(k, `${keys.get(k) ?? ""}\n${c.content}`);
+  }
+  return [...keys.values()].filter((t) => !isHeadingOnly(t)).length;
 }
 
 export type ClauseGroup = "amendment" | "covenant" | "other";

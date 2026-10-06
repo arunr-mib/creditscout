@@ -14,6 +14,7 @@ import {
   applyLocalEdits,
   blockers as computeBlockers,
   clauseFor,
+  clausesOnFile,
   entryFor,
   quotesForClause,
   readRefusal,
@@ -301,7 +302,7 @@ export function CovenantSetup(props: {
   // ----------------------------------------------------------------- render
 
   const busy = phase.kind === "proposing";
-  const totalOnFile = new Set(clauses.map((c) => clauseKeyOf(c))).size;
+  const totalOnFile = clausesOnFile(clauses);
   const knownCitations = [...new Set(clauses.map((c) => c.citation))];
 
   // After an approval the page must not contradict the footer: the versions and the
@@ -337,6 +338,7 @@ export function CovenantSetup(props: {
     opened: uncited.filter((c) => opened.has(clauseKeyOf(c))).length,
     looseClauses: loose.clauses,
     looseParagraphs: loose.paragraphs,
+    looseWhere: loose.where,
     unboarded: unboarded.length,
   };
 

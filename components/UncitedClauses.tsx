@@ -40,7 +40,7 @@ export function UncitedClauses(props: {
   const openedCount = uncited.filter((c) => opened.has(clauseKeyOf(c))).length;
 
   return (
-    <section id="uncited-clauses" aria-labelledby="uncited-title" className="space-y-3 rounded-md border-2 border-code p-4">
+    <section id="uncited-clauses" aria-labelledby="uncited-title" className="space-y-3 rounded-md border border-border-strong border-l-4 border-l-code p-4">
       <div>
         <h2 id="uncited-title" className="text-section text-text">
           Clauses retrieved but not cited
@@ -51,7 +51,8 @@ export function UncitedClauses(props: {
           them for an add-back, a cap or a carve-out that no term mentions.
         </p>
         <p className="mt-1 text-label text-text-muted">
-          Waiver letters, compliance certificates and financials are not source documents and are not listed. Only the
+          Waiver letters, compliance certificates and financials are not source documents and are not listed, and neither are
+          one-line headings with nothing under them. Only the
           clauses on file when this page loaded are listed. A cited clause can still hold a paragraph no term rests on; the
           clause panel marks those.
         </p>

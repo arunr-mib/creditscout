@@ -13,6 +13,8 @@ export interface OmissionCounts {
   /** Cited clauses that hold a paragraph no term rests on, and how many such paragraphs. */
   looseClauses: number;
   looseParagraphs: number;
+  /** Which cited clauses those paragraphs are in, by citation. */
+  looseWhere: string[];
   /** Amendments on file that the terms in force do not carry. */
   unboarded: number;
 }
@@ -171,7 +173,7 @@ function Open({ omission: o, uncheckedLists }: { omission: OmissionCounts; unche
       `, ${o.opened} opened by you`,
   );
   if (o.looseParagraphs > 0) {
-    items.push(`${o.looseParagraphs} paragraph${o.looseParagraphs === 1 ? "" : "s"} in ${o.looseClauses} cited clause${o.looseClauses === 1 ? "" : "s"} that no term rests on`);
+    items.push(`${o.looseParagraphs} paragraph${o.looseParagraphs === 1 ? "" : "s"} in ${o.looseWhere.join(", ")} that no term rests on`);
   }
   return (
     <p className="mt-3 border-t border-border-strong pt-3 font-mono text-label text-code">
