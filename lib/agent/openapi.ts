@@ -115,6 +115,9 @@ const dscrFinancialCitations = {
     scheduled_principal: citation,
     cash_interest: citation,
   },
+  // Closed, as the route is: a citation under any other key is refused with the
+  // path it belongs at, never silently ignored.
+  additionalProperties: false,
 };
 
 const dscrSuccess = {

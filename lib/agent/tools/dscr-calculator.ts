@@ -120,6 +120,10 @@ function malformedField(terms: unknown, financials: unknown): string | null {
   return null;
 }
 
+/** The only keys `financial_citations` may carry, in the order the error lists them. */
+const CITATION_KEYS = [...FINANCIAL_FIELDS, "addback_amounts"];
+const CITATION_KEYS_TEXT = `${FINANCIAL_FIELDS.join(", ")} and addback_amounts`;
+
 /**
  * Shape checks on `financial_citations`, which mirrors `financials`: one
  * citation string per figure, and `addback_amounts` keyed by add-back name.
@@ -128,9 +132,29 @@ function malformedField(terms: unknown, financials: unknown): string | null {
  * citation that is absent, null or blank is NOT malformed: it is a figure with
  * no source, and that is reported per figure (HTTP 200) as missing evidence. A
  * citation that is present but is not a string is malformed, and refused here.
+ *
+ * CLOSED TO ITS KNOWN KEYS, at both levels. A citation filed under the wrong
+ * key is a SHAPE error, and it is refused here with the path it belongs at —
+ * never left to surface later as "no citation" for the figure it was meant
+ * for. That answer was true and useless: in the verify-8c run the model filed
+ * the add-back's citation one level up, was told the add-back had no citation,
+ * read that as missing evidence, and stopped with three of eight steps unspent.
  */
-function malformedCitations(citations: unknown): string | null {
+function malformedCitations(citations: unknown, financials: Record<string, unknown>): string | null {
   if (!isObject(citations)) return "financial_citations is required and must be an object";
+
+  const amounts = own(financials, "addback_amounts");
+  const addbackNames = isObject(amounts) ? Object.keys(amounts) : [];
+  const addbackNamed = (key: string): string | undefined => addbackNames.find((n) => normaliseLabel(n) === normaliseLabel(key));
+  for (const key of Object.keys(citations)) {
+    if (CITATION_KEYS.includes(key)) continue;
+    const name = addbackNamed(key);
+    if (name !== undefined) {
+      return `financial_citations["${key}"] is misplaced: an add-back's citation belongs at financial_citations.addback_amounts["${name}"]`;
+    }
+    return `financial_citations["${key}"] is not a field: financial_citations takes only ${CITATION_KEYS_TEXT}`;
+  }
+
   for (const field of FINANCIAL_FIELDS) {
     const c = own(citations, field);
     if (c !== undefined && c !== null && typeof c !== "string") return `financial_citations.${field} must be a string`;
@@ -140,6 +164,12 @@ function malformedCitations(citations: unknown): string | null {
     if (!isObject(cited)) return "financial_citations.addback_amounts must be an object";
     for (const [name, c] of Object.entries(cited)) {
       if (c !== null && typeof c !== "string") return `financial_citations.addback_amounts["${name}"] must be a string`;
+      if (Object.prototype.hasOwnProperty.call(amounts ?? {}, name)) continue;
+      if (FINANCIAL_FIELDS.includes(name)) {
+        return `financial_citations.addback_amounts["${name}"] is misplaced: ${name} is not an add-back; its citation belongs at financial_citations.${name}`;
+      }
+      const has = addbackNames.length > 0 ? `which has: ${addbackNames.map((n) => `"${n}"`).join(", ")}` : "which has none";
+      return `financial_citations.addback_amounts["${name}"] names no add-back in financials.addback_amounts, ${has}`;
     }
   }
   return null;
@@ -295,7 +325,7 @@ export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}
     return bad("period_end is required and must be a quarter-end date (YYYY-MM-DD)");
   }
 
-  const problem = malformedField(terms, financials) ?? malformedCitations(financial_citations);
+  const problem = malformedField(terms, financials) ?? malformedCitations(financial_citations, financials as Record<string, unknown>);
   if (problem) return bad(problem);
 
   if (casefile_id !== undefined && casefile_id !== null) {
