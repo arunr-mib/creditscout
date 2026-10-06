@@ -311,3 +311,33 @@ them, which is exactly why `/design-system` runs on every component:
 
 **Nothing in §1–§9 failed to tokenise for technical reasons.** The five above are
 rules about *meaning and behaviour*, which no config can express.
+
+---
+
+## 11. Calculated value — the error state
+
+*Added by a `/design-system audit`, 2026-10-05. The audit found that §5.2
+specified how a calculated value looks when it succeeds, and said nothing about
+what renders when it does not — despite the calculator refusing to compute being
+a **first-class product behaviour** (PRD §2.3 behaviours 6–10).*
+
+When `computeDscr()` returns `{error}` — missing input, denominator ≤ 0, unknown
+component name — the UI must render the refusal, not a blank and never a zero:
+
+```
+DSCR   —   ⟡ not computed · missing input: cash_interest
+```
+
+| Element | Token | Why |
+|---|---|---|
+| Value | `text-text-muted`, an em dash | **Never `0.00`.** A zero is a number, and the whole point is that no number exists. |
+| Badge | `text-danger` on `bg-danger-bg` | Rose, not amber. Amber means *code produced a value*; here code **declined** to. |
+| Reason | The error string verbatim | The analyst needs to know which input is missing to go and find it. |
+
+**The rule this encodes:** a missing figure is missing evidence, not zero. The
+calculator never defaults, so the UI must never imply that it did.
+
+The `⟡` glyph is decorative and carries `aria-hidden="true"` — the meaning is in
+the words *computed by code* / *not computed*, which is what a screen reader
+announces. This satisfies §2's rule that meaning is never carried by colour or
+icon alone.
