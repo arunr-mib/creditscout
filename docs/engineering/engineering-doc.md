@@ -63,6 +63,12 @@ agent loop.** Model choice is open to anything available on Azure.
    └────────────────────────────────────────┘
 ```
 
+**Rule — a mid-investigation recomputation never amends the `tests` row.** The
+test records what the *approved* terms produced; that is the audit fact. A
+recomputation on re-mapped terms is evidence inside the casefile. Re-boarding
+creates `covenant_terms` v2, and re-running the test then produces a **new**
+`tests` row.
+
 **Why this satisfies both goals.** Foundry runs the loop, so the owner sees the
 orchestrator delegate to three specialist agents and can replay every step in
 the Foundry portal — that is the learning goal, met natively. But the calculator
@@ -204,9 +210,20 @@ Plan 1 Task 4 owns this, with tests.
 ## 5. How an investigation runs
 
 1. Analyst clicks **Investigate**. The browser calls `POST /api/investigate`.
-2. Vercel creates the `casefiles` row, loads memory (the facility's prior cases
-   plus the top 3 lessons), creates a Foundry **thread**, starts a **run**, and
-   stores `foundry_thread_id` / `foundry_run_id` on the casefile.
+2. Vercel creates the `casefiles` row and assembles the investigation context,
+   then creates a Foundry **thread**, starts a **run**, and stores
+   `foundry_thread_id` / `foundry_run_id` on the casefile.
+
+   **The context must contain all four of these.** The first two were already
+   specified; the last two are required for the agent to detect a covenant
+   boarding lag, which is F1's and F5's entire path:
+
+   | Loaded | Why |
+   |---|---|
+   | The exception, with our number and the borrower's | The thing being investigated |
+   | Top 3 memory lessons for this facility | Warm-memory speed-up |
+   | **The approved `covenant_terms` version in force**, with its `effective_from` | The agent must know what it was tested against |
+   | **The document inventory** — every document on file with `doc_type` and `effective_date` | Without it the agent cannot notice that an amendment exists which the approved terms do not reflect |
 3. It returns `{casefile_id}` **immediately** — as spec §4.2 requires.
 4. Foundry runs the loop: the orchestrator delegates to specialists and calls our
    tools. Tool calls arrive at Vercel as ordinary HTTPS requests.

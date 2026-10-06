@@ -207,11 +207,21 @@ passing number.
 
 ## 4. The MVP: three facilities
 
-| Facility | Twist | Expected path | Outcome |
-|---|---|---|---|
-| **F1 Harbor Logistics** | Amendment No. 2 permits a one-time restructuring add-back. Borrower reports 1.12. | definition → calc (fail) → research → finds Amd 2 → re-map terms → calc (pass) → resolve | **Resolve** (~6 steps) |
-| **F3 Northgate Foods** | A genuine breach. Nothing in the file explains it. | definition → calc (fail) → research (nothing found) → escalate | **Escalate** (~4 steps) |
-| **F5 Coastal Marine** | Same amendment pattern as F1, a quarter later. | memory lesson → check amendments first → calc (pass) → resolve | **Resolve** (~3 steps, warm memory) |
+| Facility | Period | Borrower reports | **We compute** | Mechanism | Expected path | Outcome |
+|---|---|---|---|---|---|---|
+| **F1 Harbor Logistics** | Q2 2026 | 1.12 | **1.12** (agree, both fail) | Approved terms are **v1**; Amendment No. 2 (effective 2026-04-01) is **on file but not yet boarded** | terms → calc (fail) → research → spots the unboarded amendment → re-map → calc (pass) | **Resolve + re-board as v2** (~6 steps) |
+| **F3 Northgate Foods** | Q2 2026 | **1.31 — compliant** | **1.08 — breach** | Borrower took an add-back with **no basis** in the agreement or any amendment. An unexecuted waiver *request* letter is on file, dated after the period, unsigned by the lender. | calc (fail) → research → finds the request letter → determines a requested waiver is not a granted waiver | **Escalate** (~4 steps) |
+| **F5 Coastal Marine** | Q4 2025 | 1.41 | 1.41 | Agree | code only, no agent | **Compliant, no action** |
+| **F5 Coastal Marine** | Q1 2026 | **1.38** | **1.29** | Borrower took the full $900k add-back; the amendment **caps it at $500k**. Both still clear 1.25. | code only, no agent | **Variance logged, not investigated** |
+| **F5 Coastal Marine** | Q2 2026 | 1.30 | 1.12 | Same unboarded-amendment pattern as F1 | memory lesson → check amendments first → calc (pass) | **Resolve in ~3 steps** (warm memory) |
+
+**F3 is the headline case.** The borrower reports *compliant*; nobody would have
+investigated. We compute a breach because we applied their actual covenant. This
+is the case the exception-triage design structurally could not reach.
+
+**Covenant boarding lag is the F1/F5 mechanism, and it is realistic** — setup
+accuracy is a recurring loan-review audit finding, which is also why §4.1a
+requires four-eyes approval.
 
 F1 and F5 together are the demo: **the same problem, solved twice, the second
 time in half the steps because a human taught it something.**
@@ -224,13 +234,14 @@ the demo never shows what happens to the other ~90% of borrowers.
 | Period | F5 scenario | Outcome |
 |---|---|---|
 | Q4 2025 | We compute 1.41 · borrower reports 1.41 · agree | **1 — compliant, no action** |
-| Q1 2026 | We compute 1.38 · borrower reports **1.29** (they omitted a permitted add-back) · both clear 1.25 | **2 — variance logged, not investigated** |
-| Q2 2026 | We compute 1.12 pre-amendment → exception → memory from F1 → resolves | **3 — breach → investigate** |
+| Q1 2026 | We compute **1.29** · borrower reports **1.38** — they took the full $900k add-back, the amendment caps it at $500k · both clear 1.25 | **2 — variance logged, not investigated** |
+| Q2 2026 | Approved terms are v1; Amendment No. 2 is on file unboarded → we compute 1.12 → exception → memory from F1 → resolves | **3 — breach → investigate** |
 
-Two extra financials + certificate pairs, no new facility. Q1 2026 is the one
-that earns the end-to-end redesign: **the borrower's arithmetic is wrong and
-their conclusion is still right** — invisible under the old design, and the
-cheapest possible proof that we compute independently.
+Two extra financials + certificate pairs, no new facility. **F3 carries the case
+that earns the whole redesign:** the borrower reports **1.31 — compliant** and we
+compute **1.08 — a breach**, because they took an add-back with no basis in their
+agreement. Nobody would have investigated that borrower. Under exception triage
+it is structurally unreachable.
 
 ---
 

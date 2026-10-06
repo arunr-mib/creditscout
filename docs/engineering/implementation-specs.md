@@ -137,16 +137,25 @@ guardrails/policy.js
 - **Description:** Three synthetic facilities — F1 Harbor Logistics (amendment add-back), F3 Northgate Foods (true breach), F5 Coastal Marine (repeat of F1's pattern) — each with agreement, amendment/waiver, quarterly financials, compliance certificate.
 - **Plus two extra quarters on F5**, so the demo can show all three quarterly outcomes rather than only the third:
 
-| Period | F5 scenario | Outcome shown |
-|---|---|---|
-| Q4 2025 | Our number 1.41, borrower reports 1.41, agree | **1 — compliant, no action** |
-| Q1 2026 | Our number 1.38, borrower reports **1.29** (they omitted a permitted add-back). Both clear 1.25. | **2 — variance logged, no investigation** |
-| Q2 2026 | Our number 1.12 pre-amendment → exception → memory from F1 → resolves | **3 — breach → investigate** |
+| Period | Borrower reports | We compute | Mechanism | Outcome shown |
+|---|---|---|---|---|
+| Q4 2025 | 1.41 | 1.41 | Agree | **1 — compliant, no action** |
+| Q1 2026 | **1.38** | **1.29** | Borrower took the full $900k add-back; the amendment caps it at **$500k**. Both clear 1.25. | **2 — variance logged, no investigation** |
+| Q2 2026 | 1.30 | 1.12 | Approved terms are v1; Amendment No. 2 on file **unboarded** | **3 — breach → investigate**, resolves in ~3 steps on F1's lesson |
 
-  Two extra financials + certificate pairs, no new facility. The Q1 variance case
-  is what makes the "their maths is off but the conclusion stands" path real
-  rather than hypothetical, and it is the cheapest way to demonstrate that we
-  compute independently.
+  Two extra financials + certificate pairs, no new facility.
+
+**The two mechanisms the synthetic data must support:**
+
+1. **Covenant boarding lag (F1, F5 Q2).** The amendment PDF exists in the
+   document set with an `effective_date` inside the test period, but the approved
+   `covenant_terms` row is v1 and predates it. The agent's job is to notice the
+   gap. **Do not board the amendment during seed** — the lag *is* the twist.
+2. **Unsupported add-back (F3).** The borrower's certificate shows an add-back
+   that appears **nowhere** in the agreement or any amendment, so their 1.31
+   becomes our 1.08. An unexecuted waiver *request* letter sits in the file,
+   dated after the period and unsigned by the lender — the agent must determine
+   that a requested waiver is not a granted waiver.
 - **User flow:** The analyst uploads these during the demo.
 - **Placement:** `data/facilities/F1|F3|F5/`.
 - **Design:** Documents look like credit agreements — definitions article, financial covenants article with DSCR at a `§7.11`-style section, events of default, notices.
@@ -169,6 +178,9 @@ guardrails/policy.js
   - [ ] F5 Q4-2025 produces outcome 1 (compliant, variance within tolerance)
   - [ ] F5 Q1-2026 produces outcome 2 — `variance_flagged = true`, `passed = true`, **no exception row**
   - [ ] F5 Q2-2026 produces outcome 3 (exception)
+  - [ ] **F3's certificate reports 1.31 (compliant) while the agreement supports only 1.08** — the false-compliant catch
+  - [ ] F1 and F5-Q2 amendments are present as documents but **not** boarded into `covenant_terms` by the seed
+  - [ ] F3's waiver request letter is unsigned and dated after the test period
 
 ---
 
@@ -343,14 +355,16 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
   - **No approved terms for the period → refuse to run**, with "Approve covenant terms first". Never fall back to proposed terms (I-3).
   - A financial input missing → `tests.calc_error`, `computed_dscr` NULL, **no exception raised, no zero substituted**
   - Reported DSCR absent from the certificate → test still runs on our number; variance NULL
-  - Ours passes, theirs fails → **investigate** (PRD §2.3 #16)
-  - Ours passes, theirs passes, variance > tolerance → **log only, no investigation** (owner decision)
+  - Ours passes, borrower **overstates** beyond tolerance → **log only, no investigation** (owner decision)
+  - Ours passes, borrower **reports a failure** → **investigate** — a borrower self-reporting a breach may know something the documents do not yet show (resolves the PRD §2.3 #16 / spec §4.1b conflict; owner-approved 2026-10-05)
   - Re-running the same period → updates the existing row, does not duplicate
 - **Testing checklist:**
   - [ ] F1 computes below threshold on the pre-amendment terms → exception raised
   - [ ] F3 computes below threshold → exception raised
   - [ ] A compliant borrower produces a `tests` row and **no** exception
-  - [ ] Variance beyond tolerance sets `variance_flagged` **without** creating an exception
+  - [ ] Borrower overstating beyond tolerance sets `variance_flagged` **without** creating an exception
+  - [ ] Borrower reporting a failure while we pass **does** create an exception
+  - [ ] **F3: our 1.08 raises an exception even though the certificate says 1.31**
   - [ ] Missing financial input → `calc_error` set, `computed_dscr` NULL, no exception
   - [ ] Running without approved terms is refused
   - [ ] Our number, not the reported number, decides `passed`
@@ -387,11 +401,14 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
   - Agent proposes a prohibited action → policy forces `escalate`
   - Malformed agent output → one retry, then `abstain`
   - An exception already under investigation → return the existing casefile, don't start a second
+  - **A recomputation during an investigation never amends the originating `tests` row.** The test records what the *approved* terms produced — that is the audit fact. Re-boarding creates `covenant_terms` v2; re-running then produces a new `tests` row.
 - **Testing checklist:**
   - [ ] `/api/investigate` returns `{casefile_id}` without waiting for the run
   - [ ] Each completed step appends one `trace` entry in order
-  - [ ] F1 reaches `resolve` citing the amendment, with two calculations logged
-  - [ ] F3 reaches `escalate` having found nothing
+  - [ ] F1 reaches `resolve` citing the **unboarded** Amendment No. 2, with two calculations logged, and recommends re-boarding as v2
+  - [ ] F3 reaches `escalate`, having found the waiver **request** and determined it is not a granted waiver
+  - [ ] The investigation context contains the approved terms version **and** the document inventory — without both, F1's path is unreachable
+  - [ ] The originating `tests` row is unchanged after an investigation recomputes
   - [ ] A fabricated figure in the explanation forces `abstain`
   - [ ] A quoted covenant figure does **not** force abstain
   - [ ] Step cap → `abstain`, not a guess

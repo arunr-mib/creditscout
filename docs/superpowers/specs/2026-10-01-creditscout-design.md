@@ -132,7 +132,8 @@ Maker-checker (the four-eyes principle) is the standard control for covenant boa
 | Our number | Borrower's number | Result |
 |---|---|---|
 | Passes | Agrees within `variance_tolerance` | Log compliant, no action |
-| Passes | Differs beyond tolerance | **Log the variance. No investigation.** Their arithmetic is off; the conclusion stands. |
+| Passes | **Overstates** — theirs higher, beyond tolerance | **Log the variance. No investigation.** Their arithmetic is off; the conclusion stands. |
+| Passes | **Reports a failure** | **Investigate.** A borrower self-reporting a breach is significant — they may know something the documents do not yet show. |
 | **Fails** | Anything | **Exception → Investigate (§4.2)** |
 
 4. Every test writes a `tests` row and a `calc_log` row, whether or not it fails.
@@ -188,16 +189,25 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 
 ### 4.3 Expected investigation paths (agentic variation)
 
-| Facility | Twist | Expected path | Outcome |
-|---|---|---|---|
-| F1 Harbor Logistics | Amendment No. 2 permits one-time restructuring add-back; reported 1.12 → actual 1.31 | definition → calc (fail) → research → finds Amd 2 → re-map terms → calc (pass) → resolve | **Resolve** (~6 steps) |
-| F2 Pinecrest Dental | Certificate uses wrong test period | read certificate → period mismatch detected → request; no calc on bad inputs | **Request** corrected certificate (~2) |
-| F3 Northgate Foods | Genuine breach, nothing explains it | definition → calc (fail) → research (nothing) → escalate | **Escalate** (~4) |
-| F4 Alder Software | Certificate cites a waiver not in file | certificate → search waiver → not found → abstain | **Abstain / request waiver** (~3) |
-| F5 Coastal Marine | Same pattern as F1 | memory lesson → check amendments first → calc (pass) → resolve | **Resolve** (~3, warm memory) |
-| F6 Ridge Ag Supply | Borrower omitted a permitted add-back | calc → differs from reported → determine borrower error → resolve with note | **Resolve** with note (~4) |
+| Facility | Period | Borrower reports | **We compute** | Mechanism | Expected path | Outcome |
+|---|---|---|---|---|---|---|
+| **F1 Harbor Logistics** | Q2 2026 | 1.12 | **1.12** (agree, both fail) | Approved terms are **v1**; Amendment No. 2 (effective 2026-04-01) is **on file but not yet boarded** | terms → calc (fail) → research → spots the unboarded amendment → re-map → calc (pass) | **Resolve + re-board as v2** (~6 steps) |
+| **F3 Northgate Foods** | Q2 2026 | **1.31 — compliant** | **1.08 — breach** | Borrower took an add-back with **no basis** in the agreement or any amendment. An unexecuted waiver *request* letter is on file, dated after the period, unsigned by the lender. | calc (fail) → research → finds the request letter → determines a requested waiver is not a granted waiver | **Escalate** (~4 steps) |
+| **F5 Coastal Marine** | Q4 2025 | 1.41 | 1.41 | Agree | code only, no agent | **Compliant, no action** |
+| **F5 Coastal Marine** | Q1 2026 | **1.38** | **1.29** | Borrower took the full $900k add-back; the amendment **caps it at $500k**. Both still clear 1.25. | code only, no agent | **Variance logged, not investigated** |
+| **F5 Coastal Marine** | Q2 2026 | 1.30 | 1.12 | Same unboarded-amendment pattern as F1 | memory lesson → check amendments first → calc (pass) | **Resolve in ~3 steps** (warm memory) |
 
-Owner to validate realism of these twists from credit experience (open item).
+**F3 is the headline case.** The borrower reports *compliant*; nobody would have
+investigated. We compute a breach because we applied their actual covenant. This
+is the case the exception-triage design structurally could not reach.
+
+**Covenant boarding lag is the F1/F5 mechanism, and it is realistic** — setup
+accuracy is a recurring loan-review audit finding, which is also why §4.1a
+requires four-eyes approval.
+
+Facilities F2, F4 and F6 are deferred to the post-MVP backlog
+(`docs/parking-lot.md` §4.1); F2 and F4 exercise `request` and `abstain` and are
+first to restore.
 
 ### 4.4 Review
 
