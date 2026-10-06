@@ -4,6 +4,7 @@ import { applyGuardrail } from "../../guardrails/guardrail.js";
 import { applyPolicy } from "../../guardrails/policy.js";
 import { applyTermsDrift, compareTermsToApproved } from "../../guardrails/terms-drift.js";
 import { termsInForce } from "../terms.ts";
+import { quarterLabel } from "../tests/extract-financials.ts";
 import {
   calcIdNotes,
   calcLogForCasefile,
@@ -44,11 +45,17 @@ import { appendNotes, stoppedAtCap, type Note } from "./notes.ts";
  *   5. guardrail    `applyGuardrail`
  *   6. policy       `applyPolicy`, the policy read live, `steps_count` always
  *                   present (E-7)
+ *   6b. on file     `requestedDocumentsOnFile`: a `missing_evidence` entry
+ *                   naming a document the facility already has is FLAGGED
  *   7. write        the surviving claims, `calc_ids` from the queried rows
  *                   (E-3), notes APPENDED, `pending_review`
  *
- * PURE ORCHESTRATION. Every check lives in `guardrails/`; this file decides
- * what each check is handed and in what order, and nothing else. Three things
+ * PURE ORCHESTRATION. Every check lives in `guardrails/`, with ONE exception
+ * stated here: 6b needs the facility's document inventory and the quarterly
+ * test's period vocabulary, and the import-free guardrail files may neither
+ * fetch nor import. It is still a pure function, handed its evidence like every
+ * other check. Otherwise this file decides what each check is handed and in
+ * what order, and nothing else. Three things
  * it will never do: take a `facility_id` from anything but
  * `exceptions.facility_id`; treat the model's `calculations` array as
  * authoritative; write `summary` (the memory surface, a human review's to
@@ -259,6 +266,112 @@ function capturedCitations(terms: unknown): unknown[] {
   return isObj(terms) && Array.isArray(terms.source_citations) ? terms.source_citations : [];
 }
 
+// ------------------------------------------------- 6b. a request for what is on file
+
+/** A row of the facility's document inventory. */
+export interface DocumentOnFile {
+  doc_type: string;
+  title: string;
+  effective_date: string | null;
+}
+
+/**
+ * Words that may stand before the document an entry asks for without making it
+ * a different document. Anything else there — "restated", "revised", "signed",
+ * "executed", "lender confirmation accepting" — and the entry asks for
+ * something that is NOT the document on file, so it is not flagged.
+ */
+const LEAD = String.raw`^\s*(?:(?:the|a|an|any|one|copy|copies|of|borrower['’]s|lender['’]s|its|their)\s+)*(?:(?:Q[1-4]\s+\d{4}|\d{4}-\d{2}-\d{2})\s+)?`;
+
+/**
+ * The kinds of document an entry can ask for, each by the identity that names
+ * exactly one document: a quarterly document by its type AND period, an
+ * amendment by its number, the agreement, and the waiver REQUEST letter by
+ * name. "A waiver" is not the request letter — a granted waiver is the thing
+ * F3 does not have — so only "waiver request" matches it. A plural
+ * ("compliance certificates for the prior four quarters") matches nothing.
+ */
+const KINDS: { head: RegExp; matches: (doc: DocumentOnFile, m: RegExpExecArray, periods: string[]) => boolean }[] = [
+  {
+    head: new RegExp(`${LEAD}(?:compliance\\s+certificate\\b|CC(?=\\s+Q[1-4]\\s+\\d{4}))`, "i"),
+    matches: (d, _m, periods) => d.doc_type === "compliance_certificate" && d.effective_date !== null && periods.includes(quarterLabel(d.effective_date)),
+  },
+  {
+    head: new RegExp(`${LEAD}(?:financial\\s+statements?\\b|financials\\b|Fin(?=\\s+Q[1-4]\\s+\\d{4}))`, "i"),
+    matches: (d, _m, periods) => d.doc_type === "financials" && d.effective_date !== null && periods.includes(quarterLabel(d.effective_date)),
+  },
+  { head: new RegExp(`${LEAD}amendment\\s+no\\.?\\s*(\\d+)\\b`, "i"), matches: (d, m) => d.doc_type === "amendment" && d.title === `Amendment No. ${m[1]}` },
+  { head: new RegExp(`${LEAD}credit\\s+agreement\\b`, "i"), matches: (d) => d.doc_type === "agreement" },
+  { head: new RegExp(`${LEAD}waiver\\s+request\\b`, "i"), matches: (d) => d.doc_type === "waiver" && /request/i.test(d.title) },
+];
+
+const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+
+/**
+ * The periods an entry names, as quarter labels ("Q2 2026"): a quarter label,
+ * an ISO date, or a long-form date. None named — "the compliance certificate",
+ * "… for the test period" — means the investigation's own period, which is what
+ * the words mean inside it.
+ */
+function periodsNamed(entry: string, testPeriodEnd: string): string[] {
+  const out = new Set<string>();
+  for (const m of entry.matchAll(/\bQ([1-4])\s+(\d{4})\b/gi)) out.add(`Q${m[1]} ${m[2]}`);
+  for (const m of entry.matchAll(/\b(\d{4})-(\d{2})-\d{2}\b/g)) out.add(quarterLabel(`${m[1]}-${m[2]}-01`));
+  for (const m of entry.matchAll(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+(\d{4})\b/gi)) {
+    out.add(quarterLabel(`${m[2]}-${String(MONTHS.indexOf(m[1].toLowerCase()) + 1).padStart(2, "0")}-01`));
+  }
+  return out.size > 0 ? [...out] : [quarterLabel(testPeriodEnd)];
+}
+
+/**
+ * THE ON-FILE CHECK (8c fix round 2). `missing_evidence` is "what is not on file
+ * that would change the answer". An entry that asks for a document the facility
+ * already holds — the live verify-8c run asked for the Q2 2026 compliance
+ * certificate, which F1 has — sends an analyst after something they have, and
+ * shows the agent did not read its own inventory.
+ *
+ * FLAG, never downgrade: a `request` is already the conservative answer, and the
+ * note tells the analyst exactly what the model missed. It runs on every
+ * recommendation, because the field means the same thing on all of them.
+ *
+ * REFUSES (flags): an entry that LEADS with a document the inventory has —
+ * "Compliance Certificate Q2 2026 or …", "The Q2 2026 financial statements",
+ * "Amendment No. 2 to the Credit Agreement".
+ * KEEPS ALLOWING (no note): anything genuinely absent — a signed or executed
+ * waiver, an executed amendment, a restated certificate, another period's
+ * document the facility does not have — and an entry that only MENTIONS a
+ * document while asking for something else ("lender confirmation accepting the
+ * Compliance Certificate"). Narrow on purpose: a flag that fires on context is
+ * noise an analyst learns to ignore.
+ */
+export function requestedDocumentsOnFile(missingEvidence: unknown, documents: readonly DocumentOnFile[], testPeriodEnd: string): Note[] {
+  const notes: Note[] = [];
+  for (const entry of Array.isArray(missingEvidence) ? missingEvidence : []) {
+    if (typeof entry !== "string" || entry.trim() === "") continue;
+    const periods = periodsNamed(entry, testPeriodEnd);
+    for (const kind of KINDS) {
+      const m = kind.head.exec(entry);
+      if (!m) continue;
+      const held = documents.filter((d) => kind.matches(d, m, periods));
+      if (held.length > 0) {
+        const where = held.map((d) => `${d.title}, effective ${d.effective_date ?? "undated"}`).join("; ");
+        notes.push({ layer: "guardrail", check: "requested_document_on_file", action: "flag", detail: `${entry} — on file as ${where}` });
+      }
+      break;
+    }
+  }
+  return notes;
+}
+
+/** The facility's inventory: filtered by the query AND again in memory, as every evidence gather is. */
+async function loadDocuments(client: Db, facilityId: string): Promise<DocumentOnFile[]> {
+  const rows = (check(
+    await client.from("documents").select("facility_id, doc_type, title, effective_date").eq("facility_id", facilityId),
+    "read documents",
+  ) ?? []) as (DocumentOnFile & { facility_id: string })[];
+  return rows.filter((r) => r.facility_id === facilityId).map(({ doc_type, title, effective_date }) => ({ doc_type, title, effective_date }));
+}
+
 // ------------------------------------------------------------- 7. the write
 
 /**
@@ -409,6 +522,10 @@ export async function enforceCasefile(casefileId: string, deps: EnforceDeps = {}
   // ---- 5–6. guardrail, then policy -----------------------------------------
   const policed = police(casefile, calcs, citedChunks, await readPolicy(client), row.steps_count);
   notes.push(...policed.notes);
+
+  // ---- 6b. a request for a document already on file: flagged, never downgraded
+  const documents = await loadDocuments(client, exception.facility_id);
+  notes.push(...requestedDocumentsOnFile(policed.casefile.missing_evidence, documents, exception.test_period_end));
 
   // ---- 7. write ------------------------------------------------------------
   const wrote = await writeEnforced(client, row, policed, calcs, notes, replaced);
