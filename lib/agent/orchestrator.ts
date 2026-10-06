@@ -354,14 +354,15 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
  * bug available in this system. `casefile_id` is forced so every calculation
  * lands in `calc_log` against this investigation whatever the model sent.
  *
- * The calculator gets `facility_id` too: it verifies each financial figure
- * against the financials chunk the model cited, and the facility decides whose
- * financials those are. Named by the model, it could point the check at another
- * borrower's documents to make its figures verify.
+ * The calculator gets `facility_id` and `period_end` too: it verifies each
+ * financial figure against the line the model cited, and these two decide whose
+ * financials, and which quarter's, that line must come from. Named by the
+ * model, either could point the check at documents where its figures verify —
+ * another borrower's, or a prior quarter's that passed.
  */
 export function toolRequestBody(name: string, args: unknown, ctx: ToolContext): Record<string, unknown> {
   const base = isObj(args) ? { ...args } : {};
-  if (name === "dscr_calculator") return { ...base, casefile_id: ctx.casefileId, facility_id: ctx.facilityId };
+  if (name === "dscr_calculator") return { ...base, casefile_id: ctx.casefileId, facility_id: ctx.facilityId, period_end: ctx.periodEnd };
   if (name === "search_documents") return { ...base, facility_id: ctx.facilityId };
   if (name === "search_past_cases") return { ...base, facility_id: ctx.facilityId, run_id: ctx.runId };
   return base;

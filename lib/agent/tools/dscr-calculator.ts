@@ -1,8 +1,16 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeDscr } from "../../../calc/dscr.js";
-import { extractFigures } from "../../../guardrails/guardrail.js";
 import { resolveCitation } from "../../chunk.ts";
+import {
+  INPUT_LABELS,
+  financialsTitle,
+  isQuarterEnd,
+  labeledLines,
+  normaliseLabel,
+  parseAmount,
+  type InputName,
+} from "../../tests/extract-financials.ts";
 import { loadFacilityChunks, type FacilityChunk } from "../evidence.ts";
 
 /**
@@ -20,12 +28,22 @@ import { loadFacilityChunks, type FacilityChunk } from "../evidence.ts";
  * quoted verbatim from a cited chunk ... a figure the agent cannot cite is
  * missing evidence". So every figure arrives with a citation naming the
  * FINANCIALS chunk it was read from, and before anything is calculated the
- * figure is checked against that chunk's text, for the facility the casefile
- * names. Without this the model can hand the calculator a number it produced
- * itself — every live F1 run passed 500,000, the cap applied by the model, where
- * the financials state 620,000 — and the calculation gets a calc_id the
- * guardrail trusts. The cap is the calculator's job; the model's only correct
- * move is to pass what the document says.
+ * figure is checked against that chunk, for the facility and the test period
+ * the casefile names. Without this the model can hand the calculator a number
+ * it produced itself — every live F1 run passed 500,000, the cap applied by the
+ * model, where the financials state 620,000 — and the calculation gets a
+ * calc_id the guardrail trusts. The cap is the calculator's job; the model's
+ * only correct move is to pass what the document says.
+ *
+ * "What the document says" means the figure printed on THAT FIELD'S labelled
+ * line, in THAT PERIOD'S financials. A figure merely present somewhere in a
+ * financials chunk is not enough (review 8c, I-1 and I-2): F5's Q4 2025 figures
+ * turn its Q2 2026 fail (1.12) into a pass (1.41), and swapping F1's capex and
+ * principal figures turns 1.28 into 1.62 — every one of those numbers genuinely
+ * printed in a genuine financials chunk. The labels are the quarterly test's
+ * own (`lib/tests/extract-financials.ts`, spec §9: each input printed as its own
+ * labelled line so it can be read and cited without extraction), so the agent's
+ * figures are checked by exactly the reading that produced our figure.
  */
 
 export interface ToolResult {
@@ -134,6 +152,8 @@ interface FinancialInput {
   /** The key it sits under: a financials field, or the add-back's name. */
   key: string;
   addback: boolean;
+  /** The line it must be read from: the quarterly test's label for a field, the add-back's own name for an add-back. */
+  label: string;
   value: number;
   /** Trimmed; "" when none was given. */
   citation: string;
@@ -153,7 +173,10 @@ function financialInputs(financials: Record<string, unknown>, citations: Record<
   const out: FinancialInput[] = [];
   for (const field of FINANCIAL_FIELDS) {
     const v = own(financials, field);
-    if (isNumber(v)) out.push({ field: `financials.${field}`, key: field, addback: false, value: v, citation: cite(own(citations, field)) });
+    if (isNumber(v)) {
+      const label = INPUT_LABELS[field as InputName];
+      out.push({ field: `financials.${field}`, key: field, addback: false, label, value: v, citation: cite(own(citations, field)) });
+    }
   }
   const amounts = own(financials, "addback_amounts");
   const cited = own(citations, "addback_amounts");
@@ -161,7 +184,7 @@ function financialInputs(financials: Record<string, unknown>, citations: Record<
     for (const [name, v] of Object.entries(amounts)) {
       if (!isNumber(v)) continue;
       const c = isObject(cited) ? own(cited, name) : undefined;
-      out.push({ field: `financials.addback_amounts["${name}"]`, key: name, addback: true, value: v, citation: cite(c) });
+      out.push({ field: `financials.addback_amounts["${name}"]`, key: name, addback: true, label: name, value: v, citation: cite(c) });
     }
   }
   return out;
@@ -175,44 +198,64 @@ function financialInputs(financials: Record<string, unknown>, citations: Record<
  */
 const sameCents = (a: number, b: number): boolean => Math.round(a * 100) === Math.round(b * 100);
 
+/** The quarterly test's input labels, normalised: an add-back line carrying one of these is not an add-back. */
+const INPUT_LABEL_SET = new Set(Object.values(INPUT_LABELS).map(normaliseLabel));
+
 /**
- * THE PROVENANCE CHECK. For each input, in order: the citation must be given,
- * must name a section on file for THIS facility, that section must be a
- * financials chunk, and the figure must be stated in it. Numbers are compared
- * after normalisation (`extractFigures`, the guardrail's own reader), never as
- * text: the chunk prints "4,020,000" and the figure is 4020000.
+ * The one problem with one figure, or null when it is exactly what its cited
+ * line prints. Each step closes a way to cite a real number for the wrong thing:
  *
+ *   1. a citation at all
+ *   2. it names a section on file for THIS facility
+ *   3. that section is a FINANCIALS chunk. The cap a model pre-applies is
+ *      printed too — in the amendment ("not to exceed $500,000") — and the
+ *      borrower's compliance certificate prints figures, but the borrower's
+ *      figure is evidence to reconcile against, never the source of ours.
+ *   4. it is THE TEST PERIOD'S financials, chosen by exact document title as
+ *      the quarterly test chooses it (`financialsTitle`). Other quarters'
+ *      financials are real financials chunks, and their figures are real.
+ *   5. it has exactly one line carrying THIS FIELD'S label — read with the
+ *      quarterly test's `labeledLines`, a debt-service input never from an
+ *      add-back line and an add-back only from one — whose value is a plain
+ *      number (`parseAmount`), and that value is the figure, to the cent.
+ *      Numbers are compared as numbers, never as text: the line prints
+ *      "4,020,000" and the figure is 4020000.
+ */
+function problemWith(input: FinancialInput, chunks: readonly FacilityChunk[], periodEnd: string): string | null {
+  const { field, value, citation, label, addback } = input;
+  if (citation === "") return `${field}: no citation`;
+
+  const ref = resolveCitation(citation);
+  const parts = ref.doc_title && ref.section ? chunks.filter((c) => c.doc_title === ref.doc_title && c.section === ref.section) : [];
+  if (parts.length === 0) return `${field}: ${citation} names no section on file for this facility`;
+
+  const other = parts.find((c) => c.doc_type !== FINANCIALS_DOC_TYPE);
+  if (other) return `${field}: ${citation} is not a financials chunk (it is ${other.doc_type ?? "of no known type"})`;
+
+  const wantedTitle = financialsTitle(periodEnd);
+  if (ref.doc_title !== wantedTitle) return `${field}: ${citation} is from "${ref.doc_title}", not the test period's "${wantedTitle}"`;
+
+  const wanted = normaliseLabel(label);
+  const lines = labeledLines(parts.map((c) => ({ content: c.content, citation }))).filter(
+    (l) => l.addback === addback && normaliseLabel(l.label) === wanted && !(addback && INPUT_LABEL_SET.has(wanted)),
+  );
+  if (lines.length === 0) return `${field}: ${citation} has no ${addback ? "add-back " : ""}line labelled "${label}"`;
+  if (lines.length > 1) return `${field}: "${label}" appears ${lines.length} times in ${citation}, so the figure is ambiguous`;
+
+  const [line] = lines;
+  const stated = parseAmount(line.raw);
+  if (stated === null) return `${field}: ${citation} prints "${line.raw}" on its "${line.label}" line, which is not a plain number`;
+  if (!sameCents(stated, value)) return `${field}: ${citation} states ${stated} on its "${line.label}" line, not ${value}`;
+  return null;
+}
+
+/**
+ * THE PROVENANCE CHECK: `problemWith` for every input, in input order.
  * Returns every problem, joined, so one more step can fix them all; null when
  * every figure is verified.
- *
- * WHY THE DOCUMENT TYPE IS CHECKED, and not only the figure: the cap a model
- * pre-applies is stated too — in the amendment ("not to exceed $500,000"). A
- * figure check alone would accept the pre-capped 500,000 cited to `Amd 2 §3`,
- * which is exactly the error this exists to stop. The borrower's compliance
- * certificate states figures as well, and the borrower's figure is evidence to
- * reconcile against, never the source of ours.
  */
-function provenanceProblems(inputs: FinancialInput[], chunks: readonly FacilityChunk[]): string | null {
-  const problems: string[] = [];
-  for (const { field, value, citation } of inputs) {
-    if (citation === "") {
-      problems.push(`${field}: no citation`);
-      continue;
-    }
-    const ref = resolveCitation(citation);
-    const parts = ref.doc_title && ref.section ? chunks.filter((c) => c.doc_title === ref.doc_title && c.section === ref.section) : [];
-    if (parts.length === 0) {
-      problems.push(`${field}: ${citation} names no section on file for this facility`);
-      continue;
-    }
-    const other = parts.find((c) => c.doc_type !== FINANCIALS_DOC_TYPE);
-    if (other) {
-      problems.push(`${field}: ${citation} is not a financials chunk (it is ${other.doc_type ?? "of no known type"})`);
-      continue;
-    }
-    const stated = extractFigures(parts.map((c) => c.content).join("\n")) as number[];
-    if (!stated.some((n) => sameCents(n, value))) problems.push(`${field}: ${value} is not stated in ${citation}`);
-  }
+function provenanceProblems(inputs: FinancialInput[], chunks: readonly FacilityChunk[], periodEnd: string): string | null {
+  const problems = inputs.map((i) => problemWith(i, chunks, periodEnd)).filter((p): p is string => p !== null);
   return problems.length > 0 ? problems.join("; ") : null;
 }
 
@@ -233,17 +276,24 @@ async function defaultClient(): Promise<Pick<SupabaseClient, "from">> {
 /** Postgres foreign_key_violation: here, a casefile_id that names no casefile. */
 const FOREIGN_KEY_VIOLATION = "23503";
 
+/** An ISO date that ends a quarter: documents are filed by quarter (`isQuarterEnd`). */
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * `facility_id` names whose financials the citations are read against. The
- * MODEL never supplies it: the orchestrator's `toolRequestBody` overwrites it
- * from the casefile's exception, so a model cannot point the check at another
- * borrower's documents to make its figures verify.
+ * `facility_id` and `period_end` decide whose financials, and which quarter's,
+ * the citations are read against. The MODEL never supplies either: the
+ * orchestrator's `toolRequestBody` overwrites both from the casefile's
+ * exception, so a model can point the check neither at another borrower's
+ * documents nor at another quarter's to make its figures verify.
  */
 export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}): Promise<ToolResult> {
   if (!isObject(body)) return bad("request body must be a JSON object");
-  const { terms, financials, financial_citations, facility_id, casefile_id } = body;
+  const { terms, financials, financial_citations, facility_id, period_end, casefile_id } = body;
 
   if (typeof facility_id !== "string" || !UUID.test(facility_id)) return bad("facility_id is required and must be a UUID");
+  if (typeof period_end !== "string" || !ISO_DATE.test(period_end) || !isQuarterEnd(period_end)) {
+    return bad("period_end is required and must be a quarter-end date (YYYY-MM-DD)");
+  }
 
   const problem = malformedField(terms, financials) ?? malformedCitations(financial_citations);
   if (problem) return bad(problem);
@@ -267,7 +317,7 @@ export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}
       return { status: 500, body: { error: "the cited documents could not be read" } };
     }
   }
-  const unverified = provenanceProblems(inputs, chunks);
+  const unverified = provenanceProblems(inputs, chunks, period_end);
   if (unverified) return { status: 200, body: { error: unverified } };
 
   // The id is minted here, before the call, and handed in. The pure function
@@ -289,6 +339,7 @@ export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}
       financials,
       financial_citations: verifiedCitations(financials as Record<string, unknown>, inputs),
       facility_id,
+      period_end,
     },
     outputs: result,
     calculator_version: result.calculator_version,

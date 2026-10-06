@@ -97,15 +97,16 @@ const citation = { type: "string" };
 
 /**
  * Where each figure in `financials` was read: the same keys, one citation
- * string per figure. The route verifies every figure against the chunk its
- * citation names before it calculates anything (spec §4.2). Required as a
- * whole; an individual figure's citation missing is reported as missing
- * evidence (HTTP 200), not a malformed request.
+ * string per figure. The route verifies every figure against the labelled line
+ * of the chunk its citation names, in the test period's financials, before it
+ * calculates anything (spec §4.2). Required as a whole; an individual figure's
+ * citation missing is reported as missing evidence (HTTP 200), not a malformed
+ * request.
  */
 const dscrFinancialCitations = {
   type: "object",
   description:
-    'For every figure sent in financials, the citation of the financials chunk it was read from, in the label form search_documents returns (for example "Fin Q2 2026 §1"). Same keys as financials, addback_amounts included. A figure with no citation, a citation that is not a financials chunk, or a figure the cited chunk does not state returns an error body (HTTP 200) and no calculation.',
+    'For every figure sent in financials, the citation of the financials chunk it was read from, in the label form search_documents returns (for example "Fin Q2 2026 §1"). Same keys as financials, addback_amounts included. A figure with no citation, a citation that is not the test period\'s financials, or a figure that is not the one printed on that field\'s labelled line in the cited chunk returns an error body (HTTP 200) and no calculation.',
   properties: {
     ebitda: citation,
     addback_amounts: { type: "object", additionalProperties: citation, description: "Keyed by add-back name, exactly as in financials.addback_amounts." },
@@ -188,18 +189,19 @@ export function buildOpenApi(env: Record<string, string | undefined> = process.e
           operationId: "dscr_calculator",
           summary: "Compute DSCR from covenant terms and the period's financials",
           description:
-            "The only source of a DSCR figure. Returns a calc_id for every successful calculation. Each financial figure is verified against the financials chunk cited for it before anything is calculated. A missing input, or a figure that cannot be verified, returns an error body (HTTP 200), not a number.",
+            "The only source of a DSCR figure. Returns a calc_id for every successful calculation. Each financial figure is verified against its labelled line in the test period's financials chunk cited for it before anything is calculated. A missing input, or a figure that cannot be verified, returns an error body (HTTP 200), not a number.",
           security: secured,
           requestBody: {
             required: true,
             content: json({
               type: "object",
-              required: ["terms", "financials", "financial_citations", "facility_id"],
+              required: ["terms", "financials", "financial_citations", "facility_id", "period_end"],
               properties: {
                 terms: dscrTerms,
                 financials: dscrFinancials,
                 financial_citations: dscrFinancialCitations,
                 facility_id: { ...uuid, description: "The facility whose financials the citations are read against." },
+                period_end: { type: "string", format: "date", description: "The test period end; the citations must name that quarter's financials." },
                 casefile_id: { ...uuid, description: "The casefile this calculation belongs to, if any." },
               },
             }),
