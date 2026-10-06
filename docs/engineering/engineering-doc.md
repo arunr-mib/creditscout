@@ -604,6 +604,12 @@ agent's work inside the product.
 
 ---
 
+**A-5 — a retry starts a new Foundry thread**, never reuses the failed one. A
+reused thread inherits the context that failed and tends to fail the same way.
+`casefiles.foundry_thread_id` holds the latest attempt.
+
+---
+
 ## 11. Evaluation
 
 **Unchanged from spec §8.** `evals/run.mjs` POSTs to `/api/investigate` on the
