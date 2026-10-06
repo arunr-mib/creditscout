@@ -328,9 +328,12 @@ every quarter, not only for the ones that fail.
 | `variance_flagged` | boolean DEFAULT false | `abs(variance) > policy.variance_tolerance` |
 | `calc_id` | uuid FK → `calc_log` | |
 | `calc_error` | text NULL | Populated when inputs were missing — never defaulted to zero |
+| `run_id` | text NOT NULL DEFAULT `'demo'` | **A-2.** Separates eval runs from demo data, matching `casefiles.run_id`. Without it an eval pass writes into the demo portfolio *and* collides on the unique constraint below. |
 | `created_at` | timestamptz | |
 
-**Constraint:** `UNIQUE (facility_id, test_period_end)`.
+**Constraint:** `UNIQUE (facility_id, test_period_end, run_id)` — the `run_id` is
+part of the key, so an eval can re-test the same borrower and period without
+touching demo data.
 **The three outcomes** are derived, not stored as an enum: `passed = true` and
 `variance_flagged = false` → compliant; `passed = true` and `variance_flagged =
 true` → logged variance; `passed = false` → an `exceptions` row is written.
@@ -346,7 +349,7 @@ true` → logged variance; `passed = false` → an `exceptions` row is written.
 | `computed_dscr` | numeric(10,4) | |
 | `reported_dscr` | numeric(10,4) | |
 | `required_dscr` | numeric(10,4) | |
-| `status` | text CHECK | `new` \| `investigating` \| `pending_review` \| `closed` \| `needs_filing` |
+| `status` | text CHECK | `new` \| `investigating` \| `pending_review` \| `closed` \| `needs_filing`. **A-4: `casefiles.status` is authoritative** once a casefile exists; this column mirrors it. One writer only — the sync route. |
 | `created_at` | timestamptz | |
 
 ### 6.7 `casefiles`
@@ -477,7 +480,21 @@ one internal route.
 | `/api/ingest` | POST | multipart: `file`, `facility_id`, `doc_type` | `{document_id, chunks_created}` | service-role, server-side |
 | `/api/covenant-terms/propose` | POST | `{facility_id}` | `{terms_id, terms, source_citations}` — status `proposed` | service-role |
 | `/api/covenant-terms/approve` | POST | `{terms_id, approved_by, edits?}` | `{terms_id, version, effective_from}` — status `approved` | service-role |
-| `/api/tests/run` | POST | `{facility_id, test_period_end}` | `{test_id, computed_dscr, passed, variance_flagged, exception_id?}` | service-role |
+| `/api/tests/run` | POST | `{facility_id, test_period_end, run_id?}` | `{test_id, computed_dscr, passed, variance_flagged, exception_id?}` | service-role |
+
+**A-1 — the analyst triggers a test per borrower.** There is deliberately no
+"run the whole quarter" route. The analyst picks a borrower and a period. It
+costs three clicks in the demo instead of one, and it keeps the human visibly in
+control of when a covenant gets tested, which is the posture the whole product
+takes.
+
+**A-3 — ingesting a certificate does not auto-trigger a test.** Upload and test
+stay separate actions. Auto-running would hide the independent-computation
+moment, which is the thing worth seeing.
+
+**A-6 — no certificate on file:** `reported_dscr` is NULL, `variance` NULL,
+`variance_flagged` false. **The test still runs on our number.** We do not need
+the borrower's figure to determine compliance; we only need it to reconcile.
 | `/api/investigate` | POST | `{exception_id}` | `{casefile_id}` **immediately** — work continues in Foundry | service-role |
 | `/api/review` | POST | `{casefile_id, decision, reason?, corrected_outcome?, confirmed_tag?}` | `{status}` | service-role |
 

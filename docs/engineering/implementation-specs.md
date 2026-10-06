@@ -96,6 +96,12 @@ guardrails/guardrail.js
   applyGuardrail(casefile, calcLogEntries, citedChunks) → {casefile, notes[]}
   normaliseNumber(text) → number|null    ← "1,250,000" "1.25x" "$4.25m" → number
 
+  verifyTermsProvenance(terms, sourceCitations, chunks) → {valid, violations[]}
+    SECURITY FIX S-1. Every numeric value in `terms` must appear — after
+    normalisation — in the quote that term cites. A citation that merely EXISTS
+    is not evidence; a threshold of 0.85 citing a clause that says 1.25 must be
+    rejected. Blocks approval in F6.
+
 guardrails/policy.js
   applyPolicy(casefile, policy, calcs) → {casefile, notes[]}
   DEFAULT_POLICY
@@ -129,6 +135,8 @@ guardrails/policy.js
   - [ ] Policy: prohibited action proposed → forced `escalate`
   - [ ] Policy: breach deeper than `escalate_if_breach_margin_over` → `escalate`
   - [ ] Schema: malformed output → one retry, then `abstain`
+  - [ ] **S-1: a term whose value does not appear in its own cited quote is rejected** (threshold 0.85 citing a clause that reads 1.25)
+  - [ ] S-1: a term whose value *does* appear, in any format, is accepted
 
 ---
 
@@ -303,6 +311,17 @@ at `status: requires_action` and resumes via
 | `POST /api/tools/search-past-cases` | `{facility_id, exception_profile, k?}` | `[{lesson_text, pattern_tag, case_summary}]` |
 
 All three require `X-CreditScout-Tool-Key`; 401 without it.
+
+**SECURITY FIX S-2 — fail closed.** The check must reject when
+`process.env.CREDITSCOUT_TOOL_KEY` is **unset or empty**, not only when the
+header mismatches. `header !== process.env.KEY` passes when both are
+`undefined`, which would leave these routes publicly callable.
+
+```ts
+const expected = process.env.CREDITSCOUT_TOOL_KEY;
+if (!expected || expected.length < 32) return unauthorized();   // fail closed
+if (req.headers.get("x-creditscout-tool-key") !== expected) return unauthorized();
+```
 An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry registers.
 
 ### Frontend & QA
@@ -315,6 +334,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
   - Malformed `terms` → validation error naming the field
 - **Testing checklist:**
   - [ ] Request without the tool key → 401
+  - [ ] **S-2: request succeeds against an unset `CREDITSCOUT_TOOL_KEY` → must still 401** (fail closed, not open)
   - [ ] `search-documents` with facility A never returns facility B's chunks
   - [ ] Calculator tool writes exactly one `calc_log` row per call
   - [ ] `calc_id` returned matches the row written
@@ -339,7 +359,8 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 - **Database tasks:** `propose` inserts `status='proposed'`. `approve` sets `status='approved'`, `approved_by`, `approved_at`; sets the previous version's `effective_to` and marks it `superseded`; assigns `version = max(version)+1`.
 - **Helper functions:**
   - `lib/agent/tools/definition-agent.ts` → `proposeTerms(facilityId): Promise<{terms, source_citations}>`
-  - `lib/terms.ts` → `validateTerms(terms)`, `supersede(facilityId, newVersion)`
+  - `lib/terms.ts` → `validateTerms(terms)` (shape), `supersede(facilityId, newVersion)`
+  - **`verifyTermsProvenance()` from `guardrails/guardrail.js` runs before approval is offered.** Shape validation is not provenance validation — see S-1.
 - **API routes:** `POST /api/covenant-terms/propose` · `POST /api/covenant-terms/approve`.
 
 ### Frontend & QA
@@ -348,6 +369,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 - **Edge cases:**
   - Agreement with no recognisable DSCR definition → "not found", analyst resolves manually; **never invent a threshold** (PRD §2.3 #27)
   - A term without a citation → Approve stays disabled
+  - **A term whose value is absent from its own cited quote → Approve stays disabled**, with the offending term flagged. A real citation carrying a wrong number is the dangerous case, because it looks correct.
   - Analyst edits a term → the edit is stored and the citation marked `analyst-corrected`
   - Approving when an approved version already exists → creates v+1, supersedes the old; **never overwrites**
   - Two approvals racing → `UNIQUE (facility_id, version)` rejects the second
@@ -358,6 +380,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
   - [ ] A second approval creates v2 and sets v1 `effective_to` and `superseded`
   - [ ] **A test run for a past period still resolves to the version in force then**
   - [ ] Approve disabled while any term lacks a citation
+  - [ ] **Approve disabled while any term's value is absent from its cited quote**
   - [ ] Agreement without a DSCR definition does not fabricate one
 
 ---
@@ -374,7 +397,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 ### Data & Backend
 - **Database schema:** Writes `tests`, `calc_log`, and `exceptions` when failing.
-- **Database tasks:** Insert `tests` row (unique on facility+period); insert `calc_log`; on `passed=false` insert `exceptions` with `test_id`.
+- **Database tasks:** Insert `tests` row (unique on facility + period + **`run_id`**); insert `calc_log`; on `passed=false` insert `exceptions` with `test_id`. `run_id` defaults to `'demo'`; the eval runner passes its own.
 - **Helper functions:**
   - `lib/tests/run.ts` → `runTest(facilityId, periodEnd): Promise<TestResult>`
   - `lib/tests/extract-financials.ts` → `readLabeledFigures(facilityId, periodEnd)` — reads the six labeled lines **and returns the citation for each**
@@ -524,17 +547,16 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 ## Ambiguities found in the engineering document
 
-The skill says report rather than guess. These are structural questions the
-engineering doc does not answer. **A-1 and A-2 need a decision before F7.**
+**All six resolved 2026-10-05.** Kept as a record of what was decided and why.
 
-| # | Ambiguity | Why it matters | Recommendation |
+| # | Ambiguity | Why it matters | Resolution |
 |---|---|---|---|
-| **A-1** | **Who triggers a quarterly test?** §7 defines `POST /api/tests/run` taking one `facility_id` + `test_period_end`, but never says whether the analyst runs it per borrower or runs a whole quarter at once. | The portfolio screen needs one button or many, and the demo reads very differently: "run the quarter" shows all three outcomes at once, which is the point of end-to-end. | **Add `POST /api/tests/run-quarter {test_period_end}`** that loops every facility with approved terms. Keeps the per-facility route for re-runs. |
-| **A-2** | **`tests` has no `run_id`.** `casefiles` has one to separate eval runs from demo data; `tests` does not. | An eval pass would write `tests` rows into the demo portfolio and trip the `UNIQUE (facility_id, test_period_end)` constraint against demo data. | **Add `run_id text` to `tests`** and include it in the unique constraint. Small schema change, better caught now than during the eval. |
-| **A-3** | **Does ingesting a certificate auto-trigger a test?** The certificate carries its own `test_period_end`. | Determines whether the demo is "upload → test runs" or "upload, then click run". | Keep them separate. Explicit is better on camera, and auto-running hides the independent-computation moment. |
-| **A-4** | **Who owns the `exceptions.status` transition** vs `casefiles.status`? Both carry `investigating` and `pending_review`. | Two sources of truth drift. | **`casefiles.status` is authoritative**; `exceptions.status` mirrors it. Or drop the overlapping values from `exceptions`. |
-| **A-5** | **Foundry thread reuse on retry** — same thread or a new one? | A retry on the same thread inherits the failed context, which may re-fail the same way. | New thread per attempt; keep `foundry_thread_id` as the latest. |
-| **A-6** | **`reported_dscr` when no certificate exists.** | §6.5 allows NULL but §4.1b's outcome table assumes a borrower figure. | NULL `reported_dscr` → `variance` NULL, `variance_flagged` false. The test still runs on our number. Already specified in F7; the engineering doc should say it too. |
+| **A-1** ✅ | **Who triggers a quarterly test?** §7 defines `POST /api/tests/run` taking one `facility_id` + `test_period_end`, but never says whether the analyst runs it per borrower or runs a whole quarter at once. | The portfolio screen needs one button or many, and the demo reads very differently: "run the quarter" shows all three outcomes at once, which is the point of end-to-end. | **Add `POST /api/tests/run-quarter {test_period_end}`** that loops every facility with approved terms. Keeps the per-facility route for re-runs. |
+| **A-2** ✅ | **`tests` has no `run_id`.** `casefiles` has one to separate eval runs from demo data; `tests` does not. | An eval pass would write `tests` rows into the demo portfolio and trip the `UNIQUE (facility_id, test_period_end)` constraint against demo data. | **Add `run_id text` to `tests`** and include it in the unique constraint. Small schema change, better caught now than during the eval. |
+| **A-3** ✅ | **Does ingesting a certificate auto-trigger a test?** The certificate carries its own `test_period_end`. | Determines whether the demo is "upload → test runs" or "upload, then click run". | Keep them separate. Explicit is better on camera, and auto-running hides the independent-computation moment. |
+| **A-4** ✅ | **Who owns the `exceptions.status` transition** vs `casefiles.status`? Both carry `investigating` and `pending_review`. | Two sources of truth drift. | **`casefiles.status` is authoritative**; `exceptions.status` mirrors it. Or drop the overlapping values from `exceptions`. |
+| **A-5** ✅ | **Foundry thread reuse on retry** — same thread or a new one? | A retry on the same thread inherits the failed context, which may re-fail the same way. | New thread per attempt; keep `foundry_thread_id` as the latest. |
+| **A-6** ✅ | **`reported_dscr` when no certificate exists.** | §6.5 allows NULL but §4.1b's outcome table assumes a borrower figure. | NULL `reported_dscr` → `variance` NULL, `variance_flagged` false. The test still runs on our number. Already specified in F7; the engineering doc should say it too. |
 
 ---
 
