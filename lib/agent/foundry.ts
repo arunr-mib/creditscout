@@ -388,6 +388,33 @@ export async function startRun(agentId: string, userMessage: string, deps: Found
   );
 }
 
+/**
+ * A further run on a thread that already exists, opened by one user message.
+ *
+ * Used for exactly one thing: the casefile guardrail's single retry when the
+ * agent's final answer does not match the output schema (spec 6.1). The
+ * message goes in as `additional_messages`, so the request and the run are one
+ * call and there is no window in which the thread holds a question nobody is
+ * answering.
+ *
+ * `tool_choice: "none"` is what keeps the retry to ONE turn. The agent is being
+ * asked to restate what it already concluded, not to investigate again; a tool
+ * call here would be a step past the cap nobody counted.
+ */
+export async function createRunOnThread(
+  threadId: string,
+  agentId: string,
+  userMessage: string,
+  deps: FoundryDeps = {},
+): Promise<Run> {
+  return api<Run>(
+    "POST",
+    `/threads/${encodeURIComponent(threadId)}/runs`,
+    { assistant_id: agentId, additional_messages: [{ role: "user", content: userMessage }], tool_choice: "none" },
+    deps,
+  );
+}
+
 export async function getRun(threadId: string, runId: string, deps: FoundryDeps = {}): Promise<Run> {
   return api<Run>("GET", `/threads/${encodeURIComponent(threadId)}/runs/${encodeURIComponent(runId)}`, undefined, deps);
 }

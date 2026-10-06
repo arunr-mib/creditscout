@@ -468,3 +468,55 @@ test("N2: in a document's text every 'N to 1' is a ratio by its form; a model's 
     assert.equal(thresholdCheck(1.0, quote, [{ citation: "CA §7.11", content: quote }]).valid, false, quote);
   }
 });
+
+// --- E-5: parentheses never make a figure invisible -------------------------
+// The rule has two directions and each is tested. It REFUSES a figure hidden in
+// brackets that do not wrap it alone; it KEEPS ALLOWING an accounting negative
+// and a bracketed ratio, both read as their unbracketed form would be.
+
+test("E-5 refuses: a covenant floor stated in brackets is seen, and an untraceable one abstains", () => {
+  // The reproduced bypass: "(0.50 to 1.00)" used to yield no figure at all, so a
+  // model could state any floor in brackets and the traceability rule never saw it.
+  assert.deepEqual(extractFigures("The covenant floor is (0.50 to 1.00) and coverage is 1.12.", [1.12]), [0.5, 1, 1.12]);
+  const calcs = [{ calc_id: "calc_e5", outputs: { dscr: 1.12, threshold: 1.25, pass: false, margin: -0.13 } }];
+  const cf = base({
+    recommendation: "request",
+    explanation: "The covenant floor is (0.50 to 1.00) and coverage is 1.12.",
+  });
+  const { casefile, notes } = applyGuardrail(cf, calcs, CHUNKS);
+  assert.equal(casefile.recommendation, "abstain");
+  assert.match(notes.find((n) => n.check === "figure_traceable").detail, /0\.5/);
+});
+
+test("E-5 refuses: a half-bracketed figure is read as the figure, not dropped", () => {
+  // Any bracket that does not close around the figure itself is not part of it.
+  assert.deepEqual(extractFigures("(the floor is 0.50)"), [0.5]);
+  assert.deepEqual(extractFigures("(coverage 1.47 at year end)"), [1.47]);
+  const cf = base({ explanation: "Recomputed DSCR is 1.31 (the floor is 0.50)." });
+  assert.equal(applyGuardrail(cf, CALCS, CHUNKS).casefile.recommendation, "abstain");
+});
+
+test("E-5 keeps allowing: a bracketed ratio reads as the ratio, so a quoted floor in brackets does not abstain", () => {
+  // HANDOFF 9.4's false abstain: "minimum (1.25x)" read as -1.25.
+  assert.deepEqual(extractFigures("minimum (1.25x)"), [1.25]);
+  assert.deepEqual(extractFigures("requires (1.25 to 1.00)", [1.25]), [1.25]);
+  const cf = base({ explanation: "Recomputed DSCR is 1.31 against the minimum (1.25x), which is (1.25 to 1.00)." });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, CHUNKS);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+});
+
+test("E-5 keeps allowing: an accounting negative keeps its sign and still matches its statement", () => {
+  assert.deepEqual(extractFigures("Net loss (1,200)"), [-1200]);
+  const chunks = [...CHUNKS, { citation: "Fin Q2 2026 §1", content: "Net income: (1,200)" }];
+  const cf = base({
+    explanation: "Recomputed DSCR is 1.31 against the required 1.25x; net income was (1,200).",
+    claims: [...base().claims, { text: "Net income was (1,200)", citation: "Fin Q2 2026 §1", quote: "Net income: (1,200)" }],
+  });
+  assert.equal(applyGuardrail(cf, CALCS, chunks).casefile.recommendation, "resolve");
+});
+
+test("E-5: a bracketed PLAIN number keeps the accounting-negative reading and abstains, fail-closed", () => {
+  assert.deepEqual(extractFigures("coverage is (1.47)"), [-1.47]);
+  const cf = base({ explanation: "Coverage is (1.31) against the required 1.25x." });
+  assert.equal(applyGuardrail(cf, CALCS, CHUNKS).casefile.recommendation, "abstain");
+});

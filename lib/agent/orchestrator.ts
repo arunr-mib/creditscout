@@ -16,10 +16,14 @@ import {
   type Run,
   type ToolOutput,
 } from "./foundry.ts";
+import { enforceCasefile } from "./enforce.ts";
+import { appendNotes, STEP_CAP_CHECK, stoppedAtCap, type Note } from "./notes.ts";
 import { DEFAULT_BASE_URL } from "./openapi.ts";
 import { buildInvestigationPrompt, SPECIALIST_NAMES, type SpecialistName } from "./prompt.ts";
 import { SPECIALIST_RUNNERS, type SpecialistRunner } from "./specialists.ts";
 import { localEntries, mapRunStepsToTrace, memoryUnavailableEntry, mergeTrace, type TraceEntry } from "./trace.ts";
+
+export { STEP_CAP_CHECK, stoppedAtCap };
 
 /**
  * The investigation loop: start a Foundry run against an exception, then drive
@@ -27,11 +31,12 @@ import { localEntries, mapRunStepsToTrace, memoryUnavailableEntry, mergeTrace, t
  *
  * Three things this file will not do, each for a stated reason.
  *
- * IT DOES NOT REACH `pending_review`. That transition is the guardrail's act
- * (stage 8b). Making it here would let a casefile reach a reviewable state
- * unpoliced, which is the one thing the architecture exists to prevent. A
- * terminal run leaves the raw output on the casefile and the status
- * `investigating`.
+ * IT DOES NOT WRITE `pending_review`. That transition is the casefile
+ * guardrail's act, and `enforceCasefile` (`./enforce.ts`) is its only writer.
+ * Every terminal path here — a clean finish, a finish on the cap, a run the
+ * cap stopped — stores what the agent said and hands the casefile to it, so a
+ * casefile can reach a reviewable state only by passing through the guardrail
+ * and the policy. Writing the status here would be a second path, unpoliced.
  *
  * IT DOES NOT WRITE TO `tests` OR `covenant_terms`. The agent recomputes on
  * re-mapped terms mid-investigation; the `tests` row records what the APPROVED
@@ -54,6 +59,15 @@ export const DEFAULT_DEADLINE_MS = 25_000;
 export const DEFAULT_POLL_INTERVAL_MS = 1_500;
 /** A run that has produced no new step for this long is not thinking, it is stuck. */
 export const STALL_AFTER_MS = 10 * 60_000;
+/**
+ * How long a claimed casefile may sit with no Foundry run on it before that
+ * means "never started" (O-1). Between the claim and the run being stored,
+ * `startInvestigation` embeds the exception profile for the lesson search and
+ * creates the thread and run — normally one to three seconds, and each call has
+ * a network timeout well past that. A sync landing inside the window is a
+ * normal poll racing a normal start, not a failure. Past it, the start died.
+ */
+export const CLAIM_GRACE_MS = 60_000;
 /** Our own tool routes, by the operationId the agent calls them with. */
 export const TOOL_ROUTES: Record<string, string> = {
   dscr_calculator: "/api/tools/dscr-calculator",
@@ -263,13 +277,20 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.error("the lesson search failed; this investigation runs cold", err);
-    check(
-      await client
-        .from("casefiles")
-        .update({ trace: [memoryUnavailableEntry(reason, new Date(now()))] })
-        .eq("id", casefile.id),
-      "record memory unavailable",
-    );
+    // A marker that cannot be written is worth a log line, not a dead
+    // casefile (R2-4): throwing here, after the claim, left a casefile
+    // `investigating` with no run that nothing would ever drive.
+    try {
+      check(
+        await client
+          .from("casefiles")
+          .update({ trace: [memoryUnavailableEntry(reason, new Date(now()))] })
+          .eq("id", casefile.id),
+        "record memory unavailable",
+      );
+    } catch (markErr) {
+      console.error("the memory-unavailable marker could not be written; the run starts anyway", markErr);
+    }
   }
 
   const prompt = buildInvestigationPrompt({
@@ -289,8 +310,14 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   } catch (err) {
     // The casefile stays, holding the reason. An exception whose investigation
     // never started must not look as though one is under way.
+    //
+    // The reason goes in `guardrail_notes`, like every other failure (D-6).
+    // NOT `summary`: that is the memory surface, the one-line case summary a
+    // human's review writes and `match_lessons` hands to later investigations.
     const message = err instanceof Error ? err.message : String(err);
-    await client.from("casefiles").update({ status: "failed", summary: `The investigation could not be started: ${message}` }).eq("id", casefile.id);
+    const note: Note = { layer: "run", check: "foundry_run", action: "failed", detail: `The investigation could not be started: ${message}` };
+    await appendNotes(client, casefile.id, [note]).catch((noteErr) => console.error("could not record why the run did not start", noteErr));
+    await client.from("casefiles").update({ status: "failed" }).eq("id", casefile.id);
     return { casefileId: casefile.id, status: "failed", reused: false };
   }
 
@@ -435,25 +462,79 @@ const isSpecialist = (name: string): name is SpecialistName => (SPECIALIST_NAMES
 export async function callAnyTool(name: string, args: unknown, ctx: ToolContext, deps: OrchestratorDeps = {}): Promise<string> {
   if (isSpecialist(name)) {
     const runner = deps.specialists?.[name] ?? SPECIALIST_RUNNERS[name];
+    let output: string;
     try {
       // The facility and the period come from the CASEFILE, never from `args`.
       // A model naming another borrower's facility would read a confidential
       // agreement into this casefile, which is the worst bug available here, so
       // `args` is not consulted and is not merged in.
-      return await runner(args, { facilityId: ctx.facilityId, periodEnd: ctx.periodEnd });
+      output = await runner(args, { facilityId: ctx.facilityId, periodEnd: ctx.periodEnd });
     } catch (err) {
       // A specialist that could not answer is missing evidence, not an outage
       // to crash on. The orchestrator reasons about it and moves on.
       return JSON.stringify({ error: `${name} could not answer: ${err instanceof Error ? err.message : String(err)}` });
     }
+    if (name === "definition_agent") await captureDefinition(deps, ctx.casefileId, output);
+    return output;
   }
   return (deps.callRoute ?? callToolRoute)(name, args, ctx);
+}
+
+/**
+ * Keep the definition agent's citations on the casefile, so the terms they back
+ * can be checked at enforcement (ruling A-1).
+ *
+ * When the orchestrator re-maps a covenant mid-investigation, the clauses that
+ * justify the new terms are in THIS tool output and nowhere else: the
+ * orchestrator sees them, the calculator does not log them, and by the time the
+ * guardrail runs they would be gone. Without them a legitimate re-mapping
+ * (F1's unboarded amendment) cannot be told from a fabricated one, and both
+ * escalate.
+ *
+ * Stored in `casefiles.terms` as `source_citations` (accumulated across calls,
+ * because each one is verified on its own against the facility's text and a
+ * second call cannot make a first one's quote untrue) beside `proposed_terms`
+ * (the latest mapping). Enforcement later adds the governing calculation's
+ * `terms` and `calc_id` to the same object. Nothing here is trusted: every
+ * citation is resolved and quote-checked against this facility's chunks
+ * before it backs anything.
+ *
+ * A capture that cannot be written throws. The sync fails, the tool call is
+ * serviced again on the next one, and the agent never proceeds on a re-mapping
+ * whose evidence was silently lost.
+ */
+async function captureDefinition(deps: OrchestratorDeps, casefileId: string, output: string): Promise<void> {
+  let reply: unknown;
+  try {
+    reply = JSON.parse(output);
+  } catch {
+    return;
+  }
+  if (!isObj(reply) || !isObj(reply.terms) || !Array.isArray(reply.source_citations)) return;
+  const fresh = reply.source_citations.filter(
+    (c): c is { field: string; citation: string; quote: string } =>
+      isObj(c) && typeof c.field === "string" && typeof c.citation === "string" && typeof c.quote === "string",
+  ).map((c) => ({ field: c.field, citation: c.citation, quote: c.quote }));
+
+  const client = deps.client ?? (await defaultClient());
+  const row = check(await client.from("casefiles").select("terms").eq("id", casefileId).maybeSingle(), "read casefile terms") as
+    | { terms?: unknown }
+    | null;
+  const prior = isObj(row?.terms) ? row.terms : {};
+  const priorCites = Array.isArray(prior.source_citations) ? prior.source_citations : [];
+  const key = (c: unknown) => JSON.stringify(isObj(c) ? [c.field, c.citation, c.quote] : c);
+  const seen = new Set(priorCites.map(key));
+  const merged = [...priorCites, ...fresh.filter((c) => !seen.has(key(c)) && seen.add(key(c)))];
+  check(
+    await client.from("casefiles").update({ terms: { ...prior, proposed_terms: reply.terms, source_citations: merged } }).eq("id", casefileId),
+    "capture the definition agent's citations",
+  );
 }
 
 /** Service every tool call Foundry is waiting on. One bad call never fails the others. */
 async function serviceToolCalls(run: Run, ctx: ToolContext, deps: OrchestratorDeps): Promise<ToolOutput[]> {
   const calls = run.required_action?.submit_tool_outputs?.tool_calls ?? [];
-  const call = deps.callTool ?? ((name, args, ctx) => callAnyTool(name, args, ctx, deps));
+  const call = deps.callTool ?? ((name: string, args: unknown, ctx: ToolContext) => callAnyTool(name, args, ctx, deps));
   const outputs: ToolOutput[] = [];
   for (const toolCall of calls) {
     const name = toolCall.function?.name ?? "";
@@ -475,12 +556,12 @@ export interface SyncResult {
   casefile_id: string;
   /** Foundry's status for the run. */
   run_status: string;
-  /** Ours. `investigating` after a clean finish: the transition to review is the guardrail's (8b). */
+  /** Ours. `pending_review` once a terminal run has been through `enforceCasefile`; `investigating` while it runs. */
   casefile_status: string;
   steps: number;
   max_steps: number;
   stopped: StopReason;
-  /** The agent's raw final output. Present only on a clean finish; never parsed here. */
+  /** The agent's raw final output, as it ended the run. Never parsed here; `enforceCasefile` parses it. */
   output: string | null;
   error: string | null;
 }
@@ -548,13 +629,19 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
   // Reaching the cap ends the RUN, and it is a policy outcome rather than a
   // failure. Said once, it stays said — and whatever the agent managed to
   // conclude before the cap is reported with it, never thrown away.
+  //
+  // A capped casefile still `investigating` has not been through enforcement
+  // yet (or an earlier attempt at it failed), so it goes now. Enforcement is
+  // idempotent and refuses anything not `investigating`.
   if (stoppedAtCap(casefile.guardrail_notes)) {
     // Tested for CONTENT, not for `!== null`. An absent column reads as
     // undefined, and that must not be reported as an answer that was captured —
     // claiming an answer exists when none does is the failure mode this whole
     // branch is here to avoid.
     const captured = typeof casefile.agent_output === "string" && casefile.agent_output !== "" ? casefile.agent_output : null;
+    const enforced = await enforceCasefile(casefileId, enforcementDeps(deps, client));
     return result({
+      casefile_status: enforced.status,
       stopped: "step_cap",
       output: captured,
       error:
@@ -564,6 +651,17 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
     });
   }
   if (!casefile.foundry_thread_id || !casefile.foundry_run_id) {
+    // Claimed, run not stored yet (O-1). `startInvestigation` claims the
+    // casefile BEFORE the slow work so two POSTs cannot both start a run, which
+    // leaves a short window where the row exists and the run does not. Stage
+    // 9's one-second poll lands in it routinely. Failing the casefile there
+    // returned the exception to the queue while the original call went on to
+    // start a run nobody would drive. Inside the grace window this is "in
+    // progress"; past it the start has died and it is a genuine failure.
+    const since = Date.parse(casefile.created_at);
+    if (Number.isFinite(since) && now() - since < CLAIM_GRACE_MS) {
+      return result({ run_status: "starting" });
+    }
     const message = "The casefile carries no Foundry run; the investigation never started.";
     await markFailed(client, casefile, message, now);
     return result({ casefile_status: "failed", error: message });
@@ -616,9 +714,10 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
         const salvaged = await latestAssistantText(threadId, runId, deps.foundry).catch(() => "");
         if (salvaged !== "") await writeAgentOutput(client, casefileId, salvaged, trace.length, now);
         await noteStepCap(client, casefileId, trace.length, maxSteps);
+        const enforced = await enforceCasefile(casefileId, enforcementDeps(deps, client));
         return result({
           run_status: run.status,
-          casefile_status: "investigating",
+          casefile_status: enforced.status,
           steps: trace.length,
           stopped: "step_cap",
           output: salvaged === "" ? null : salvaged,
@@ -646,7 +745,7 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
         await markFailed(client, casefile, message, now);
         return result({ run_status: run.status, casefile_status: "failed", steps: trace.length, error: message });
       }
-      await submitToolOutputs(threadId, runId, await serviceToolCalls(run, ctx, deps), deps.foundry);
+      await submitToolOutputs(threadId, runId, await serviceToolCalls(run, ctx, { ...deps, client }), deps.foundry);
       continue;
     }
 
@@ -680,16 +779,18 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
     return result({ run_status: run.status, casefile_status: "failed", steps: trace.length, error: message });
   }
 
-  // The raw output is stored and NOT parsed. Status stays `investigating`:
-  // reaching `pending_review` is the guardrail's act (8b), and a casefile that
-  // reached a reviewable state before the guardrail existed would be unpoliced.
+  // The raw output is stored and NOT parsed here. Reaching `pending_review` is
+  // the casefile guardrail's act, so the casefile is handed to it: parsing,
+  // the figure and quote checks, the terms comparison and the policy all
+  // happen there, and only there.
   await writeAgentOutput(client, casefileId, output, trace.length, now);
   // A run that concluded ON the cap still reached the cap, and the policy
   // engine has to know: `policy.js` downgrades a `resolve` at the cap.
   if (atCap) await noteStepCap(client, casefileId, trace.length, maxSteps);
+  const enforced = await enforceCasefile(casefileId, enforcementDeps(deps, client));
   return result({
     run_status: run.status,
-    casefile_status: "investigating",
+    casefile_status: enforced.status,
     steps: trace.length,
     stopped: atCap ? "step_cap" : null,
     output,
@@ -738,21 +839,9 @@ async function mirror(
   return trace.length;
 }
 
-export const STEP_CAP_CHECK = "max_steps";
-
-/**
- * Was this investigation already stopped by the cap?
- *
- * It has to be asked, because the cap CANCELS the Foundry run — so the next
- * sync sees `cancelled` and, with no way to tell our own cancel from a platform
- * failure, would rewrite a policy decision as an outage and lose the note that
- * recorded it.
- */
-export function stoppedAtCap(guardrailNotes: unknown): boolean {
-  return (
-    Array.isArray(guardrailNotes) &&
-    guardrailNotes.some((n) => isObj(n) && n.layer === "policy" && n.check === STEP_CAP_CHECK && n.action === "end_run")
-  );
+/** What enforcement needs from this sync: the same client, the same Foundry, the same clock. */
+function enforcementDeps(deps: OrchestratorDeps, client: Db) {
+  return { client, foundry: deps.foundry, agentId: deps.agentId, now: deps.now, sleep: deps.sleep, pollIntervalMs: deps.pollIntervalMs };
 }
 
 /**
@@ -786,17 +875,22 @@ async function writeAgentOutput(
 
 /**
  * The cap is a policy act, so it is recorded as one, in the same
- * `{layer, check, action, detail}` shape the policy engine uses. 8b appends its
- * own notes; this one is never the whole story, only the first entry.
+ * `{layer, check, action, detail}` shape the policy engine uses.
+ *
+ * APPENDED, never overwritten (E-6). This used to write `[note]`, while
+ * `markFailed` and the casefile guardrail append; `stoppedAtCap` reads this
+ * array to decide whether a cap is final, so an overwrite landing late would
+ * erase whatever was recorded before it, and an earlier write landing over it
+ * would erase the only record that the cap was reached.
  */
 async function noteStepCap(client: Db, casefileId: string, steps: number, maxSteps: number): Promise<void> {
-  const note = {
+  const note: Note = {
     layer: "policy",
     check: STEP_CAP_CHECK,
     action: "end_run",
     detail: `the investigation reached the step cap of ${maxSteps} after ${steps} steps and was stopped`,
   };
-  check(await client.from("casefiles").update({ guardrail_notes: [note] }).eq("id", casefileId), "note step cap");
+  await appendNotes(client, casefileId, [note]);
 }
 
 /**
@@ -810,12 +904,12 @@ async function noteStepCap(client: Db, casefileId: string, steps: number, maxSte
  * though one is under way.
  */
 async function markFailed(client: Db, casefile: CasefileRow, message: string, now: () => number): Promise<void> {
-  const note = { layer: "run", check: "foundry_run", action: "failed", detail: message };
-  const existing = Array.isArray(casefile.guardrail_notes) ? casefile.guardrail_notes : [];
+  // Appended to the notes as they are NOW, not as this sync first read them.
+  await appendNotes(client, casefile.id, [{ layer: "run", check: "foundry_run", action: "failed", detail: message }]);
   check(
     await client
       .from("casefiles")
-      .update({ status: "failed", guardrail_notes: [...existing, note], last_step_at: new Date(now()).toISOString() })
+      .update({ status: "failed", last_step_at: new Date(now()).toISOString() })
       .eq("id", casefile.id),
     "fail casefile",
   );

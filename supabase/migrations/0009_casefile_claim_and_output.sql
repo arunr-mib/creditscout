@@ -1,10 +1,16 @@
 -- Two changes to `casefiles`, both from the stage-8a review.
 --
--- NOT YET APPLIED. Hand to the owner for the dashboard SQL editor, as with
--- 0007 and 0008. The application code works with or without it: the unique
--- index only narrows a race the code already reorders around, and the terminal
--- write falls back to `summary` while `agent_output` is absent. Once this is
--- applied, that fallback should be deleted (lib/agent/orchestrator.ts).
+-- APPLIED by the owner through the dashboard SQL editor, as with 0006-0008
+-- (both changes verified live by the whole-branch review, 2026-10-06), so it
+-- may not appear in `supabase_migrations.schema_migrations`.
+--
+-- The application code now REQUIRES it. There is no fallback: the terminal
+-- write puts the raw answer in `agent_output` and nowhere else, and without the
+-- column that write fails (lib/agent/orchestrator.ts `writeAgentOutput`). The
+-- earlier fallback to `summary` was deleted on purpose — `summary` is the memory
+-- surface (section 2 below), and a dead path still aimed at it is how that leak
+-- comes back. The unique index is what makes the claim in `startInvestigation`
+-- race-proof rather than merely narrow.
 
 -- ---------------------------------------------------------------- 1. the claim
 -- At most ONE live casefile per exception.

@@ -78,6 +78,9 @@ function statedRatios(text) {
   return out;
 }
 
+/** One figure-like token, with no surrounding parentheses: "$4.25m", "1,250,000", "-3", "1.25x". */
+const FIGURE = String.raw`\$?\s?-?\d[\d,]*(?:\.\d+)?(?:bn|mm|[kmbx])?`;
+
 /**
  * Pull every figure out of free text.
  *
@@ -138,11 +141,33 @@ export function extractFigures(text, knownRatios) {
   // be added back" reads as $500bn, "1.08 below" as 1.08bn, "12 months" as
   // 12,000,000 — and an inflated figure matches nothing, so correct work
   // abstains. b/k/m/x start too many words in this corpus for that to be safe.
-  const tokens = cleaned.match(/\(?\$?\s?-?\d[\d,]*(\.\d+)?(bn|mm|[kmbx])?\)?/gi) || [];
+  //
+  // PARENTHESES NEVER MAKE A FIGURE INVISIBLE (E-5). A token is either a whole
+  // figure wrapped in its own parentheses — "(1,200)", "(1.47)", "(1.25x)" — or
+  // a bare figure; a parenthesis that does not close around the figure itself
+  // is not part of the token. The old pattern took an unbalanced "(" or ")" into
+  // the token, `normaliseNumber` then read "(0.50" and "1.00)" as nothing at
+  // all, and the figure silently left the check.
+  //
+  // REFUSES: a figure stated inside parentheses that do not wrap it alone —
+  // "(0.50 to 1.00)", "(the floor is 0.50)", "(coverage 1.47 at year end)".
+  // Each figure in them is read exactly as it would be without the brackets, so
+  // an untraceable one abstains like any other. This was a bypass: a model
+  // could state any covenant floor in brackets and the traceability rule never
+  // saw it.
+  //
+  // MUST KEEP ALLOWING: the accounting negative a financial statement writes —
+  // "(1,200)" is -1200, as `normaliseNumber` has always read it, so a restated
+  // negative still matches the chunk it came from; and a ratio in brackets —
+  // "(1.25x)" is the ratio 1.25, not -1.25, because a ratio has no accounting
+  // sign. Reading "minimum (1.25x)" as negative abstained on a correctly quoted
+  // floor (HANDOFF 9.4). A parenthesised PLAIN number such as "(1.47)" keeps
+  // the negative reading: it abstains, fail-closed, which is acceptable.
+  const tokens = cleaned.match(new RegExp(`\\(${FIGURE}\\)|${FIGURE}`, "gi")) || [];
 
   const out = [];
   for (const t of tokens) {
-    const n = normaliseNumber(t);
+    const n = /^\(.*x\)$/i.test(t) ? normaliseNumber(t.slice(1, -1)) : normaliseNumber(t);
     if (n !== null) out.push(n);
   }
   return out;
