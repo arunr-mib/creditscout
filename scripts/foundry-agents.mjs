@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  AGENTS_FILE,
-  createAgents,
-  foundryConfig,
-  orchestratorDefinition,
-  specialistDefinitions,
-} from "../lib/agent/foundry.ts";
+import { AGENTS_FILE, createAgents, foundryConfig, orchestratorDefinition } from "../lib/agent/foundry.ts";
 
 /**
- * Create or update the four Foundry agents and write their ids to AGENTS_FILE.
+ * Create or update the Foundry agent and write its id to AGENTS_FILE.
+ *
+ * There is ONE agent. The three specialists are plain function tools on it,
+ * serviced in-process, not connected agents — see `specialistTools` in
+ * lib/agent/foundry.ts for the ruling.
  *
  * Spec §8.3 requires the agent definitions to be committed after every change.
  * The definitions themselves live in `lib/agent/prompt.ts` (instructions) and
@@ -31,27 +29,16 @@ const dryRun = process.argv.includes("--dry-run");
 const config = foundryConfig();
 
 if (dryRun) {
-  const specialists = specialistDefinitions();
-  const fakeIds = Object.fromEntries(specialists.map((s) => [s.name, `asst_DRYRUN_${s.name}`]));
-  const orchestrator = orchestratorDefinition(fakeIds);
-  for (const def of [...specialists, orchestrator]) {
-    console.log(`\n=== ${def.name} (${def.model}) ===`);
-    console.log(def.instructions);
-    if (def.tools?.length) {
-      console.log(
-        "tools:",
-        def.tools
-          .map((t) => (t.type === "connected_agent" ? `connected_agent:${t.connected_agent.name}` : `function:${t.function.name}`))
-          .join(", "),
-      );
-    }
-  }
+  const def = orchestratorDefinition();
+  console.log(`\n=== ${def.name} (${def.model}) ===`);
+  console.log(def.instructions);
+  console.log("\ntools:", def.tools.map((t) => `function:${t.function.name}`).join(", "));
   console.log("\n--dry-run: nothing was created or written.");
   process.exit(0);
 }
 
 console.log(`project: ${config.endpoint}`);
-console.log(`orchestrator model: ${config.orchestratorModel}  specialists: ${config.specialistModel}`);
+console.log(`orchestrator model: ${config.orchestratorModel}  specialists (serviced in-process): ${config.specialistModel}`);
 
 const agents = await createAgents();
 

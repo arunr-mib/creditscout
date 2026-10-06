@@ -2,14 +2,9 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { DOC_TYPES } from "../retrieval.ts";
 import { buildOpenApi } from "./openapi.ts";
-import {
-  ORCHESTRATOR_INSTRUCTIONS,
-  ORCHESTRATOR_NAME,
-  SPECIALIST_INSTRUCTIONS,
-  SPECIALIST_NAMES,
-  type SpecialistName,
-} from "./prompt.ts";
+import { ORCHESTRATOR_INSTRUCTIONS, ORCHESTRATOR_NAME, SPECIALIST_INSTRUCTIONS } from "./prompt.ts";
 
 /**
  * The Azure AI Foundry Agent Service client, and the four agent definitions.
@@ -209,51 +204,94 @@ export interface AgentDefinition {
   tools?: unknown[];
 }
 
+/** What the orchestrator may narrow a specialist's reading to. Mirrors `DOC_TYPES`. */
+const docTypesParam = {
+  type: "array",
+  description: "Optional. Restrict which documents are read. Omit to read across all of them.",
+  items: { type: "string", enum: [...DOC_TYPES] },
+};
+
 /**
- * The three specialists.
+ * The three specialists, declared as plain function tools.
  *
- * They carry NO tools, and that is not a simplification. A connected agent's
- * inner run is executed inside Foundry and we never see it, so a function tool
- * on one parks that inner run at `requires_action` where nothing can service
- * it, and the PARENT run hangs in `in_progress` indefinitely. Verified live
- * against this project before the loop was written. The orchestrator retrieves;
- * the specialists read what it pastes to them.
+ * They were `connected_agent` tools until the owner took the documented
+ * fallback (spec §12). The ruling is not that Connected Agents failed — it
+ * behaved exactly as the spike showed — but that a connected agent's inner run
+ * executes inside Foundry and therefore cannot carry a function tool. A
+ * specialist that cannot retrieve can only be handed text the orchestrator
+ * already holds, so every delegation was a step spent buying an opinion on
+ * something already read, and across eleven live runs the orchestrator spent
+ * two to four of its eight steps failing to paste that text at all.
+ *
+ * Serviced by us (`lib/agent/specialists.ts`), each specialist retrieves for
+ * itself. Note what is NOT a parameter: `facility_id`. It comes from the
+ * casefile, so a model cannot point a specialist at another borrower.
  */
-export function specialistDefinitions(env: Record<string, string | undefined> = process.env): AgentDefinition[] {
-  const config = foundryConfig(env);
-  return SPECIALIST_NAMES.map((name) => ({
-    name,
-    model: config.specialistModel,
-    description: SPECIALIST_INSTRUCTIONS[name].description,
-    instructions: SPECIALIST_INSTRUCTIONS[name].instructions,
-  }));
+export function specialistTools(): FunctionTool[] {
+  return [
+    {
+      type: "function",
+      function: {
+        name: "definition_agent",
+        description: SPECIALIST_INSTRUCTIONS.definition_agent.description,
+        // No parameters at all: there is nothing here for the orchestrator to
+        // get wrong, and nothing it can steer the mapping with.
+        parameters: { type: "object", properties: {} },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "research_agent",
+        description: SPECIALIST_INSTRUCTIONS.research_agent.description,
+        parameters: {
+          type: "object",
+          required: ["gap"],
+          properties: {
+            gap: {
+              type: "string",
+              description: "Our figure, the borrower's, the required minimum, and what you have found so far.",
+              maxLength: 2000,
+            },
+            doc_types: docTypesParam,
+          },
+        },
+      },
+    },
+    {
+      type: "function",
+      function: {
+        name: "document_agent",
+        description: SPECIALIST_INSTRUCTIONS.document_agent.description,
+        parameters: {
+          type: "object",
+          required: ["question"],
+          properties: {
+            question: { type: "string", description: "What you want quoted from the documents.", maxLength: 2000 },
+            doc_types: docTypesParam,
+          },
+        },
+      },
+    },
+  ];
 }
 
 /**
- * The orchestrator: three connected agents and three function tools.
+ * The orchestrator, and now the ONLY agent object in the project.
  *
- * It needs the specialists' ids, so it can only be defined after they exist —
- * a dependency, not an ordering preference.
+ * Six function tools: three that reach our own HTTP routes (derived from the
+ * OpenAPI document) and three specialists we service in-process. No
+ * `connected_agent` entry, and no specialist agents to create — see
+ * `specialistTools` for why.
  */
-export function orchestratorDefinition(
-  specialistIds: Partial<Record<SpecialistName, string>>,
-  env: Record<string, string | undefined> = process.env,
-): AgentDefinition {
+export function orchestratorDefinition(env: Record<string, string | undefined> = process.env): AgentDefinition {
   const config = foundryConfig(env);
-  const connected = SPECIALIST_NAMES.map((name) => {
-    const id = specialistIds[name];
-    if (!id) throw new Error(`the orchestrator needs the agent id for ${name}`);
-    return {
-      type: "connected_agent",
-      connected_agent: { id, name, description: SPECIALIST_INSTRUCTIONS[name].description },
-    };
-  });
   return {
     name: ORCHESTRATOR_NAME,
     model: config.orchestratorModel,
     description: "Investigates a DSCR covenant exception and recommends; a human analyst decides.",
     instructions: ORCHESTRATOR_INSTRUCTIONS,
-    tools: [...connected, ...functionTools(env)],
+    tools: [...specialistTools(), ...functionTools(env)],
   };
 }
 
@@ -282,24 +320,19 @@ export async function upsertAgent(def: AgentDefinition, existing: Agent[], deps:
 }
 
 /**
- * Create or update all four agents and return their ids by name.
+ * Create or update the orchestrator and return its id by name.
  *
- * Keeping existing ids on an update matters: the committed ids file, the Foundry
- * portal's trace history and any thread already in flight all name an agent by
- * id, and recreating one would orphan all three.
+ * Keeping an existing id on an update matters: the committed ids file, the
+ * Foundry portal's trace history and any thread already in flight all name the
+ * agent by id, and recreating it would orphan all three.
  */
 export async function createAgents(
   deps: FoundryDeps = {},
   env: Record<string, string | undefined> = process.env,
 ): Promise<Record<string, string>> {
   const existing = await listAgents(deps);
-  const ids: Record<string, string> = {};
-  for (const def of specialistDefinitions(env)) {
-    ids[def.name] = await upsertAgent(def, existing, deps);
-  }
-  const orchestrator = orchestratorDefinition(ids as Partial<Record<SpecialistName, string>>, env);
-  ids[orchestrator.name] = await upsertAgent(orchestrator, existing, deps);
-  return ids;
+  const orchestrator = orchestratorDefinition(env);
+  return { [orchestrator.name]: await upsertAgent(orchestrator, existing, deps) };
 }
 
 export interface AgentsFile {
