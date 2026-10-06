@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeDscr } from "../../calc/dscr.js";
+import { DEFAULT_RUN_ID } from "../retrieval.ts";
 import { isIsoDate, termsInForce, validateTerms, type TermsRow } from "../terms.ts";
 import { readReportedDscr } from "./certificate.ts";
 import {
@@ -32,7 +33,6 @@ import {
 
 type Db = Pick<SupabaseClient, "from">;
 
-export const DEFAULT_RUN_ID = "demo";
 const MAX_RUN_ID_LENGTH = 200;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -211,6 +211,20 @@ function failMessage(e: { error: string }, problems: string[]): string {
   return problems.length > 0 ? `${e.error} (${problems.join("; ")})` : e.error;
 }
 
+/**
+ * A re-run that no longer warrants an exception must not leave the old one
+ * standing, with numbers that are no longer true, for an analyst to open.
+ * Closes it only while it is still `new`: once an analyst has moved it on, a
+ * human has touched it and it is not ours to retract. Never deletes (a casefile
+ * may hang off it).
+ */
+async function retractStaleException(client: Db, testId: string): Promise<void> {
+  check(
+    await client.from("exceptions").update({ status: "closed" }).eq("test_id", testId).eq("status", "new"),
+    "close stale exception",
+  );
+}
+
 const check = <T>(res: { data?: T | null; error: { message: string } | null }, what: string): T | null => {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
   return res.data ?? null;
@@ -285,6 +299,7 @@ export async function runTest(
       await client.from("tests").upsert(rowOut, { onConflict: testsKey }).select("id").single(),
       "write tests",
     ) as { id: string };
+    await retractStaleException(client, saved.id);
     return {
       test_id: saved.id,
       run_id: input.runId,
@@ -384,6 +399,8 @@ export async function runTest(
       ) as { id: string };
       exceptionId = created.id;
     }
+  } else {
+    await retractStaleException(client, saved.id);
   }
 
   return {
