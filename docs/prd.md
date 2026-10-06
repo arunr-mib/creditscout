@@ -988,38 +988,67 @@ Modelled per analyst, covering 30 borrowers:
 | Analyst time per contested exception today | ~2.5 hours | ⚠️ *Still an estimate — not confirmed by the owner* |
 | Time per contested exception with CreditScout | ~0.5 hours | Target from the North Star metric |
 
-**Where the 520 hours go, and what the MVP actually touches:**
+**Deriving the unit of work.** 520 hours ÷ 120 test cycles per year (30
+borrowers × 4 quarters) = **~4.3 hours per covenant test cycle.** This is the
+anchor, and it is derived from the owner's time-share figure rather than guessed.
+It is corroborated by the published vendor benchmark putting **DSCR
+recomputation alone at 30–40 minutes** — the arithmetic is a fraction of the
+cycle; the document work around it is the bulk.
 
-| Activity | Hours/year | CreditScout MVP | Hours saved |
-|---|---|---|---|
-| Routine quarterly testing — receive certificate, rekey figures, recompute ratio, file | ~40 (120 tests × ~20 min) | Automated ingest, schema extraction, **code** comparison to threshold | **~30** |
-| Contested exception investigation | ~30 (12/year × 2.5 hrs) | The agent investigation — the core product | **~24** |
-| Document chasing, reporting, portfolio review | ~450 | Not addressed in MVP | 0 |
-| **Total** | **~520** | | **~54** |
+**Where those 4.3 hours go, and what the MVP touches:**
+
+| Activity in a test cycle | ~Hours | Addressed by MVP? |
+|---|---|---|
+| Chase and receive the compliance certificate | 0.7 | Partly — email intake is P2 |
+| Read the certificate, cross-check against the agreement and amendments | 1.2 | **Yes — this is the core product** |
+| Rekey figures, recompute the ratio, check the formula | 0.8 | **Yes — deterministic calculator** |
+| Update the covenant tracker, write the monitoring note, file it | 0.9 | **Yes — the casefile is the record** |
+| Internal discussion, judgment, approvals routing | 0.7 | Partly — human review is retained by design |
+| **Total** | **~4.3** | |
+
+*The split within the cycle is an estimate; the 4.3-hour total is derived from
+the owner's figure.*
+
+**Reduction estimate**
+
+| Scope | Covenant-monitoring time reduction | Basis |
+|---|---|---|
+| **MVP** — one covenant, manual upload, text PDFs | **30–40%** | The three fully-addressed rows (~2.9 hrs) are the bulk of the cycle, but manual upload and single-covenant scope cap the realisable share |
+| **Full product** — all covenants, email intake, system integrations | **50–65%** | Consistent with the 50–75% range vendors in this category advertise |
+
+**ROI at the MVP figure (35% midpoint):**
 
 | | |
 |---|---|
-| **Value per analyst per year** | 54 hrs × $60 = **~$3,240** |
+| Hours saved per analyst per year | 520 × 35% = **~182 hrs** |
+| **Value per analyst per year** | 182 × $60 = **~$10,900** |
 | **Price per analyst per year** | 30 borrowers × $5 × 12 = **$1,800** |
-| **ROI** | **~1.8×** |
+| **ROI** | **~6×** |
 
-**Two honest observations about this number:**
+**Three observations:**
 
-- **It is deliberately conservative.** 54 hours is ~10% of the analyst's
-  covenant-monitoring time. Vendor marketing in this category claims 50–75%
-  reductions. We are modelling a fifth of what competitors advertise, and the
-  case still works.
-- **It is sensitive to the two inputs still unconfirmed.** At a $40/hour loaded
-  cost the ROI falls to ~1.2×; at $80/hour it rises to ~2.4×. Confirming the
-  real loaded rate and the real hours per contested exception is the single
-  highest-value correction left in this document.
+- **This supersedes an earlier, wrong estimate in this document's history.** A
+  first pass modelled routine testing at 20 minutes per cycle and produced ~10%
+  reduction and 1.8× ROI. That was a modelling error — it treated the document
+  handling, cross-checking and write-up as unaddressable when they are precisely
+  what the product does. The figures above are derived from the owner's
+  time-share rather than assumed.
+- **It is still sensitive to the unconfirmed loaded rate.** At $40/hour the ROI
+  falls to ~4×; at $80/hour it rises to ~8×. The conclusion holds across the
+  range, which is what makes it safe to present.
+- **$5 per borrower may be under-priced.** At ~6× ROI there is clear headroom —
+  the earlier $8–12 range would still have landed at 2.5–4×. Pricing low is a
+  defensible land-and-expand choice in a new category with long sales cycles,
+  but it is a choice, not a constraint, and worth revisiting once there is
+  measured usage.
 
-**The offshore case is different, and worth stating plainly.** Where monitoring
-is executed from an India-based GCC at a materially lower loaded rate, 54 hours
-saved is worth roughly $1,100–1,350 against a $1,800 price — **the labour-
-arbitrage argument does not carry the sale.** For those accounts the purchase
-case has to rest on the three things below, and positioning should say so rather
-than recycling an onshore ROI slide.
+**The offshore case, corrected.** At an India GCC loaded rate of roughly
+$20–25/hour, 182 hours is worth ~$3,600–4,500 against a $1,800 price — so the
+labour case **does** work offshore, at roughly a third of the onshore ratio.
+Positioning there should still lead with accuracy, auditability and capacity
+rather than cost savings, because that is where the margin of advantage is
+largest — but the savings argument is no longer loss-making, as an earlier draft
+of this section wrongly implied.
 
 **What the time-saving arithmetic does not capture:**
 
@@ -1137,7 +1166,7 @@ numbers rest on domain judgment rather than published data:
 
 | Figure | Placeholder in use | Why it matters |
 |---|---|---|
-| Fully-loaded analyst cost per hour | ~$60 | Drives the entire ROI ratio (§9.7) |
-| Analyst hours per contested exception today | ~2.5 | Drives the North Star baseline (§1.5) and the ROI (§9.7) |
+| Fully-loaded analyst cost per hour | ~$60 | Drives the ROI ratio (§9.7), though the conclusion holds from $40 to $80 |
+| Analyst hours per contested exception today | ~2.5 | Drives the North Star baseline (§1.5). **Likely too low** — §9.7 derives an average test cycle of ~4.3 hours from the owner's time-share figure, and a *contested* exception should exceed the average, not sit below it. Worth correcting. |
 | Target time-to-decision with the product | < 30 min | The North Star target itself (§1.5) |
 | India domestic lender market size | Not sized | §9.4 — needs primary research, deliberately left blank |
