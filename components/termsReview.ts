@@ -262,6 +262,10 @@ export interface RowView {
   entry?: Citation;
   /** Per field: the value now, and the model's original when an analyst changed it. */
   parts: { spec: FieldSpec; text: string; original?: string }[];
+  /** An analyst changed at least one field of this row (so "model proposed" is no longer the whole story). */
+  edited: boolean;
+  /** The server's notes that are about THIS term. A row must not say it is clean while one of these exists. */
+  notes: Warning[];
 }
 
 export interface ReviewInput {
@@ -272,6 +276,8 @@ export interface ReviewInput {
   edits: Record<string, Edit>;
   /** Fields edited since `violations` were issued. Their violations describe a value that no longer stands. */
   staleFields: ReadonlySet<string>;
+  /** The server's notes; the ones that name a field or a kind of term are attached to their rows. */
+  warnings?: readonly Warning[] | null;
 }
 
 export function entryFor(field: string, citations: Citation[], edits: Record<string, Edit>): Citation | undefined {
@@ -283,7 +289,7 @@ export function entryFor(field: string, citations: Citation[], edits: Record<str
 }
 
 export function reviewRows(input: ReviewInput): { views: RowView[]; stray: Violation[] } {
-  const { terms, citations, edits, staleFields } = input;
+  const { terms, citations, edits, staleFields, warnings } = input;
   const live = input.violations.filter((v) => !staleFields.has(v.field));
   const effective = applyLocalEdits(terms, edits);
   const rows = buildRows(effective);
@@ -321,12 +327,142 @@ export function reviewRows(input: ReviewInput): { views: RowView[]; stray: Viola
     else if (row.citeField && !entry) state = "no_citation";
     else if (anyEdited) state = "edited";
     else state = "ok";
-    return { row, state, problems, entry, parts };
+    return { row, state, problems, entry, parts, edited: anyEdited, notes: warningsForRow(row, warnings ?? []) };
   });
 
   // A refusal no row owns still has to be seen: it is never dropped for being awkward to place.
   const stray = live.filter((v) => !claimed.has(v.field));
   return { views, stray };
+}
+
+// ----------------------------------------------- notes attached to rows
+
+/**
+ * The server's notes that belong on a row. A note that names a field goes on
+ * the row that owns or borrows that field; two kinds name no field but have an
+ * obvious home. A row that asserts it is supported while a note elsewhere on
+ * the page says its clause is amended is worse than either message alone: the
+ * reader believes the one next to the value.
+ */
+export function warningsForRow(row: Row, warnings: readonly Warning[]): Warning[] {
+  const own = new Set<string>(row.fields.map((f) => f.field));
+  // A row that only BORROWS a citation (basis, base) shares what is wrong with the
+  // definition it is checked against, but not a note about someone else's quote:
+  // "threshold.min_dscr cites an amended clause" is not a note about the test basis.
+  const borrowed = row.checkedAgainst !== undefined && row.citeField !== null ? row.citeField : null;
+  if (row.citeField && borrowed === null) own.add(row.citeField);
+  return warnings.filter((w) => {
+    if (w.field && borrowed !== null && w.field === borrowed) return w.code.startsWith("definition_");
+    if (w.field) return own.has(w.field);
+    if (w.code === "addback_not_in_terms") return row.id.startsWith("addback");
+    if (w.code === "amendment_not_cited") return row.id.startsWith("amendment");
+    return false;
+  });
+}
+
+// -------------------------------------------------------------- boarding
+
+export interface DocumentLite {
+  id: string;
+  title: string;
+  doc_type: string;
+  effective_date: string | null;
+}
+
+/** The documents a set of terms says it carries: `effective_amendments[].doc`. */
+export function amendmentDocs(terms: Terms | null | undefined): string[] {
+  const list = terms && Array.isArray(terms.effective_amendments) ? terms.effective_amendments : [];
+  return list.filter(isObj).map((a) => (typeof a.doc === "string" ? a.doc : "")).filter(Boolean);
+}
+
+/**
+ * Amendments on file that the terms in force do not carry: the covenant boarding
+ * lag (docs/design.md §12.5). Judged by title against the approved terms'
+ * `effective_amendments`, never by date alone, because a date can be later than
+ * an amendment and still not include it.
+ */
+export function amendmentsNotBoarded(documents: readonly DocumentLite[], boardedTitles: ReadonlySet<string>): DocumentLite[] {
+  return documents.filter((d) => d.doc_type === "amendment" && !boardedTitles.has(d.title));
+}
+
+// ------------------------------------------------------------ paragraphs
+
+export interface Paragraph {
+  start: number;
+  end: number;
+  /** A section heading line, which no term is expected to rest on. */
+  heading: boolean;
+  /** Some term's quote overlaps this paragraph. */
+  rested: boolean;
+}
+
+const ENUMERATOR = /^\s*(?:\(\s*[A-Za-z0-9]{1,5}\s*\)\s|§\s*\d|ARTICLE\s+[IVXLCDM]+\b)/;
+
+/**
+ * A clause split into the paragraphs the DOCUMENT draws (a blank line, or a line
+ * that opens with an enumerator such as "(b)"), each marked by whether any term's
+ * quote touches it. Cited-at-section-level hides this: citing §7.11 for its
+ * minimum ratio says nothing about whether §7.11(b) or (c) is rested on by
+ * anything, and an add-back lives in exactly such a paragraph.
+ */
+export function paragraphsOf(content: string, spans: readonly { start: number; end: number }[]): Paragraph[] {
+  const out: { start: number; end: number; lines: number }[] = [];
+  let offset = 0;
+  let open: { start: number; end: number; lines: number } | null = null;
+  for (const line of content.split("\n")) {
+    const start = offset;
+    offset += line.length + 1;
+    if (line.trim() === "") {
+      open = null;
+      continue;
+    }
+    const lead = line.length - line.trimStart().length;
+    if (open === null || ENUMERATOR.test(line)) {
+      open = { start: start + lead, end: start + line.trimEnd().length, lines: 1 };
+      out.push(open);
+    } else {
+      open.end = start + line.trimEnd().length;
+      open.lines += 1;
+    }
+  }
+  return out.map((p, i) => ({
+    start: p.start,
+    end: p.end,
+    heading: i === 0 && p.lines === 1 && p.end - p.start < 120 && /^(?:§\s*\d|ARTICLE\b)/.test(content.slice(p.start, p.end)),
+    rested: spans.some((sp) => sp.start < p.end && sp.end > p.start),
+  }));
+}
+
+/** Every quote any term (or edit) cites inside this clause. */
+export function quotesForClause(clause: Clause, citations: readonly { citation: string; quote: string }[]): string[] {
+  const out: string[] = [];
+  for (const c of citations) {
+    const r = resolveCitation(c.citation);
+    if (r.doc_title === clause.doc_title && r.section === clause.section && c.quote) out.push(c.quote);
+  }
+  return out;
+}
+
+/** How many cited clauses hold a paragraph no term rests on, and how many such paragraphs there are. */
+export function unrestedParagraphs(
+  citations: readonly { citation: string; quote: string }[],
+  clauses: readonly Clause[],
+): { clauses: number; paragraphs: number } {
+  const seen = new Set<string>();
+  let nClauses = 0;
+  let nParas = 0;
+  for (const c of citations) {
+    const clause = clauseFor(c.citation, clauses);
+    if (!clause) continue;
+    const key = clauseKey(clause.doc_title, clause.section);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const spans = quotesForClause(clause, citations).map((q) => findQuote(clause.content, q)).filter((x): x is { start: number; end: number } => x !== null);
+    const loose = paragraphsOf(clause.content, spans).filter((p) => !p.heading && !p.rested).length;
+    if (loose > 0) nClauses += 1;
+    nParas += loose;
+  }
+  return { clauses: nClauses, paragraphs: nParas };
 }
 
 // ---------------------------------------------------------------- blockers
@@ -413,25 +549,40 @@ export function clauseFor(citation: string, clauses: readonly Clause[]): Clause 
 const clauseKey = (doc: string | null, section: string | null) => `${doc ?? ""}|${section ?? ""}`;
 
 /**
- * The clauses the model saw (or, for a stored proposal, the ones on file) that
- * no term cites. This is the only control against OMISSION: provenance proves a
- * stated value is supported, never that something was left out.
+ * Every clause of the agreement and its amendments, as the SERVER loaded them for
+ * provenance, that no term cites. The universe is the full set on file, not what
+ * retrieval returned: a clause retrieval never surfaced is exactly the one a
+ * model cannot have used, and a panel limited to retrieval would never show it.
+ * Each result says whether the model was shown it.
  *
- * Citing a section covers the whole section here, so a cited clause can still
- * hold a provision no term uses; the screen says so beside the list.
+ * Citing a section covers the whole section HERE; paragraph-level coverage inside
+ * a cited clause is `paragraphsOf`, drawn in the clause panel.
  */
-export function uncitedClauses(citations: readonly { citation: string }[], seen: readonly Clause[]): Clause[] {
+export interface UncitedClause extends Clause {
+  /** Whether the model was shown this clause; null when that was not recorded (a stored proposal). */
+  shown: boolean | null;
+}
+
+export function uncitedClauses(
+  citations: readonly { citation: string }[],
+  /** Every agreement and amendment clause on file, not only what retrieval returned. */
+  universe: readonly Clause[],
+  /** What the model was shown, or null when unknown. */
+  shown: readonly Clause[] | null = null,
+): UncitedClause[] {
+  const seen = universe;
+  const shownKeys = shown ? new Set(shown.map((c) => clauseKey(c.doc_title, c.section))) : null;
   const cited = new Set<string>();
   for (const c of citations) {
     const r = resolveCitation(c.citation);
     if (r.doc_title && r.section) cited.add(clauseKey(r.doc_title, r.section));
   }
-  const merged = new Map<string, Clause>();
+  const merged = new Map<string, UncitedClause>();
   for (const s of seen) {
     const k = clauseKey(s.doc_title, s.section);
     if (cited.has(k)) continue;
     const prior = merged.get(k);
-    merged.set(k, prior ? { ...prior, content: `${prior.content}\n${s.content}` } : s);
+    merged.set(k, prior ? { ...prior, content: `${prior.content}\n${s.content}` } : { ...s, shown: shownKeys ? shownKeys.has(k) : null });
   }
   return [...merged.values()];
 }

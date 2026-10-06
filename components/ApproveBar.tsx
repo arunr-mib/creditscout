@@ -1,5 +1,22 @@
 import type { Refusal } from "./termsReview";
 
+/** What is open for the analyst to read. None of it blocks approval; none of it is nothing. */
+export interface OmissionCounts {
+  /** Notes the server raised about the terms (not counting a check that did not run). */
+  notes: number;
+  /** Clauses no term cites. */
+  uncited: number;
+  /** Of those, how many the model was never shown; null when that was not recorded. */
+  neverShown: number | null;
+  /** Of those, how many the analyst has opened on this screen. */
+  opened: number;
+  /** Cited clauses that hold a paragraph no term rests on, and how many such paragraphs. */
+  looseClauses: number;
+  looseParagraphs: number;
+  /** Amendments on file that the terms in force do not carry. */
+  unboarded: number;
+}
+
 export type ApprovalState =
   | { kind: "idle" }
   | { kind: "sending" }
@@ -26,10 +43,13 @@ export function ApproveBar(props: {
   blockers: string[];
   state: ApprovalState;
   editCount: number;
+  omission: OmissionCounts;
+  /** Fields the analyst is approving without a completeness check having run. */
+  uncheckedLists: string[];
   onApprove: () => void;
   onReload: () => void;
 }) {
-  const { approver, onApprover, blockers, state, editCount, onApprove, onReload } = props;
+  const { approver, onApprover, blockers, state, editCount, omission, uncheckedLists, onApprove, onReload } = props;
   const sending = state.kind === "sending";
 
   if (state.kind === "approved") {
@@ -107,8 +127,8 @@ export function ApproveBar(props: {
             </>
           ) : (
             <p className="text-label text-text-muted">
-              Nothing on this screen blocks approval. That is not permission: the server re-checks every term against the
-              clauses and refuses what is unsupported.
+              Nothing here blocks approval. That is not permission: the server re-checks every term and refuses what is
+              unsupported.
             </p>
           )}
         </div>
@@ -120,7 +140,7 @@ export function ApproveBar(props: {
             disabled={disabled}
             className="h-10 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {sending ? "Sending…" : "Approve terms"}
+            {sending ? "Sending…" : uncheckedLists.length > 0 ? "Approve without a completeness check" : "Approve terms"}
           </button>
           {editCount > 0 && (
             <span className="text-label text-text-muted">
@@ -129,7 +149,34 @@ export function ApproveBar(props: {
           )}
         </div>
       </div>
+
+      <Open omission={omission} uncheckedLists={uncheckedLists} />
     </footer>
+  );
+}
+
+/**
+ * The counts. Not blocking is true; reading "nothing blocks" as "nothing
+ * matters" is the mistake this exists to prevent. Every figure here was counted
+ * by code from what is on this screen.
+ */
+function Open({ omission: o, uncheckedLists }: { omission: OmissionCounts; uncheckedLists: string[] }) {
+  const items: string[] = [];
+  if (uncheckedLists.length > 0) items.push(`no completeness check ran for ${uncheckedLists.join(", ")}`);
+  if (o.unboarded > 0) items.push(`${o.unboarded} amendment${o.unboarded === 1 ? "" : "s"} on file not boarded`);
+  if (o.notes > 0) items.push(`${o.notes} note${o.notes === 1 ? "" : "s"} from the server`);
+  items.push(
+    `${o.uncited} clause${o.uncited === 1 ? "" : "s"} no term cites` +
+      (o.neverShown !== null && o.uncited > 0 ? `, ${o.neverShown} never shown to the model` : "") +
+      `, ${o.opened} opened by you`,
+  );
+  if (o.looseParagraphs > 0) {
+    items.push(`${o.looseParagraphs} paragraph${o.looseParagraphs === 1 ? "" : "s"} in ${o.looseClauses} cited clause${o.looseClauses === 1 ? "" : "s"} that no term rests on`);
+  }
+  return (
+    <p className="mt-3 border-t border-border-strong pt-3 font-mono text-label text-code">
+      <span aria-hidden="true">⟡ </span>counted by code, open for you to read (none of it blocks approval): {items.join(" · ")}
+    </p>
   );
 }
 

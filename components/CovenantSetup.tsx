@@ -1,22 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ApproveBar, type ApprovalState } from "./ApproveBar";
+import { ApproveBar, type ApprovalState, type OmissionCounts } from "./ApproveBar";
 import { ClausePanel } from "./ClausePanel";
 import { ProposeTrace } from "./ProposeTrace";
 import { ReviewNotices } from "./ReviewNotices";
 import { TermEditor } from "./TermEditor";
 import { TermRow } from "./TermRow";
-import { UncitedClauses } from "./UncitedClauses";
+import { UncitedClauses, clauseKeyOf } from "./UncitedClauses";
 import {
+  amendmentDocs,
+  amendmentsNotBoarded,
   applyLocalEdits,
   blockers as computeBlockers,
   clauseFor,
   entryFor,
+  quotesForClause,
   readRefusal,
   reviewRows,
   splitWarnings,
   uncitedClauses,
+  unrestedParagraphs,
   type Citation,
   type Clause,
   type Edit,
@@ -38,6 +42,8 @@ export interface HistoryRow {
   effective_from: string;
   approved_by: string | null;
   approved_at: string | null;
+  /** The amendment documents these terms carry (`effective_amendments[].doc`). */
+  boarded_docs: string[];
 }
 
 export interface Proposal {
@@ -50,9 +56,8 @@ export interface Proposal {
   /** null: the server gave no list, which is not the same as an empty one. */
   warnings: Warning[] | null;
   warningsNote?: string;
-  /** Clauses the proposal was made from, or all that are on file when that was not stored. */
-  seen: Clause[];
-  seenMode: "shown-to-model" | "on-file";
+  /** The clauses the model was shown, or null when that was not stored with the proposal. */
+  shown: Clause[] | null;
   /** Loaded from the database rather than just proposed. */
   stored: boolean;
 }
@@ -61,7 +66,7 @@ type Phase =
   | { kind: "idle" }
   | { kind: "proposing" }
   | { kind: "proposal" }
-  | { kind: "not_found"; reason: string; seen: Clause[] };
+  | { kind: "not_found"; reason: string; shown: Clause[] };
 
 type Selection = { kind: "term"; rowId: string } | { kind: "clause"; clause: Clause } | null;
 
@@ -95,6 +100,8 @@ export function CovenantSetup(props: {
   const [approver, setApprover] = useState("");
   const [approval, setApproval] = useState<ApprovalState>({ kind: "idle" });
   // A failed propose must not take away what the analyst was already reviewing.
+  // Clauses the analyst has opened from the uncited list. Opening is not reading, and the screen says "opened".
+  const [opened, setOpened] = useState<ReadonlySet<string>>(new Set());
   const [proposeError, setProposeError] = useState<{ status: number; message: string } | null>(null);
 
   const approved = approval.kind === "approved";
@@ -105,7 +112,7 @@ export function CovenantSetup(props: {
   const review = useMemo(
     () =>
       proposal
-        ? reviewRows({ terms: proposal.terms, citations: proposal.citations, violations, edits, staleFields: stale })
+        ? reviewRows({ terms: proposal.terms, citations: proposal.citations, violations, edits, staleFields: stale, warnings: proposal.warnings })
         : null,
     [proposal, violations, edits, stale],
   );
@@ -131,15 +138,19 @@ export function CovenantSetup(props: {
     [review, approver, notRunKeys, confirmed],
   );
 
+  const allCitations = useMemo(() => [...(proposal?.citations ?? []), ...Object.values(edits)], [proposal, edits]);
+
+  // The universe is everything the server holds for the facility, never only what retrieval returned.
   const uncited = useMemo(() => {
-    if (phase.kind === "not_found") return uncitedClauses([], phase.seen);
+    if (phase.kind === "not_found") return uncitedClauses([], clauses, phase.shown);
     if (!proposal) return [];
-    return uncitedClauses([...proposal.citations, ...Object.values(edits)], proposal.seen);
-  }, [phase, proposal, edits]);
+    return uncitedClauses(allCitations, clauses, proposal.shown);
+  }, [phase, proposal, allCitations, clauses]);
 
-  const seenForSection = phase.kind === "not_found" ? phase.seen : (proposal?.seen ?? []);
+  const shownKnown = phase.kind === "not_found" ? true : proposal?.shown != null;
+  const loose = useMemo(() => unrestedParagraphs(allCitations, clauses), [allCitations, clauses]);
 
-  const panel = useMemo((): { clause: Clause | null; quote?: string; reason?: string; unresolved?: string } => {
+  const panel = useMemo((): { clause: Clause | null; quote?: string; quotes?: string[]; reason?: string; unresolved?: string } => {
     if (!sel || !review) {
       return sel?.kind === "clause" ? { clause: sel.clause, reason: "Not cited by any term" } : { clause: null };
     }
@@ -150,8 +161,8 @@ export function CovenantSetup(props: {
     if (!entry) return { clause: null };
     const clause = clauseFor(entry.citation, clauses);
     if (!clause) return { clause: null, unresolved: entry.citation };
-    return { clause, quote: entry.quote, reason: `Cited for ${view.row.label}` };
-  }, [sel, review, proposal, edits, clauses]);
+    return { clause, quote: entry.quote, quotes: quotesForClause(clause, allCitations), reason: `Cited for ${view.row.label}` };
+  }, [sel, review, proposal, edits, clauses, allCitations]);
 
   // ---------------------------------------------------------------- actions
 
@@ -161,6 +172,7 @@ export function CovenantSetup(props: {
     setEdits({});
     setStale(new Set());
     setConfirmed(new Set());
+    setOpened(new Set());
     setEditing(null);
     setApproval({ kind: "idle" });
     setPhase({ kind: "proposal" });
@@ -196,7 +208,8 @@ export function CovenantSetup(props: {
     const excerpts = (Array.isArray(body.excerpts) ? body.excerpts : []) as Clause[];
     if (body.found === false) {
       setProposal(null);
-      setPhase({ kind: "not_found", reason: String(body.reason ?? "No reason was given."), seen: excerpts });
+      setPhase({ kind: "not_found", reason: String(body.reason ?? "No reason was given."), shown: excerpts });
+      setOpened(new Set());
       return;
     }
     const provenance = (body.provenance ?? {}) as { violations?: Violation[] };
@@ -208,8 +221,7 @@ export function CovenantSetup(props: {
       citations: (body.source_citations ?? []) as Citation[],
       violations: provenance.violations ?? [],
       warnings: Array.isArray(body.warnings) ? (body.warnings as Warning[]) : null,
-      seen: excerpts,
-      seenMode: "shown-to-model",
+      shown: excerpts,
       stored: false,
     });
   }
@@ -276,16 +288,57 @@ export function CovenantSetup(props: {
     });
   }
 
+  function openClause(clause: Clause) {
+    setSel({ kind: "clause", clause });
+    setOpened((o) => new Set(o).add(clauseKeyOf(clause)));
+  }
+
   function openCitation(citation: string) {
     const clause = clauseFor(citation, clauses);
-    if (clause) setSel({ kind: "clause", clause });
+    if (clause) openClause(clause);
   }
 
   // ----------------------------------------------------------------- render
 
   const busy = phase.kind === "proposing";
-  const governing = history.find((h) => h.status === "approved");
+  const totalOnFile = new Set(clauses.map((c) => clauseKeyOf(c))).size;
   const knownCitations = [...new Set(clauses.map((c) => c.citation))];
+
+  // After an approval the page must not contradict the footer: the versions and the
+  // boarding flags are recomputed from what was just approved.
+  const approvedRow: HistoryRow | null =
+    approval.kind === "approved" && effectiveTerms
+      ? {
+          version: approval.version,
+          status: "approved",
+          effective_from: approval.effectiveFrom,
+          approved_by: approval.by,
+          approved_at: null,
+          boarded_docs: amendmentDocs(effectiveTerms),
+        }
+      : null;
+  const shownHistory: HistoryRow[] = approvedRow
+    ? [
+        ...history
+          .filter((h) => !(h.status === "proposed" && (h.version === approvedRow.version || h.version === proposal?.version)))
+          .map((h) => (h.status === "approved" ? { ...h, status: "superseded" } : h)),
+        approvedRow,
+      ].sort((a, b) => a.version - b.version)
+    : history;
+  const governing = shownHistory.find((h) => h.status === "approved");
+  const boardedTitles = new Set(governing ? governing.boarded_docs : []);
+  const unboarded = amendmentsNotBoarded(documents, boardedTitles);
+  const proposedDocs = new Set(effectiveTerms ? amendmentDocs(effectiveTerms) : []);
+  const boarding = approved || !proposal ? [] : unboarded.map((d) => ({ title: d.title, effectiveDate: d.effective_date, inTerms: proposedDocs.has(d.title) }));
+  const omission: OmissionCounts = {
+    notes: proposal?.warnings ? splitWarnings(proposal.warnings).notes.length : 0,
+    uncited: uncited.length,
+    neverShown: shownKnown ? uncited.filter((c) => c.shown === false).length : null,
+    opened: uncited.filter((c) => opened.has(clauseKeyOf(c))).length,
+    looseClauses: loose.clauses,
+    looseParagraphs: loose.paragraphs,
+    unboarded: unboarded.length,
+  };
 
   const onFile = (
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="What is on file">
@@ -297,6 +350,7 @@ export function CovenantSetup(props: {
                 <th className="pb-1 font-medium">Title</th>
                 <th className="pb-1 font-medium">Type</th>
                 <th className="pb-1 font-medium">Effective</th>
+                <th className="pb-1 font-medium">Boarded</th>
               </tr>
             </thead>
             <tbody>
@@ -307,7 +361,18 @@ export function CovenantSetup(props: {
                     {d.doc_type.replace("_", " ")}
                     {!SOURCE_TYPES.includes(d.doc_type) && " (cannot be a source of terms)"}
                   </td>
-                  <td className="whitespace-nowrap py-1 font-mono text-text-muted">{d.effective_date ?? "—"}</td>
+                  <td className="whitespace-nowrap py-1 pr-2 font-mono text-text-muted">{d.effective_date ?? "—"}</td>
+                  <td className="py-1">
+                    {d.doc_type !== "amendment" ? (
+                      <span className="text-text-muted">—</span>
+                    ) : boardedTitles.has(d.title) ? (
+                      <span className="text-text-muted">boarded</span>
+                    ) : (
+                      <span className="whitespace-nowrap rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+                        <span aria-hidden="true">⟡ </span>not boarded
+                      </span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -315,7 +380,7 @@ export function CovenantSetup(props: {
         </div>
         <div className="rounded-md border border-border bg-surface p-3">
           <h2 className="text-card text-text">Versions</h2>
-          {history.length === 0 ? (
+          {shownHistory.length === 0 ? (
             <p className="mt-2 text-body text-text-secondary">No covenant terms exist for this facility yet. No test can run until a person approves some.</p>
           ) : (
             <table className="mt-2 w-full text-left text-body">
@@ -328,7 +393,7 @@ export function CovenantSetup(props: {
                 </tr>
               </thead>
               <tbody>
-                {history.map((h) => (
+                {shownHistory.map((h) => (
                   <tr key={h.version} className="border-t border-border">
                     <td className="py-1 pr-2 font-mono text-text-secondary">v{h.version}</td>
                     <td className="py-1 pr-2 text-text-secondary">{h.status}</td>
@@ -342,6 +407,11 @@ export function CovenantSetup(props: {
           {governing && (
             <p className="mt-2 text-label text-text-muted">
               Version {governing.version} is the one in force. A new proposal changes nothing until it is approved.
+            </p>
+          )}
+          {unboarded.length > 0 && (
+            <p className="mt-2 text-label text-code">
+              <span aria-hidden="true">⟡ </span>by code · {unboarded.map((d) => d.title).join(", ")} on file and not part of the terms in force
             </p>
           )}
         </div>
@@ -413,11 +483,12 @@ export function CovenantSetup(props: {
             <div className="col-span-3">
               <UncitedClauses
                 uncited={uncited}
-                totalSeen={seenForSection.length}
-                mode="shown-to-model"
+                totalOnFile={totalOnFile}
+                shownKnown
                 warnings={[]}
-                selectedKey={sel?.kind === "clause" ? `${sel.clause.doc_title}|${sel.clause.section}` : null}
-                onOpen={(clause) => setSel({ kind: "clause", clause })}
+                opened={opened}
+                selectedKey={sel?.kind === "clause" ? clauseKeyOf(sel.clause) : null}
+                onOpen={openClause}
               />
             </div>
             <div className="col-span-2">
@@ -453,6 +524,7 @@ export function CovenantSetup(props: {
           <ReviewNotices
             warnings={proposal.warnings}
             note={proposal.warningsNote}
+            boarding={boarding}
             confirmed={confirmed}
             locked={approved}
             onConfirm={(k, on) =>
@@ -504,15 +576,16 @@ export function CovenantSetup(props: {
 
               <UncitedClauses
                 uncited={uncited}
-                totalSeen={seenForSection.length}
-                mode={proposal.seenMode}
+                totalOnFile={totalOnFile}
+                shownKnown={shownKnown}
                 warnings={proposal.warnings ?? []}
-                selectedKey={sel?.kind === "clause" ? `${sel.clause.doc_title}|${sel.clause.section}` : null}
-                onOpen={(clause) => setSel({ kind: "clause", clause })}
+                opened={opened}
+                selectedKey={sel?.kind === "clause" ? clauseKeyOf(sel.clause) : null}
+                onOpen={openClause}
               />
             </div>
             <div className="col-span-2">
-              <ClausePanel clause={panel.clause} quote={panel.quote} reason={panel.reason} unresolved={panel.unresolved} />
+              <ClausePanel clause={panel.clause} quote={panel.quote} quotes={panel.quotes} reason={panel.reason} unresolved={panel.unresolved} />
             </div>
           </div>
 
@@ -524,6 +597,8 @@ export function CovenantSetup(props: {
             blockers={approved ? [] : blockerList}
             state={approval}
             editCount={Object.keys(edits).length}
+            omission={omission}
+            uncheckedLists={notRunKeys}
             onApprove={approve}
             onReload={() => window.location.reload()}
           />

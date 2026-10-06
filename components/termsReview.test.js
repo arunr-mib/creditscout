@@ -2,17 +2,23 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  amendmentDocs,
+  amendmentsNotBoarded,
   applyLocalEdits,
   blockers,
   buildRows,
   classify,
   clauseFor,
   findQuote,
+  paragraphsOf,
+  quotesForClause,
   readRefusal,
   reviewRows,
   splitWarnings,
   uncitedClauses,
+  unrestedParagraphs,
   valueText,
+  warningsForRow,
 } from "./termsReview.ts";
 import { checkTermsProvenance, loadSourceChunks, termsWarnings } from "../lib/terms.ts";
 import { FACILITY_ID, chunkRows, facility, fakeDb, proposalFor } from "../lib/terms.fixtures.js";
@@ -257,4 +263,95 @@ test("a row that borrows another's citation does not inherit that row's refusal"
   assert.equal(views.find((v) => v.row.id === "threshold").state, "unsupported");
   assert.equal(views.find((v) => v.row.id === "basis").state, "ok", "the basis is not the thing that is wrong");
   assert.match(views.find((v) => v.row.id === "basis").row.checkedAgainst, /Minimum DSCR/);
+});
+
+// ------------------------------------------------ F-3: notes live on their rows
+
+test("a note about a cited clause is attached to the row that cites it, so the row cannot claim to be clean", () => {
+  const p = proposalFor(facility("F1"), 1);
+  const w = termsWarnings(p.terms, p.source_citations, sourceClauses("F1"), ["Amendment No. 2"]);
+  const { views } = reviewRows({ terms: p.terms, citations: p.source_citations, violations: [], edits: {}, staleFields: none, warnings: w });
+  const threshold = views.find((v) => v.row.id === "threshold");
+  assert.equal(threshold.state, "ok", "its value checks passed");
+  assert.ok(threshold.notes.some((n) => n.code === "clause_amended"), "but it carries the note that its clause is amended");
+  // The add-back the amendment permits lands on the add-backs row, which is where its absence is.
+  assert.ok(views.find((v) => v.row.id === "addbacks-none").notes.some((n) => n.code === "addback_not_in_terms"));
+  assert.ok(views.find((v) => v.row.id === "amendments-none").notes.some((n) => n.code === "amendment_not_cited"));
+  // And it does not land on unrelated rows.
+  assert.deepEqual(views.find((v) => v.row.id === "denominator").notes, []);
+});
+
+test("definition_not_located attaches to the list it did not check", () => {
+  const rows = buildRows(proposalFor(facility("F3"), 1).terms);
+  const w = [{ code: "definition_not_located", field: "numerator.deductions", message: "m" }];
+  const got = rows.filter((r) => warningsForRow(r, w).length > 0).map((r) => r.id);
+  assert.deepEqual(got.sort(), ["base", "deductions"], "the list itself, and the base that is checked against the same article");
+});
+
+test("an edited row, even one the server refused, says analyst-corrected and not only model proposed", () => {
+  const p = proposalFor(facility("F3"), 1);
+  const edits = { "threshold.min_dscr": { field: "threshold.min_dscr", value: 0.85, citation: "CA \u00a77.11", quote: "to be less than 1.25 to 1.00" } };
+  const violations = [{ field: "threshold.min_dscr", reason: "value 0.85 does not appear in its cited quote" }];
+  const { views } = reviewRows({ terms: p.terms, citations: p.source_citations, violations, edits, staleFields: none });
+  const row = views.find((v) => v.row.id === "threshold");
+  assert.equal(row.state, "unsupported");
+  assert.equal(row.edited, true);
+});
+
+// ------------------------------------------------------ F-2: not boarded
+
+test("an amendment on file that the approved terms do not carry is not boarded; one they carry is", () => {
+  const docs = [
+    { id: "1", title: "Credit Agreement", doc_type: "agreement", effective_date: "2024-03-15" },
+    { id: "2", title: "Amendment No. 2", doc_type: "amendment", effective_date: "2026-04-01" },
+    { id: "3", title: "Waiver Request Letter \u2014 unexecuted", doc_type: "waiver", effective_date: "2026-08-12" },
+  ];
+  assert.deepEqual(amendmentsNotBoarded(docs, new Set()).map((d) => d.title), ["Amendment No. 2"], "only amendments are ever flagged");
+  assert.deepEqual(amendmentsNotBoarded(docs, new Set(["Amendment No. 2"])), []);
+  const v1 = facility("F1").terms_versions.find((v) => v.version === 1).terms;
+  assert.deepEqual(amendmentDocs(v1), [], "F1's approved v1 carries no amendment: that is the twist");
+  assert.deepEqual(amendmentDocs({ effective_amendments: [{ doc: "Amendment No. 2", effective: "2026-04-01", citation: "x" }] }), ["Amendment No. 2"]);
+});
+
+// -------------------------------------------- F-4: the universe is what is on file
+
+test("a clause retrieval never surfaced still appears, marked as never shown to the model", () => {
+  const p = proposalFor(facility("F1"), 1);
+  const universe = sourceClauses("F1");
+  const retrieved = universe.filter((c) => c.section === "\u00a77.11" || c.section === "\u00a71.01"); // all the model saw
+  const uncited = uncitedClauses(p.source_citations, universe, retrieved);
+  const amd = uncited.find((c) => c.doc_type === "amendment" && /\u00a73/.test(c.citation));
+  assert.ok(amd, "Amendment §3 is listed though retrieval returned nothing of it");
+  assert.equal(amd.shown, false);
+  assert.ok(uncited.every((c) => c.shown === false), "nothing outside the retrieved set was shown");
+  // When it was not recorded, the screen must not guess.
+  assert.ok(uncitedClauses(p.source_citations, universe, null).every((c) => c.shown === null));
+});
+
+// -------------------------------------------- F-5: paragraphs inside a cited clause
+
+test("paragraphs of a cited clause that no quote touches are marked, and the heading is not", () => {
+  const text = "\u00a77.11 Debt Service Coverage Ratio.\n(a) Minimum Ratio. Not less than the stated ratio.\n(b) Adjustments. An add-back may be permitted.\n(c) Verification. Stated in a certificate.";
+  const quote = findQuote(text, "Not less than the stated ratio.");
+  const paras = paragraphsOf(text, [quote]);
+  assert.deepEqual(paras.map((p) => [p.heading, p.rested]), [[true, false], [false, true], [false, false], [false, false]]);
+  assert.equal(text.slice(paras[2].start, paras[2].end), "(b) Adjustments. An add-back may be permitted.");
+});
+
+test("on the real F3 agreement, \u00a77.11(b) and (c) rest on no term when only (a) is quoted", () => {
+  const p = proposalFor(facility("F3"), 1);
+  const universe = sourceClauses("F3");
+  const clause = clauseFor("CA \u00a77.11", universe);
+  const quotes = quotesForClause(clause, p.source_citations);
+  assert.ok(quotes.length >= 1);
+  const spans = quotes.map((q) => findQuote(clause.content, q)).filter(Boolean);
+  const loose = paragraphsOf(clause.content, spans).filter((x) => !x.heading && !x.rested);
+  assert.ok(loose.length >= 1, "the paragraphs after the minimum-ratio sentence are unrested");
+  const counts = unrestedParagraphs(p.source_citations, universe);
+  assert.ok(counts.paragraphs >= loose.length && counts.clauses >= 1);
+});
+
+test("a quote that is not in the clause rests on nothing, so every paragraph is unrested", () => {
+  const text = "(a) one.\n(b) two.";
+  assert.deepEqual(paragraphsOf(text, []).map((p) => p.rested), [false, false]);
 });

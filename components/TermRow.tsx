@@ -1,5 +1,5 @@
 import { CitationChip } from "./CitationChip";
-import { PROBLEM_HEADLINE, type RowView } from "./termsReview";
+import { PROBLEM_HEADLINE, WARNING_LABEL, type RowView } from "./termsReview";
 
 /**
  * One covenant term. The row's whole job is to show, without reading, WHO made
@@ -7,11 +7,16 @@ import { PROBLEM_HEADLINE, type RowView } from "./termsReview";
  *
  *   teal   "model proposed"    the model produced this value
  *   slate  "analyst-corrected" a human changed it; the model's value stays beside it
+ *   slate  "approved by"       a human stands behind it
  *   rose   a refusal           no citation, or a citation that does not support the value
+ *   amber  "server check"      the deterministic checker said so (design.md §5.6)
  *
  * The dangerous row is a real citation carrying the wrong number: it looks
  * correct to anyone scanning for a missing chip. So an unsupported row opens
  * with what is wrong, then shows the quote it is wrong against, in the row.
+ *
+ * A row never says it is clean while a server note about it exists. The note
+ * sits under the value, where the reader's eye already is.
  */
 export function TermRow(props: {
   view: RowView;
@@ -27,7 +32,7 @@ export function TermRow(props: {
   children?: React.ReactNode;
 }) {
   const { view, selected, editable, editing, onSelect, onEdit, onUndo, editedFields, approvedBy, children } = props;
-  const { row, state, problems, entry, parts } = view;
+  const { row, state, problems, entry, parts, edited, notes } = view;
   const blocked = state === "no_citation" || state === "unsupported";
 
   const frame = blocked
@@ -79,10 +84,10 @@ export function TermRow(props: {
             <CitationChip citation={entry?.citation} selected={selected} onSelect={onSelect} />
             {approvedBy ? (
               <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">approved by {approvedBy}</span>
+            ) : edited ? (
+              <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
             ) : (
-              state !== "edited" && entry && (
-                <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span>
-              )
+              entry && <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span>
             )}
           </div>
         )}
@@ -103,6 +108,9 @@ export function TermRow(props: {
                 {PROBLEM_HEADLINE[p.kind]}. This term blocks approval.
               </p>
               <p className="mt-1 text-body text-text-secondary">
+                <span className="mr-2 rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+                  <span aria-hidden="true">⟡ </span>refused by the server&rsquo;s check
+                </span>
                 <span className="font-mono text-label text-text-muted">{p.violation.field}</span> · {p.violation.reason}
               </p>
             </div>
@@ -116,7 +124,26 @@ export function TermRow(props: {
         </div>
       )}
 
-      {state === "ok" && row.citeField !== null && (
+      {notes.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {!blocked && state !== "edited" && !row.absence && (
+            <p className="text-label text-text-muted">
+              The server&rsquo;s value checks passed, but it raised {notes.length === 1 ? "a note" : `${notes.length} notes`} on this term. Read before trusting it:
+            </p>
+          )}
+          {notes.map((w, i) => (
+            <div key={`${w.code}-${i}`} className="rounded-sm border-l-4 border-code bg-code-bg p-2">
+              <p className="text-label uppercase tracking-wide text-code">
+                <span aria-hidden="true">⟡ </span>
+                {WARNING_LABEL[w.code] ?? (w.code === "definition_not_located" ? "Completeness not checked" : w.code)} · by code
+              </p>
+              <p className="text-body text-text-secondary">{w.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {state === "ok" && row.citeField !== null && notes.length === 0 && (
         <p className="mt-2 text-label text-text-muted">
           <span aria-hidden="true">✓ </span>
           {row.checkedAgainst ? `checked by the server against ${row.checkedAgainst}` : "supported by the clause it cites"}

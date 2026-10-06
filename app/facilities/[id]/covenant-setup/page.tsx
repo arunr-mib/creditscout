@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { CovenantSetup, type DocumentRow, type HistoryRow, type Proposal } from "@/components/CovenantSetup";
-import type { Citation, Terms, Warning } from "@/components/termsReview";
+import { amendmentDocs, type Citation, type Terms, type Warning } from "@/components/termsReview";
 import { checkTermsProvenance, loadAmendmentTitles, loadSourceChunks, termsWarnings, type TermsRow } from "@/lib/terms";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +48,7 @@ export default async function CovenantSetupPage({ params }: { params: Promise<{ 
     effective_from: r.effective_from,
     approved_by: r.approved_by,
     approved_at: r.approved_at,
+    boarded_docs: amendmentDocs(r.terms as Terms),
   }));
 
   // The newest proposal still waiting for a person. Approved and superseded rows are history.
@@ -70,8 +71,7 @@ export default async function CovenantSetupPage({ params }: { params: Promise<{ 
       warningsNote: stored
         ? undefined
         : "These notes were not stored with this proposal, so they were worked out when this page loaded, from the documents on file now.",
-      seen: chunks,
-      seenMode: "on-file",
+      shown: null, // what the model was shown was not stored with the proposal
       stored: true,
     };
   }
