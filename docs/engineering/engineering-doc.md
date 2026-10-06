@@ -226,23 +226,332 @@ recommendation.
 
 ---
 
-## 6. Data model
+## 6. Data models
 
-**Unchanged from spec §5**, with two additive columns on `casefiles`:
+Eleven tables. Two are **new** and exist only because of the end-to-end change —
+`covenant_terms` (Flow A) and `tests` (Flow B). Everything else is spec §5.
 
-| Column | Why |
+All ids are `uuid` with `default gen_random_uuid()` unless stated. All timestamps
+are `timestamptz default now()`.
+
+### 6.1 `facilities` — the borrower
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `borrower_name` | text NOT NULL | Fictional. Used for certificate matching. |
+| `industry` | text | |
+| `sender_domain` | text | Cross-check for the optional email intake |
+| `created_at` | timestamptz | |
+
+### 6.2 `documents` — what was uploaded
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `facility_id` | uuid FK → `facilities` | ON DELETE CASCADE |
+| `doc_type` | text CHECK | `agreement` \| `amendment` \| `waiver` \| `compliance_certificate` \| `financials` |
+| `title` | text NOT NULL | |
+| `effective_date` | date | Drives amendment precedence |
+| `source` | text | `upload` \| `email` |
+| `created_at` | timestamptz | |
+
+### 6.3 `doc_chunks` — the vector store
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `document_id` | uuid FK → `documents` | ON DELETE CASCADE |
+| `content` | text NOT NULL | The chunk text — the UI reads this for the citation panel |
+| `embedding` | **vector(1536)** | `text-embedding-3-small`. The dimension is load-bearing. |
+| `metadata` | jsonb NOT NULL | `{facility_id, document_id, doc_type, section, doc_title}` |
+
+**Index:** `ivfflat (embedding vector_cosine_ops)`. **Always filtered by
+`metadata->>'facility_id'`** — one borrower's agreement must never be cited in
+another borrower's casefile.
+
+### 6.4 `covenant_terms` — NEW. Flow A output, versioned and effective-dated
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `facility_id` | uuid FK → `facilities` | |
+| `version` | int NOT NULL | 1, 2, 3… |
+| `effective_from` | date NOT NULL | |
+| `effective_to` | date NULL | NULL = currently in force |
+| `terms` | jsonb NOT NULL | The executable terms (spec §4.2 schema) |
+| `source_citations` | jsonb NOT NULL | One `{field, citation, quote}` per term line |
+| `status` | text CHECK | `proposed` \| `approved` \| `superseded` |
+| `approved_by` | text NULL | Analyst identifier — the four-eyes record |
+| `approved_at` | timestamptz NULL | |
+| `created_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (facility_id, version)`.
+**Rule:** an amendment **never** mutates an existing row. It creates
+`version + 1`, sets the previous row's `effective_to`, and marks it
+`superseded`. A Q1 test must remain reproducible against the terms in force in Q1.
+**Rule:** only `status = 'approved'` rows may be used by a test.
+
+### 6.5 `tests` — NEW. Flow B output, one row per borrower per quarter
+
+This table is what makes the product end-to-end. It exists for **every** borrower
+every quarter, not only for the ones that fail.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `facility_id` | uuid FK → `facilities` | |
+| `covenant_terms_id` | uuid FK → `covenant_terms` | Which approved version was used |
+| `test_period_end` | date NOT NULL | |
+| `computed_dscr` | numeric(10,4) NULL | **Our** number. NULL when the calculator errored. |
+| `reported_dscr` | numeric(10,4) NULL | The borrower's number — evidence, not trigger |
+| `threshold` | numeric(10,4) NOT NULL | |
+| `passed` | boolean NULL | Against `computed_dscr`, never `reported_dscr` |
+| `variance` | numeric(10,4) NULL | `computed − reported` |
+| `variance_flagged` | boolean DEFAULT false | `abs(variance) > policy.variance_tolerance` |
+| `calc_id` | uuid FK → `calc_log` | |
+| `calc_error` | text NULL | Populated when inputs were missing — never defaulted to zero |
+| `created_at` | timestamptz | |
+
+**Constraint:** `UNIQUE (facility_id, test_period_end)`.
+**The three outcomes** are derived, not stored as an enum: `passed = true` and
+`variance_flagged = false` → compliant; `passed = true` and `variance_flagged =
+true` → logged variance; `passed = false` → an `exceptions` row is written.
+
+### 6.6 `exceptions`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `facility_id` | uuid FK | |
+| `test_id` | uuid FK → `tests` | **New** — every exception now traces to a test we ran |
+| `test_period_end` | date | |
+| `computed_dscr` | numeric(10,4) | |
+| `reported_dscr` | numeric(10,4) | |
+| `required_dscr` | numeric(10,4) | |
+| `status` | text CHECK | `new` \| `investigating` \| `pending_review` \| `closed` \| `needs_filing` |
+| `created_at` | timestamptz | |
+
+### 6.7 `casefiles`
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `exception_id` | uuid FK → `exceptions` | |
+| `status` | text CHECK | `investigating` \| `pending_review` \| `approved` \| `overridden` \| `awaiting_docs` \| `failed` |
+| `trace` | jsonb DEFAULT `'[]'` | `[{n, tool, input_summary, output_summary, ts}]` — the live UI reads this |
+| `terms` | jsonb | The terms the agent actually reasoned over |
+| `recommendation` | text CHECK | `resolve` \| `request` \| `escalate` \| `abstain` |
+| `confidence_basis` | text | |
+| `explanation` | text | ≤ 150 words |
+| `claims` | jsonb | `[{text, citation, quote}]` |
+| `calc_ids` | uuid[] | |
+| `missing_evidence` | jsonb | |
+| `suggested_tag` | text CHECK | The six fixed pattern tags |
+| `guardrail_notes` | jsonb | Every forced change, shown in the UI |
+| `steps_count` | int DEFAULT 0 | |
+| `summary` | text | |
+| `summary_embedding` | vector(1536) | |
+| `run_id` | text | Separates eval runs from demo data |
+| `foundry_thread_id` | text | **New** — links to the Foundry thread for trace replay |
+| `foundry_run_id` | text | **New** |
+| `last_step_at` | timestamptz | Detects a stalled run; drives Retry |
+| `created_at` | timestamptz | |
+
+### 6.8 `calc_log` — every calculation, ever
+
+| Column | Type | Notes |
+|---|---|---|
+| `calc_id` | uuid PK | **Injected by the caller**, never generated inside the pure function |
+| `casefile_id` | uuid FK NULL | NULL for quarterly tests outside an investigation |
+| `test_id` | uuid FK NULL | |
+| `inputs` | jsonb NOT NULL | |
+| `outputs` | jsonb NOT NULL | |
+| `calculator_version` | text NOT NULL | |
+| `created_at` | timestamptz | |
+
+Every number in any explanation must match a value in this table or a verbatim
+quote. This table is the evidence base for the whole trust claim.
+
+### 6.9 `reviews` — the human decision, and the lesson
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid PK | |
+| `casefile_id` | uuid FK | |
+| `decision` | text CHECK | `approve` \| `override` \| `request_docs` |
+| `reason` | text | Required on override. Stored **verbatim** — it becomes the lesson. |
+| `corrected_outcome` | text | Required on override |
+| `pattern_tag` | text | Model suggests, analyst confirms |
+| `lesson_text` | text | |
+| `lesson_embedding` | vector(1536) | |
+| `created_at` | timestamptz | |
+
+**Append-only.** A wrong lesson is superseded, never deleted — the audit trail
+is the product.
+
+### 6.10 `policy` — the Risk Officer's levers
+
+| Key | Default | Effect |
+|---|---|---|
+| `variance_tolerance` | `0.05` | Above this, a passing test still logs a variance |
+| `escalate_if_breach_margin_over` | `0.15` | A deep breach always escalates |
+| `prohibited_actions` | `["waive covenant","amend terms","contact borrower"]` | Proposing one forces escalate |
+| `max_steps` | `8` | Agent iteration cap |
+| `require_human_review` | `true` | **Locked.** Displayed as locked in the UI. |
+
+### 6.11 `eval_runs`
+
+| Column | Type |
 |---|---|
-| `foundry_thread_id text` | Links the casefile to its Foundry thread, so traces can be fetched and replayed |
-| `foundry_run_id text` | Same, for the specific run |
+| `id` uuid PK · `mode` text (`cold`\|`warm`) · `metrics` jsonb · `created_at` timestamptz |
 
-Everything else is as specced: `facilities`, `documents`, `doc_chunks`,
-`exceptions`, `calc_log`, `reviews`, `policy`, `eval_runs`, the six fixed pattern
-tags, and `run_id` separating eval runs from demo data. Embeddings stay
-**1536-dimensional**.
+### 6.12 Relationships
+
+```
+facilities 1─────* documents 1─────* doc_chunks
+    │
+    ├──────* covenant_terms (versioned, effective-dated)
+    │              │
+    │              ▼
+    └──────* tests ────* exceptions ──1 casefiles ──* reviews
+                 │                          │
+                 └──────* calc_log *────────┘
+```
+
+### 6.13 Row Level Security
+
+**This matters because the browser reads Supabase directly with the anon key.**
+
+| Role | Grant |
+|---|---|
+| `anon` (browser) | **SELECT only**, on every table. No INSERT, UPDATE or DELETE anywhere. |
+| `service_role` (API routes, server-side only) | Full access. The key never reaches the client. |
+
+```sql
+ALTER TABLE <each_table> ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon_read" ON <each_table> FOR SELECT TO anon USING (true);
+-- deliberately no INSERT / UPDATE / DELETE policy for anon
+```
+
+Three consequences, stated explicitly because they are easy to get wrong:
+
+1. **Every write goes through an API route** using the service-role client. There
+   is no browser-side write path, which is why `USING (true)` on read is
+   acceptable here.
+2. **`USING (true)` is correct only because this is single-tenant with synthetic
+   data.** Multi-tenant requires a `lender_id` on every table and
+   `USING (lender_id = auth.jwt() ->> 'lender_id')`. That is a Launch-gate
+   change, noted so nobody mistakes the demo policy for a production one.
+3. **The service-role key must never appear in a `NEXT_PUBLIC_` variable** or in
+   a Client Component. Only `lib/supabase/server.ts` may read it.
 
 ---
 
-## 7. Observability — the owner's question, answered
+## 7. API design
+
+Four analyst-facing routes, three tool routes called by the Foundry agent, and
+one internal route.
+
+### 7.1 Analyst-facing
+
+| Route | Method | Body | Returns | Auth |
+|---|---|---|---|---|
+| `/api/ingest` | POST | multipart: `file`, `facility_id`, `doc_type` | `{document_id, chunks_created}` | service-role, server-side |
+| `/api/covenant-terms/propose` | POST | `{facility_id}` | `{terms_id, terms, source_citations}` — status `proposed` | service-role |
+| `/api/covenant-terms/approve` | POST | `{terms_id, approved_by, edits?}` | `{terms_id, version, effective_from}` — status `approved` | service-role |
+| `/api/tests/run` | POST | `{facility_id, test_period_end}` | `{test_id, computed_dscr, passed, variance_flagged, exception_id?}` | service-role |
+| `/api/investigate` | POST | `{exception_id}` | `{casefile_id}` **immediately** — work continues in Foundry | service-role |
+| `/api/review` | POST | `{casefile_id, decision, reason?, corrected_outcome?, confirmed_tag?}` | `{status}` | service-role |
+
+**Reads do not go through the API.** The browser queries Supabase directly with
+the anon key under the RLS read policies above. This is what makes the
+1-second trace poll cheap.
+
+### 7.2 Tool routes — called by the Foundry agent over HTTPS
+
+Published to Foundry as an OpenAPI 3.0 specification. **Every one requires the
+`X-CreditScout-Tool-Key` header**; a request without it is rejected with 401.
+
+| Route | Method | Body | Returns |
+|---|---|---|---|
+| `/api/tools/dscr-calculator` | POST | `{terms, financials, casefile_id}` | `{calc_id, components, dscr, threshold, pass, margin}` or `{error}` |
+| `/api/tools/search-documents` | POST | `{facility_id, query, doc_types?, k?}` | `[{content, citation, section, doc_title, score}]` |
+| `/api/tools/search-past-cases` | POST | `{facility_id, exception_profile, k?}` | `[{lesson_text, pattern_tag, case_summary}]` |
+
+`dscr-calculator` is the one that matters: it imports `calc/dscr.js`, **generates
+the `calc_id` in the wrapper**, writes the `calc_log` row, and returns. The model
+can request a calculation; it cannot perform one.
+
+### 7.3 Internal
+
+| Route | Method | Purpose |
+|---|---|---|
+| `/api/investigate/sync` | POST | Polls the Foundry run, mirrors completed steps into `casefiles.trace`, and on completion runs guardrail → policy → `pending_review`. Shared-secret protected. |
+
+---
+
+## 8. Feature breakdown
+
+Every PRD user story mapped to the components, tables and routes that implement
+it. **A story with no route here will silently fail to exist.**
+
+| Story | Components | Tables written | Routes |
+|---|---|---|---|
+| **US-000** Covenant setup with analyst approval | `CovenantSetup`, `TermsReview`, `CitationPanel` | `covenant_terms`, `documents`, `doc_chunks` | `/api/ingest`, `/api/covenant-terms/propose`, `/api/covenant-terms/approve` |
+| **US-001** Independent quarterly computation | `UploadPackage`, `TestResultCard` | `tests`, `calc_log`, `exceptions` | `/api/ingest`, `/api/tests/run` |
+| **US-001b** Variance logged when both pass | `TestResultCard` (variance badge) | `tests.variance_flagged` | `/api/tests/run` |
+| **US-002** Agent investigation → recommendation | `InvestigationPage`, `CasefileView` | `casefiles` | `/api/investigate`, `/api/investigate/sync`, all three tool routes |
+| **US-003** Every number traceable | `CalcTable`, `GuardrailNotice` | `calc_log`, `casefiles.guardrail_notes` | guardrail runs inside `/api/investigate/sync` |
+| **US-004** Citation chips → clause text | `CitationChip`, `ClausePanel` | — (reads `doc_chunks`) | none — direct Supabase read |
+| **US-005** Live step trace | `StepTrace` (1s poll) | `casefiles.trace` | none — direct Supabase read |
+| **US-006** Approve / override → memory | `ReviewActions`, `OverrideDialog` | `reviews`, `casefiles.status` | `/api/review` |
+| **US-007** Request / abstain on missing evidence | `CasefileView` (missing-evidence list) | `casefiles.missing_evidence` | guardrail |
+| **US-008** Memory speeds a later case | `SeenSimilarBadge` | reads `reviews.lesson_embedding` | `/api/tools/search-past-cases` |
+| **US-009** Governance panel | `GovernancePanel` | — (reads `policy`) | none — direct read |
+| **US-010** Eval scoreboard | `Scoreboard` | — (reads `eval_runs`) | none — direct read |
+| **US-011** Email intake *(backlog)* | — | `documents` | cron → `/api/ingest` |
+
+**Coverage check:** every P0 story has at least one route and one table. US-004,
+US-005, US-009 and US-010 are read-only by design — no route needed, which is
+intentional and not an omission.
+
+---
+
+## 9. Build sequence
+
+Nine stages. **Each produces something you can actually run** — that is the test
+of whether the sequence is right.
+
+| Stage | Build | Runnable proof | Depends on |
+|---|---|---|---|
+| **0** | Supabase schema + RLS migration | `supabase db push`; tables visible in the dashboard | — |
+| **1** | `calc/dscr.js`, `guardrails/*.js` + unit tests | **`npm test` green.** No model, no network, no UI. Behaviours 1–10 and 18–24 of PRD §2.3 all covered. | 0 |
+| **2** | Synthetic documents for F1, F3, F5 + `expected-values-template.csv` | Three facilities of PDFs on disk, each marked `SYNTHETIC — FOR DEMONSTRATION`; owner can fill the template | — |
+| **3** | Next.js scaffold + `docs/design.md` tokens + Supabase clients | `npm run dev` serves a styled empty shell | 0 |
+| **4** | `/api/ingest` + chunking + embeddings | Upload an agreement, see rows in `doc_chunks` | 0, 2, 3 |
+| **5** | **Foundry spike** — one agent, one tool route, round trip | Agent calls `/api/tools/dscr-calculator` and gets a number back. **Highest-risk stage; run it first in wall-clock terms even though it depends on 1 and 4.** | 1, 4 |
+| **6** | Flow A — propose + approve covenant terms | Terms proposed with citations, analyst approves, row goes `approved` | 4, 5 |
+| **7** | Flow B part 1 — `/api/tests/run`, code-only | All three facilities tested quarterly; F1 and F3 raise exceptions. **No agent involved — pure code.** | 1, 6 |
+| **8** | Flow B part 2 — investigation, guardrail, policy | F1 resolves, F3 escalates, with cited casefiles | 5, 7 |
+| **9** | UI screens + review + memory | F1 → override → F5 resolves in fewer steps | 8 |
+| **10** | Deploy to Vercel + eval run | Public URL; scoreboard with 6 cases, cold and warm | 9 |
+
+**Two sequencing notes that matter:**
+
+- **Stage 5 is the real risk and is ordered by dependency, not by priority.** In
+  wall-clock terms it is spiked first, with a throwaway agent, before stages 6–8
+  are built on the assumption that Connected Agents works. If it fights back, the
+  fallback — demoting the three specialists to plain OpenAPI tools — changes
+  stage 8 only.
+- **Stage 7 produces a working product without any agent at all.** Ingest,
+  approved terms, deterministic calculation, exception detection. If everything
+  downstream collapses, that is still a demonstrable system, and it is the same
+  thing the kill switch degrades to in production.
+
+---
+
+## 10. Observability — the owner's question, answered
 
 Three layers, each answering a different question:
 
@@ -261,7 +570,7 @@ agent's work inside the product.
 
 ---
 
-## 8. Evaluation
+## 11. Evaluation
 
 **Unchanged from spec §8.** `evals/run.mjs` POSTs to `/api/investigate` on the
 deployed app instead of an n8n webhook — a base-URL change. Two passes, cold and
@@ -281,7 +590,7 @@ it agrees with itself.
 
 ---
 
-## 9. What this means for the three plans
+## 12. What this means for the three plans
 
 | Plan | Covers | Effect |
 |---|---|---|
@@ -294,7 +603,7 @@ network beyond the schema migration, and now no platform dependency either.
 
 ---
 
-## 10. Risks
+## 13. Risks
 
 | Risk | Mitigation |
 |---|---|
@@ -325,7 +634,7 @@ implementation task under any of the options considered.
 
 ---
 
-## 11. Spec amendments — owner approval needed
+## 14. Spec amendments — owner approval needed
 
 The spec is owner-owned. Proposed, not applied.
 
@@ -353,7 +662,7 @@ rules (§9), and the demo structure (§10).
 
 ---
 
-## 12. Open items for the owner
+## 15. Open items for the owner
 
 1. **Approve or reject this HLD** (§11). The LLD is written against the answer.
 2. **§14.1 — do the six borrower twists ring true?** Unaffected by the platform
@@ -369,7 +678,7 @@ rules (§9), and the demo structure (§10).
 
 ---
 
-## 13. Recommended next step
+## 16. Recommended next step
 
 If §11 is approved, write the LLD (`docs/spec.md`) feature by feature in the Week
 5 blueprint format — Product & UX, Data & Backend, Frontend & QA.
