@@ -5,7 +5,7 @@
   "description": "Covenant exception investigation agent \u2014 DSCR decision support",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "scripts": {
     "dev": "next dev",

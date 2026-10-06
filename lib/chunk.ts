@@ -43,26 +43,74 @@ const MAX_HEADING_LENGTH = 120;
 /** Text before the first heading: marker, title, parties. The marker must survive. */
 export const PREAMBLE_SECTION = "PREAMBLE";
 
-const SECTION_NUMBER = /(?:§\s*|Section\s+)(\d+(?:\.\d+)*)/;
-const ARTICLE_NUMBER = /\b(?:ARTICLE|Article)\s+([IVXLCDM]+)\b/;
+/** A citation resolved to the document it names and the section within it. Any part may be null. */
+export interface ResolvedCitation {
+  doc_type: string | null;
+  doc_title: string | null;
+  section: string | null;
+}
+
+// A section id is only unique within one document: in F1, `§1` exists in four.
+// A caller must therefore match on the (document, section) pair, never on the
+// section alone. The prefix vocabulary is what data/facilities.js cites with:
+// "CA" is the Credit Agreement, "Amd N" is Amendment No. N. Titles match the
+// `documents.title` values the seed writes, which are the `doc_title` metadata.
+const DOCUMENT_PREFIXES: { pattern: RegExp; resolve: (m: RegExpExecArray) => { doc_type: string; doc_title: string } }[] = [
+  {
+    pattern: /^(?:CA\b|Credit Agreement\b)\s*/,
+    resolve: () => ({ doc_type: "agreement", doc_title: "Credit Agreement" }),
+  },
+  {
+    pattern: /^(?:Amd\.?|Amendment)\s*(?:No\.?\s*)?(\d+)\s*/,
+    resolve: (m) => ({ doc_type: "amendment", doc_title: `Amendment No. ${m[1]}` }),
+  },
+];
+
+const SECTION_AT_START = /^(?:§\s*|Section\s+)(\d+(?:\.\d+)*)/;
+const ARTICLE_AT_START = /^(?:ARTICLE|Article)\s+([IVXLCDM]+)\b/;
 
 /**
- * Reduce any citation or heading to its section id.
+ * Resolve a citation to the document it names and its section id.
+ *
+ *   resolveCitation("CA §7.11(b)(i)") -> { agreement, "Credit Agreement", "§7.11" }
+ *   resolveCitation("Amd 2 §3(a)")    -> { amendment, "Amendment No. 2", "§3" }
+ *   resolveCitation("§7.11")          -> { null, null, "§7.11" }  (document unnamed)
+ *
+ * The section reference must open the string, after an optional document
+ * prefix. A section mentioned mid-sentence is not a citation, so it does not
+ * count ("see §7.11" resolves to nothing). An unknown prefix resolves to
+ * nothing too, rather than a section with no document.
+ */
+export function resolveCitation(input: string): ResolvedCitation {
+  let rest = input.trim();
+  let doc: { doc_type: string; doc_title: string } | null = null;
+  for (const { pattern, resolve } of DOCUMENT_PREFIXES) {
+    const m = pattern.exec(rest);
+    if (m) {
+      doc = resolve(m);
+      rest = rest.slice(m[0].length);
+      break;
+    }
+  }
+  const sec = SECTION_AT_START.exec(rest);
+  const art = sec ? null : ARTICLE_AT_START.exec(rest);
+  const section = sec ? `§${sec[1]}` : art ? `ARTICLE ${art[1]}` : null;
+  return section
+    ? { doc_type: doc?.doc_type ?? null, doc_title: doc?.doc_title ?? null, section }
+    : { doc_type: null, doc_title: null, section: null };
+}
+
+/**
+ * The section half of a citation or heading, or null.
  *
  *   normaliseSection("CA §7.11(b)(i)")     === "§7.11"
- *   normaliseSection("Section 7.11")        === "§7.11"
- *   normaliseSection("Amd 2 §3(a)")         === "§3"
  *   normaliseSection("ARTICLE VII — X")     === "ARTICLE VII"
  *
- * Returns null when nothing section-like is found. The stage-5 lookup applies
- * this to the citation side so both sides of the comparison use one function.
+ * The id alone does not identify a chunk; use `resolveCitation` to get the
+ * document as well.
  */
 export function normaliseSection(input: string): string | null {
-  const sec = SECTION_NUMBER.exec(input);
-  if (sec) return `§${sec[1]}`;
-  const art = ARTICLE_NUMBER.exec(input);
-  if (art) return `ARTICLE ${art[1]}`;
-  return null;
+  return resolveCitation(input).section;
 }
 
 // A heading starts the line. For `§`, the number must be followed by a
