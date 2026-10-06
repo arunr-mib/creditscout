@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { verifyTermsProvenance } from "../guardrails/guardrail.js";
+import { extractFigures, verifyTermsProvenance } from "../guardrails/guardrail.js";
 import { resolveCitation } from "./chunk.ts";
 import { citationFor } from "./retrieval.ts";
 
@@ -471,12 +471,13 @@ export function checkTermsProvenance(
 
   // Everything the guardrail's number-walk cannot see: names and lists.
   const entry = (field: string) => (flagged.has(field) ? undefined : byField.get(field));
-  const scope = (field: string): string | undefined => {
+  // The whole cited chunk, raw, so list items can be split on the document's own delimiters.
+  const rawByCitation = new Map(keyed.map((k) => [k.citation, k.content]));
+  const chunkOf = (field: string): string => {
     const e = entry(field);
-    if (!e || typeof e.quote !== "string") return undefined;
-    return enclosingSentence(content.get(String(e.citation).trim()) ?? "", e.quote);
+    return e ? rawByCitation.get(String(e.citation).trim()) ?? "" : "";
   };
-  checkNamedTerms(terms, entry, scope, flag);
+  checkNamedTerms(terms, entry, chunkOf, flag);
 
   return { valid: violations.length === 0, violations };
 }
@@ -497,43 +498,42 @@ const UNCAPPED = /\b(without\s+(?:any\s+)?(?:limit|limitation|cap)|no\s+(?:limit
 /** Words that put a limit on an amount; a quote containing one cannot be the source of "uncapped". */
 const CAPPING = /\$\s?\d|not\s+to\s+exceed|shall\s+not\s+exceed|no\s+more\s+than|up\s+to|at\s+most/i;
 
-/**
- * The sentence of `chunk` that contains `quote`, widened from the quote to the
- * nearest sentence ends. Both are folded first, so whitespace is not a barrier.
- * A sentence ends at "." or ";" followed by whitespace, except after "No" ("No.
- * 2"); a decimal point is never followed by whitespace. If the quote is not in
- * the chunk the quote itself is returned: that field is already a violation.
- */
-export function enclosingSentence(chunk: string, quote: string): string {
-  const text = foldText(chunk);
-  const q = foldText(quote);
-  const at = q === "" ? -1 : text.indexOf(q);
-  if (at < 0) return q;
-  const ends = [...text.matchAll(/(?<!\bNo)[.;](?=\s|$)/g)].map((m) => m.index as number);
-  const before = ends.filter((e) => e < at).pop();
-  const after = ends.find((e) => e >= at + q.length - 1);
-  return text.slice(before === undefined ? 0 : before + 1, after === undefined ? text.length : after + 1).trim();
-}
-
 const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(quote).toLowerCase().includes(foldText(phrase).toLowerCase());
+
+/** The delimited items of a passage: lines, `;`, and ", and" / ", or" in a list. Sentences are NOT detected: legal prose has no reliable full stop. */
+const listItems = (raw: string): string[] => raw.split(/;|\n|,\s+(?:and|or)\s+/i).map(foldText).filter(Boolean);
+
+const sameFigure = (a: number, b: number) => Math.abs(a - b) <= 1e-6 * Math.max(1, Math.abs(a), Math.abs(b));
 
 /**
  * The guardrail proves a NUMBER is in its quote. A named add-back, a deduction,
  * a denominator component, the basis and the base are just as capable of being
  * wrong, and a fabricated add-back name is the same class of lie as a fabricated
- * cap. So each is tied to the quote cited for it:
+ * cap. So each is tied to the text cited for it, and there are two different
+ * questions with two different scopes, on purpose:
  *
- *   add-back name    appears in the sentence cited for its cap
- *   cap: null        that sentence says the add-back is uncapped, and states no limit
- *   deductions       the set the ratio definition's sentence names, exactly: one
- *                    it names that the terms drop is as wrong as one invented
- *   components       the same, against the Debt Service definition's sentence
- *   numerator.base   appears in the ratio definition's sentence
- *   basis            the threshold's sentence states it ("trailing four-quarter")
+ *   COMPLETENESS ("did the proposal drop something?") is judged against the WHOLE
+ *   CITED CHUNK. A chunk is one section, the natural legal unit, so no sentence
+ *   has to be found: a proposer that quotes half a definition, or stops at a ";"
+ *   or an "Inc.", cannot choose its own ground truth. The quote must still be
+ *   verbatim in the chunk (checked before this runs); that anchors provenance.
  *
- * "Sentence" means the sentence of the cited chunk containing the quote, not the
- * quote alone (see below).
- *   amendment doc    is the document its effective-date citation points into
+ *     deductions        the set the chunk names, exactly: one it names that the
+ *                       terms drop is as wrong as one invented
+ *     components        the same, for the Debt Service definition's chunk
+ *     numerator.base    appears in the ratio definition's chunk
+ *     basis             the threshold's chunk states it ("trailing four-quarter")
+ *     cap: null         no list item of the chunk that names the add-back states
+ *                       a limit, and the quote says it is uncapped
+ *
+ *   PAIRING ("does this cap belong to this add-back?") is judged against the
+ *   DELIMITED LIST ITEM, because the delimiter that is wrong for completeness is
+ *   right for pairing: in "may add back A, up to $500,000; and B, up to $800,000"
+ *   both numbers are in the quote, and only the item says which is A's.
+ *
+ *     add-back name     appears in the quote cited for its cap
+ *     capped add-back   the cap's figure is in the list item that names it
+ *     amendment doc     is the document its effective-date citation points into
  *
  * `entry(field)` is undefined when that field has no usable citation (absent, or
  * already flagged), in which case there is nothing to check against and the
@@ -542,55 +542,68 @@ const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(
 function checkNamedTerms(
   terms: Obj,
   entry: (field: string) => Obj | undefined,
-  scope: (field: string) => string | undefined,
+  chunkOf: (field: string) => string,
   flag: (field: string, reason: string) => void,
 ): void {
-  // Judged against the sentence the quote sits in, in the document, NOT the quote.
-  // A proposer that quotes half a definition would otherwise choose its own ground
-  // truth: cut the quote short and a dropped component is "not mentioned". The
-  // quote still has to be verbatim in the chunk (checked before this runs).
-  const quoteOf = scope;
+  const quoteOf = (field: string): string | undefined => {
+    const q = entry(field)?.quote;
+    return typeof q === "string" ? q : undefined;
+  };
 
   const nu = isObj(terms.numerator) ? terms.numerator : {};
   const addbacks = Array.isArray(nu.addbacks) ? nu.addbacks : [];
   addbacks.forEach((ab, i) => {
-    if (!isObj(ab)) return;
-    const q = quoteOf(`numerator.addbacks[${i}].cap`);
+    if (!isObj(ab) || typeof ab.name !== "string") return;
+    const name: string = ab.name;
+    const field = `numerator.addbacks[${i}].cap`;
+    const q = quoteOf(field);
     if (q === undefined) return;
-    if (typeof ab.name === "string" && !has(q, ab.name)) {
-      flag(`numerator.addbacks[${i}].name`, `add-back "${ab.name}" does not appear in the quote cited for it`);
+    if (!has(q, name)) {
+      flag(`numerator.addbacks[${i}].name`, `add-back "${name}" does not appear in the quote cited for it`);
+      return;
     }
-    if (ab.cap === null && !(UNCAPPED.test(q) && !CAPPING.test(q))) {
-      flag(`numerator.addbacks[${i}].cap`, "cap is null (uncapped), but its cited quote does not say the add-back is uncapped");
+    const mine = listItems(q).filter((it) => has(it, name));
+    if (typeof ab.cap === "number") {
+      const cap = ab.cap;
+      if (!mine.some((it) => extractFigures(it).some((n: number) => sameFigure(n, cap)))) {
+        flag(field, `cap ${cap} is not in the same list item as add-back "${name}" in its cited quote`);
+      }
+    } else if (ab.cap === null) {
+      const named = listItems(chunkOf(field)).filter((it) => has(it, name));
+      if (!mine.some((it) => UNCAPPED.test(it))) {
+        flag(field, "cap is null (uncapped), but its cited quote does not say the add-back is uncapped");
+      } else if (named.some((it) => CAPPING.test(it))) {
+        flag(field, "cap is null (uncapped), but the cited chunk states a limit for this add-back");
+      }
     }
   });
 
   const exactSet = (field: string, listed: unknown, words: Record<string, RegExp>) => {
-    const q = quoteOf(field);
-    if (q === undefined || !Array.isArray(listed)) return;
+    const chunk = foldText(chunkOf(field));
+    if (chunk === "" || !Array.isArray(listed)) return;
     const problems: string[] = [];
     for (const [name, re] of Object.entries(words)) {
-      const named = re.test(q);
+      const named = re.test(chunk);
       const included = listed.includes(name);
-      if (included && !named) problems.push(`terms include ${name} but the cited sentence does not mention it`);
-      if (named && !included) problems.push(`the cited sentence mentions ${name} but the terms leave it out`);
+      if (included && !named) problems.push(`terms include ${name} but the cited chunk does not mention it`);
+      if (named && !included) problems.push(`the cited chunk mentions ${name} but the terms leave it out`);
     }
     if (problems.length > 0) flag(field, problems.join("; "));
   };
   exactSet("numerator.deductions", nu.deductions, DEDUCTION_WORDS);
   exactSet("denominator.components", isObj(terms.denominator) ? terms.denominator.components : undefined, DENOMINATOR_WORDS);
 
-  const ratioDefinition = quoteOf("numerator.deductions");
-  if (ratioDefinition !== undefined && typeof nu.base === "string" && !has(ratioDefinition, nu.base)) {
-    flag("numerator.base", `base "${nu.base}" does not appear in the ratio definition cited for the deductions`);
+  const ratioDefinition = chunkOf("numerator.deductions");
+  if (ratioDefinition !== "" && typeof nu.base === "string" && !has(ratioDefinition, nu.base)) {
+    flag("numerator.base", `base "${nu.base}" does not appear in the chunk cited for the deductions`);
   }
 
-  const thresholdQuote = quoteOf("threshold.min_dscr");
+  const thresholdChunk = chunkOf("threshold.min_dscr");
   const tp = isObj(terms.test_period) ? terms.test_period : {};
-  if (thresholdQuote !== undefined && typeof tp.basis === "string") {
-    const trailing = /trailing\s+(?:four|4|twelve|12)[\s-]+(?:fiscal\s+)?(?:quarter|month)s?/i.test(thresholdQuote);
-    const supported = tp.basis === "TTM" ? trailing : has(thresholdQuote, tp.basis);
-    if (!supported) flag("test_period.basis", `basis "${tp.basis}" is not stated in the quote cited for the threshold`);
+  if (thresholdChunk !== "" && typeof tp.basis === "string") {
+    const trailing = /trailing\s+(?:four|4|twelve|12)[\s-]+(?:fiscal\s+)?(?:quarter|month)s?/i.test(foldText(thresholdChunk));
+    const supported = tp.basis === "TTM" ? trailing : has(thresholdChunk, tp.basis);
+    if (!supported) flag("test_period.basis", `basis "${tp.basis}" is not stated in the chunk cited for the threshold`);
   }
 
   const amendments = Array.isArray(terms.effective_amendments) ? terms.effective_amendments : [];

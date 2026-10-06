@@ -387,15 +387,50 @@ test("N1: C1 stays closed: the denominator of 1.25 to 1.00 is still not a usable
   assert.equal(applyGuardrail(good, CALCS, RATIO_CHUNKS).casefile.recommendation, "resolve");
 });
 
-test("N2 (chosen): 'restored from 0.92 to 1.00' is a change in a figure, so BOTH figures must be traced and it abstains as it did before", () => {
-  assert.deepEqual(extractFigures("coverage was restored from 0.92 to 1.00"), [0.92, 1]);
-  const cf = base({
-    explanation: "Coverage was restored from 0.92 to 1.00, so the recomputed DSCR is 1.31.",
+// --- N2: wording must decide nothing -----------------------------------------
+// "N to 1" is a ratio only if N is one the documents or the calculations state.
+// A model's choice of verb cannot make a figure checkable or unchecked.
+const explain = (text) =>
+  base({
+    explanation: `${text}, so the recomputed DSCR is 1.31.`,
     claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
   });
-  const { casefile } = applyGuardrail(cf, CALCS, RATIO_CHUNKS);
-  assert.equal(casefile.recommendation, "abstain");
-  // and it cannot be used to launder a threshold either
-  const r = thresholdCheck(1.0, "restored from 0.92 to 1.00", [{ citation: "CA §7.11", content: "restored from 0.92 to 1.00" }]);
-  assert.equal(r.valid, false);
+// 0.92 and 1.17 are traceable figures here (a cited chunk states them) but are NOT ratios any
+// document states, so what must decide the verdict is the unchecked "1.00", not the first figure.
+const WITH_PRIOR = [...RATIO_CHUNKS, { citation: "Fin Q2 2026 §2", content: "Prior-year coverage of 0.92 and 1.17 was reported." }];
+const verdict = (text) => applyGuardrail(explain(text), CALCS, WITH_PRIOR).casefile.recommendation;
+
+test("N2: a 1.00 after a number that is not a known ratio is traced like any figure, whatever the surrounding words", () => {
+  for (const text of [
+    "Coverage rose from 0.92 to 1.00",
+    "Coverage was restored from 0.92 to 1.00",
+    "Coverage went from approximately 0.92 to 1.00",
+    "Coverage improved 0.92 to 1.00",
+    "Coverage moved 0.92 to 1.00",
+    "Coverage went from $1.17 to 1.00",
+    "Coverage was 0.92 to 1.00 last year",
+  ]) {
+    assert.equal(verdict(text), "abstain", text);
+  }
+});
+
+test("N2: a known ratio stated as a pair is a ratio, whatever the surrounding words", () => {
+  // 1.25 is stated as a ratio by the cited clause; 1.31 is the logged DSCR.
+  for (const text of ["The covenant requires 1.25 to 1.00", "The ratio floor is 1.25:1", "Coverage is 1.31 to 1.00 against a floor of 1.25 to 1"]) {
+    assert.equal(verdict(text), "resolve", text);
+  }
+  // Accepted residue: 1.31 IS the logged DSCR, so "from 1.31 to 1.00" reads as a ratio pair.
+  assert.equal(verdict("Coverage went from 1.31 to 1.00"), "resolve");
+});
+
+test("N2: in a document's text every 'N to 1' is a ratio by its form; a model's text must name a known N", () => {
+  assert.deepEqual(extractFigures("coverage was restored from 0.92 to 1.00"), [0.92]);
+  assert.deepEqual(extractFigures("coverage was restored from 0.92 to 1.00", []), [0.92, 1]);
+  assert.deepEqual(extractFigures("coverage was restored from 0.92 to 1.00", [0.92]), [0.92]);
+  assert.deepEqual(extractFigures("requires 1.25 to 1.00", [1.25]), [1.25]);
+  assert.deepEqual(extractFigures("requires 1.25 to 1.00", [1.3]), [1.25, 1]);
+  // and a quote cannot launder a threshold of 1.00 whatever its verb
+  for (const quote of ["restored from 0.92 to 1.00", "from approximately 0.92 to 1.00", "improved 0.92 to 1.00"]) {
+    assert.equal(thresholdCheck(1.0, quote, [{ citation: "CA §7.11", content: quote }]).valid, false, quote);
+  }
 });

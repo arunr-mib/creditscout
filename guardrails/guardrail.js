@@ -64,21 +64,19 @@ export function normaliseNumber(token) {
 }
 
 /**
- * The denominator of a STATED RATIO: "1.25 to 1.00", "1.25 to 1", "1.25:1". A
- * ratio needs both operands, so the match requires a standalone left figure:
- *
- *   - not the tail of a grouped or decimal number, so "2,400,000 to 1,900,000"
- *     never has its "1,900,000" read as a denominator "1" plus a phantom 900000.
- *     The right operand is a lone 1 / 1.0 / 1.00 and must not run on into more
- *     digits, or a ",ddd" / ".d" group.
- *   - not after "from", so "restored from 0.92 to 1.00" is a CHANGE in a figure,
- *     not a ratio. Both its figures stay to be traced; that sentence used to
- *     abstain without a source and still does. (A ratio written after another
- *     verb of change, such as "improved 0.92 to 1.00", is read as a ratio: the
- *     rule is deliberately narrow, and the cost of misreading one is a figure
- *     going unchecked, not a false abstain.)
+ * "N to 1", "N to 1.00", "N:1": a ratio stated as a pair, N its left operand.
+ * N is a standalone number (not the tail of a grouped or decimal one, so
+ * "2,400,000 to 1,900,000" never matches) and the "1" does not run on into more
+ * digits or a ",ddd" / ".d" group.
  */
-const RATIO_DENOMINATOR = /(?<![\d,.])(?<!\bfrom\s+)(\d+(?:\.\d+)?)(\s*(?:to\b|:)\s*)1(?:\.0+)?(?!\d|[.,]\d)/gi;
+const TO_ONE = /(?<![\d,.])(\d+(?:\.\d+)?)(\s*(?:to\b|:)\s*)1(?:\.0+)?(?!\d|[.,]\d)/gi;
+
+/** The N of every "N to 1" in a text. */
+function statedRatios(text) {
+  const out = [];
+  for (const m of String(text).matchAll(TO_ONE)) out.push(Number(m[1]));
+  return out;
+}
 
 /**
  * Pull every figure out of free text.
@@ -87,8 +85,17 @@ const RATIO_DENOMINATOR = /(?<![\d,.])(?<!\bfrom\s+)(\d+(?:\.\d+)?)(\s*(?:to\b|:
  * references and years. Treating "§7.11" or "Q2 2026" as unverified figures
  * would abstain on correct work, which is the failure mode this whole file is
  * built to avoid.
+ *
+ * `knownRatios` decides which "N to 1" pairs are ratios. Omitted, every one is:
+ * the right mode for a DOCUMENT's text, where "1.25 to 1.00" is a ratio by its
+ * form. Given a list, only a pair whose N is in it is: the right mode for text a
+ * MODEL wrote, where its choice of verb or wording must decide nothing. A "1.00"
+ * after a number that is not a ratio the documents or calculations state
+ * ("from 0.92 to 1.00", "improved 0.92 to 1.00") is an ordinary figure and is
+ * traced like any other. Accepted residue: "from 1.31 to 1.00" with 1.31 the
+ * logged DSCR reads as a ratio pair.
  */
-export function extractFigures(text) {
+export function extractFigures(text, knownRatios) {
   if (typeof text !== "string" || text === "") return [];
 
   const cleaned = text
@@ -97,8 +104,10 @@ export function extractFigures(text) {
     .replace(/\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*/gi, " ")
     // The "1.00" in "1.25 to 1.00" (or "1.25:1") is the ratio's denominator, not a
     // figure of its own. Left in, a claim of "requires 1.00x" would verify against
-    // any clause that states a minimum ratio in that form.
-    .replace(RATIO_DENOMINATOR, "$1 ")
+    // any clause that states a minimum ratio in that form. See `knownRatios`.
+    .replace(TO_ONE, (whole, n) =>
+      knownRatios === undefined || knownRatios.some((k) => sameNumber(k, Number(n))) ? `${n} ` : whole,
+    )
     // ISO and common dates
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, " ")
@@ -131,17 +140,10 @@ function normaliseText(s) {
     .trim();
 }
 
-/** The figures a quote states AS ratios: "1.25x", "1.25 times", "1.25 to 1.00", "1.25:1". Same operand rules as RATIO_DENOMINATOR. */
+/** The figures a quote states AS ratios: "1.25x", "1.25 times", "1.25 to 1.00", "1.25:1". */
 function ratioFigures(text) {
-  const out = [];
-  const forms = [
-    /(?<![\d,.])(\d+(?:\.\d+)?)\s*(?:x\b|times\b)/gi,
-    /(?<![\d,.])(?<!\bfrom\s+)(\d+(?:\.\d+)?)\s*(?:to\b|:)\s*1(?:\.0+)?(?!\d|[.,]\d)/gi,
-  ];
-  for (const re of forms) {
-    let m;
-    while ((m = re.exec(String(text))) !== null) out.push(Number(m[1]));
-  }
+  const out = statedRatios(text);
+  for (const m of String(text).matchAll(/(?<![\d,.])(\d+(?:\.\d+)?)\s*(?:x\b|times\b)/gi)) out.push(Number(m[1]));
   return out;
 }
 
@@ -222,9 +224,21 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   for (const content of chunkByCitation.values()) allowed.push(...extractFigures(content));
 
   // ---- check: every figure in the explanation and claims is traceable ----
+  // Which "N to 1" pairs the MODEL wrote are ratios: only those whose N a cited
+  // document states as a ratio, or a logged calculation produced as the DSCR or
+  // its threshold. Wording and verbs decide nothing.
+  const knownRatios = [];
+  for (const entry of calcs) {
+    const o = entry && entry.outputs;
+    for (const k of ["dscr", "threshold"]) {
+      if (o && typeof o[k] === "number" && Number.isFinite(o[k])) knownRatios.push(o[k]);
+    }
+  }
+  for (const content of chunkByCitation.values()) knownRatios.push(...statedRatios(content));
+
   const stated = [
-    ...extractFigures(out.explanation || ""),
-    ...out.claims.flatMap((c) => extractFigures(c.text || "")),
+    ...extractFigures(out.explanation || "", knownRatios),
+    ...out.claims.flatMap((c) => extractFigures(c.text || "", knownRatios)),
   ];
 
   const untraceable = stated.filter((n) => !allowed.some((a) => sameNumber(a, n)));
