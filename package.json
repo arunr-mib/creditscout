@@ -11,8 +11,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\"",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/*.test.js\"",
     "generate:data": "node data/generate.mjs",
+    "generate:pdf": "node data/generate.mjs --pdf",
+    "ingest:demo": "node --env-file=.env data/ingest-demo.mjs",
     "test:calc": "node --test \"calc/*.test.js\"",
     "eval": "node evals/run.mjs"
   },
@@ -21,13 +23,15 @@
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.20",
+    "pdf-lib": "^1.17.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.0"

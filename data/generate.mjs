@@ -4,8 +4,10 @@
  *   node data/generate.mjs        (or: npm run generate:data)
  *
  * Writes data/facilities/F1|F3|F5/*.txt and data/expected-values-template.csv.
- * Plain text only. PDF conversion belongs to stage 4, where the text extractor
- * exists to verify the round trip.
+ *
+ *   node data/generate.mjs --pdf  also writes a text-based PDF beside each .txt
+ *                                 (the ingest pipeline's input; lib/pdf.test.js
+ *                                 proves the writer and the reader agree).
  *
  * Every figure printed here comes from FACILITIES. Nothing numeric is a literal
  * in a template string.
@@ -13,6 +15,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import {
   FACILITIES,
   LENDER_NAME,
@@ -371,6 +374,50 @@ export function renderCsv(facilities = FACILITIES) {
   return `${rows.join("\n")}\n`;
 }
 
+// ----------------------------------------------------------------------- PDF
+
+const PAGE = { width: 612, height: 792, margin: 54, fontSize: 10, leading: 13 };
+
+/**
+ * Lay `text` out as a text-based PDF: Helvetica, one source line per row,
+ * long lines word-wrapped. Wrapping is why the chunker must not assume a
+ * paragraph is one line. Every line is real text, never an image.
+ * @returns {Promise<Uint8Array>}
+ */
+export async function renderPdf(text) {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const maxWidth = PAGE.width - 2 * PAGE.margin;
+
+  const wrap = (line) => {
+    const out = [];
+    let current = "";
+    for (const word of line.split(" ")) {
+      const next = current ? `${current} ${word}` : word;
+      if (current && font.widthOfTextAtSize(next, PAGE.fontSize) > maxWidth) {
+        out.push(current);
+        current = word;
+      } else {
+        current = next;
+      }
+    }
+    out.push(current);
+    return out;
+  };
+
+  let page = pdf.addPage([PAGE.width, PAGE.height]);
+  let y = PAGE.height - PAGE.margin;
+  for (const line of text.split("\n").flatMap(wrap)) {
+    if (y < PAGE.margin) {
+      page = pdf.addPage([PAGE.width, PAGE.height]);
+      y = PAGE.height - PAGE.margin;
+    }
+    if (line) page.drawText(line, { x: PAGE.margin, y, size: PAGE.fontSize, font });
+    y -= PAGE.leading;
+  }
+  return pdf.save();
+}
+
 // ---------------------------------------------------------------------- main
 
 /** Render every document. Pure: no filesystem access. */
@@ -390,9 +437,19 @@ export function generate({ outDir = OUT_DIR, csvPath = CSV_PATH } = {}) {
   return { documents: docs.length, facilities: FACILITIES.length, csvRows: FACILITIES.flatMap((f) => f.quarters).length };
 }
 
+/** `--pdf`: a PDF beside each .txt (same stem). Separate from generate() because PDF layout is async. */
+export async function generatePdfs({ outDir = OUT_DIR } = {}) {
+  const docs = renderAll();
+  for (const d of docs) {
+    writeFileSync(join(outDir, d.facility, d.file.replace(/\.txt$/, ".pdf")), await renderPdf(d.text));
+  }
+  return docs.length;
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const r = generate();
+  const pdfs = process.argv.includes("--pdf") ? await generatePdfs() : 0;
   console.log(
-    `Wrote ${r.documents} documents across ${r.facilities} facilities to data/facilities/ and ${r.csvRows} rows to data/expected-values-template.csv`,
+    `Wrote ${r.documents} documents${pdfs ? ` and ${pdfs} PDFs` : ""} across ${r.facilities} facilities to data/facilities/ and ${r.csvRows} rows to data/expected-values-template.csv`,
   );
 }
