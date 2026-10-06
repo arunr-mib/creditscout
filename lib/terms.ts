@@ -43,6 +43,12 @@ export interface SourceChunk {
   doc_type: string | null;
   doc_title: string | null;
   section: string | null;
+  /**
+   * When the document it came from took effect. Optional because only one thing
+   * needs it — deciding which of two documents defining the same term governs —
+   * and `loadSourceChunks` fills it from `documents.effective_date`.
+   */
+  effective_date?: string | null;
 }
 
 export interface Violation {
@@ -62,6 +68,8 @@ export interface TermsRow {
   status: "proposed" | "approved" | "superseded";
   approved_by: string | null;
   approved_at: string | null;
+  /** null on a row written before migration 0008; [] means the checks ran and raised nothing. */
+  warnings?: TermsWarning[] | null;
 }
 
 type Scalar = string | number | boolean | null;
@@ -426,19 +434,35 @@ const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  * means`; the unquoted form is a fallback for documents that do not quote
  * defined terms.
  *
- * The clause ends at the earliest of: the next definition's opener, the end of
- * the line the definition sits on (a full stop immediately before a line
- * break), or the end of the section. That is deliberately NARROW:
+ * THE CLAUSE'S EXTENT IS THE DOCUMENT'S BLOCK, NOT WHERE A LINE WRAPPED. It
+ * runs from its opener to the next structural boundary the document itself
+ * draws: the next defined term's opener, a blank line, a heading or an
+ * enumerator at the start of a line, or the end of the section. It does NOT
+ * stop at the first full stop that happens to end a line, which was wrong in
+ * both directions at once:
  *
- *   - too wide and an unrelated definition in the same §1.01 dump ('"Net
- *     Income" means net income after taxes paid in cash') forces a deduction
- *     into terms that do not have one — a FALSE REFUSAL of correct terms, which
- *     stops an analyst boarding a covenant at all
- *   - too narrow and a deduction stated later in the same definition is not
- *     required — omission, which `termsWarnings` reports to a human
+ *   - a definition written as two sentences ('... minus Unfinanced Capital
+ *     Expenditures.' / 'For the avoidance of doubt, cash taxes paid shall also
+ *     be deducted.') lost its second sentence, so the CORRECT list was refused
+ *     ("terms include cash_taxes but the clause does not mention it") and the
+ *     list with cash_taxes dropped was ACCEPTED
+ *   - a hard wrap after an abbreviation ('... owed by Northgate Foods, Inc.')
+ *     cut the clause mid-sentence, reviving the "Inc." bypass server-side
  *
- * Returns every location found. More than one can be legitimate: an amendment
- * may restate a definition, and an amendment's wins (it amends the agreement).
+ * The residue of the block rule, stated honestly because no warning used to
+ * exist for it and the old comment claimed one did: section prose that follows
+ * a definition in the SAME paragraph is taken as part of it. If that prose is
+ * what makes a deduction word appear, `termsWarnings` raises
+ * `definition_extent_ambiguous` and names the word, so a human decides. It
+ * fires only when the continuation changes the verdict, so it is not noise.
+ *
+ * WHICH DOCUMENT WINS: the one with the latest `effective_date`. An amendment
+ * restates a definition and supersedes the agreement's wording, but two
+ * amendments can both restate it, and then the NEWEST governs — not "any
+ * amendment", which took the stale one's words as truth as well. Undated
+ * documents rank below dated ones; a genuine tie is reported
+ * (`definition_conflict`) and judged against both, which fails closed.
+ *
  * Returns an empty array when no definition of that form is on file, and the
  * caller must then NOT fall back to the cited chunk — see `checkTermsProvenance`.
  */
@@ -449,20 +473,49 @@ export interface LocatedDefinition {
   text: string;
   /** The whole section the clause sits in. Used only where the narrow scope would refuse correct terms. */
   section_text: string;
+  /** Which document it came from, and when that document took effect: how precedence is decided. */
+  doc_title: string | null;
+  effective_date: string | null;
 }
 
 export function locateDefinition(term: string, chunks: readonly SourceChunk[]): LocatedDefinition[] {
   const quoted = findDefinitions(term, chunks, true);
   const found = quoted.length > 0 ? quoted : findDefinitions(term, chunks, false);
-  // An amendment that restates a definition supersedes the agreement's wording.
-  const fromAmendments = found.filter((f) => f.doc_type === "amendment");
-  return (fromAmendments.length > 0 ? fromAmendments : found).map(({ citation, text, section_text }) => ({ citation, text, section_text }));
+  if (found.length === 0) return [];
+  return governing(found).map(({ citation, text, section_text, doc_title, effective_date }) => ({ citation, text, section_text, doc_title, effective_date }));
 }
 
-/** Any definition's opener, used only to find where the located one stops. */
+/**
+ * Of several documents defining the same term, the one in force: the latest
+ * `effective_date`. A dated document always beats an undated one (an undated
+ * amendment cannot be shown to be later than the agreement). Ties — including
+ * all-undated, which is what the doc_type rule used to collapse to — are kept
+ * and judged together, so a conflict fails closed and is reported rather than
+ * resolved by accident of ordering.
+ */
+function governing<T extends { doc_title: string | null; effective_date: string | null }>(found: T[]): T[] {
+  const rank = (f: T) => (isIsoDate(f.effective_date) ? f.effective_date : "");
+  const best = found.reduce((a, f) => (rank(f) > a ? rank(f) : a), "");
+  return found.filter((f) => rank(f) === best);
+}
+
+/** Every document that defines `term`, by title, with the date it took effect. */
+export function definingDocuments(term: string, chunks: readonly SourceChunk[]): { doc_title: string | null; effective_date: string | null }[] {
+  const quoted = findDefinitions(term, chunks, true);
+  const found = quoted.length > 0 ? quoted : findDefinitions(term, chunks, false);
+  const seen = new Map<string, { doc_title: string | null; effective_date: string | null }>();
+  for (const f of found) seen.set(`${f.doc_title}`, { doc_title: f.doc_title, effective_date: f.effective_date });
+  return [...seen.values()];
+}
+
+/** Any defined term's opener: where this one's block stops. */
 const ANY_DEFINITION = /"[^"\n]{1,160}"\s+(?:means|shall\s+mean)\b/gi;
-/** A full stop that ends a line: the only end-of-clause marker legal prose is reliable about. */
-const END_OF_LINE = /\.[^\S\n]*(?:\n|$)/g;
+/**
+ * A structural break the DOCUMENT draws, at the start of a line: a blank line,
+ * a section or article heading, or an enumerator. Not a full stop — a full stop
+ * marks a sentence, and a definition may be written in several.
+ */
+const BLOCK_BREAK = /\n(?:\n|\s*(?:§|ARTICLE\b|Article\b|Section\s+\d|\([a-z0-9ivx]+\)|\d+\.\d))/g;
 
 function findDefinitions(
   term: string,
@@ -480,14 +533,21 @@ function findDefinitions(
       const start = m.index ?? 0;
       const bodyFrom = start + m[0].length;
       let end = text.length;
-      for (const re of [ANY_DEFINITION, END_OF_LINE]) {
+      for (const re of [ANY_DEFINITION, BLOCK_BREAK]) {
         for (const n of text.slice(bodyFrom).matchAll(re)) {
-          const at = bodyFrom + (n.index ?? 0) + (re === END_OF_LINE ? 1 : 0);
+          const at = bodyFrom + (n.index ?? 0);
           if (at < end) end = at;
           break; // the FIRST boundary of each kind is the only one that matters
         }
       }
-      out.push({ citation: chunk.citation, doc_type: chunk.doc_type, text: text.slice(start, end).trim(), section_text: text });
+      out.push({
+        citation: chunk.citation,
+        doc_type: chunk.doc_type,
+        doc_title: chunk.doc_title,
+        effective_date: chunk.effective_date ?? null,
+        text: text.slice(start, end).trim(),
+        section_text: text,
+      });
     }
   }
   return out;
@@ -854,7 +914,20 @@ export function thresholdProvenance(
  * provenance cannot (it proves what is stated, not what was left out).
  */
 export interface TermsWarning {
-  code: "amendment_not_cited" | "clause_amended" | "addback_not_in_terms" | "definition_not_located";
+  code:
+    | "amendment_not_cited"
+    | "clause_amended"
+    | "addback_not_in_terms"
+    /** No `"Term" means` clause on file: the completeness check DID NOT RUN. */
+    | "definition_not_located"
+    /** The located clause runs past its first sentence, and the continuation is what puts a word in the test. */
+    | "definition_extent_ambiguous"
+    /** Two documents of the same effective date define the term; both were used. */
+    | "definition_conflict"
+    /** Another document also defines the term; the later one was used and this records the choice. */
+    | "definition_superseded"
+    /** The governing definition limits itself (a period, a purpose) but was taken whole. */
+    | "definition_amendment_partial";
   message: string;
   citation?: string;
   field?: string;
@@ -871,6 +944,106 @@ const AMENDED_SECTION = [
 const ADD_BACK_PERMISSION = /\badd\s+back\s+([^,.;()]+?)(?=\s*(?:,|;|\.|\bto\s+the\s+extent\b|\bin\s+an\s+aggregate\b|$))/gi;
 
 const subOverlap = (a: string, b: string) => a === "" || b === "" || a.startsWith(b) || b.startsWith(a);
+
+/** Words the calculator's vocabulary is detected by, for both definitional fields. */
+const DEFINITION_WORDS: Record<string, Record<string, RegExp>> = {
+  "numerator.deductions": DEDUCTION_WORDS,
+  "denominator.components": DENOMINATOR_WORDS,
+};
+
+/**
+ * A restatement that limits itself: to a period, to a purpose, to a while. Taken
+ * whole it would replace the agreement's definition for every test, forever.
+ */
+const LIMITED_RESTATEMENT = /\b(solely\s+for|only\s+for|only\s+with\s+respect\s+to|for\s+the\s+(?:test\s+period|fiscal\s+quarter|fiscal\s+year)s?\s+end(?:ing|ed)|for\s+purposes\s+of\s+this\s+(?:Section|Amendment)|temporar(?:y|ily)|through\s+the\s+test\s+period|until\s+(?:the|such)|notwithstanding\s+the\s+foregoing)\b/i;
+
+/** Rough sentence split. Used ONLY for a warning, never to decide a scope: a wrong split here costs a heads-up, not a verdict. */
+const sentences = (text: string): string[] =>
+  foldText(text)
+    .split(/(?<=[.;])\s+(?=[A-Z"(])/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/**
+ * What the human needs to know about the clause the server judged them against.
+ * None of these is a refusal: each is a place where the DOCUMENT, not the model,
+ * leaves the machine check less than conclusive, and a human reading the clause
+ * settles it. Saying nothing would let silence read as a clean pass, which is
+ * the same failure shape as a wrong number with a real citation.
+ */
+function definitionWarnings(
+  field: string,
+  term: string,
+  located: readonly LocatedDefinition[],
+  chunks: readonly SourceChunk[],
+): TermsWarning[] {
+  const out: TermsWarning[] = [];
+  const words = DEFINITION_WORDS[field] ?? {};
+  const where = [...new Set(located.map((d) => d.citation))].join(", ");
+
+  // Two documents of the same effective date: both were used, so the check fails
+  // closed, but nothing decided WHICH governs and a human must.
+  const titles = [...new Set(located.map((d) => d.doc_title ?? "an untitled document"))];
+  if (titles.length > 1) {
+    out.push({
+      code: "definition_conflict",
+      field,
+      citation: where,
+      message: `${titles.join(" and ")} each define "${term}" and nothing separates them by date, so ${field} was checked against both. Read them and decide which governs.`,
+    });
+  }
+
+  // The definitions on file that are NOT the governing one. Named so a human can
+  // see that a restatement was superseded rather than ignored.
+  const all = definingDocuments(term, chunks);
+  const superseded = all.filter((d) => !titles.includes(d.doc_title ?? "an untitled document"));
+  if (superseded.length > 0) {
+    out.push({
+      code: "definition_superseded",
+      field,
+      citation: where,
+      message: `"${term}" is also defined in ${superseded.map((d) => `${d.doc_title ?? "an untitled document"} (${d.effective_date ?? "no effective date on file"})`).join(", ")}. ${titles.join(" and ")} governs because it is later; the others were not used.`,
+    });
+  }
+
+  for (const d of located) {
+    // A restatement that limits itself was still taken as the whole definition
+    // for every period. Scoping a definition to a test period is not implemented:
+    // a proposal's `test_period.period_end` is null, so there is no period to
+    // scope it against. The honest move is to say so, not to take it silently.
+    const limit = LIMITED_RESTATEMENT.exec(d.text);
+    if (limit && d.doc_title !== null && d.effective_date !== null && (chunks.find((c) => c.doc_title === d.doc_title)?.doc_type === "amendment")) {
+      out.push({
+        code: "definition_amendment_partial",
+        field,
+        citation: d.citation,
+        message: `The definition of "${term}" in ${d.doc_title} limits itself ("${limit[0]}") but was taken as the whole definition for every period: scoping a definition to a test period is not implemented. Confirm it governs the period you are boarding.`,
+      });
+    }
+
+    // The clause runs past its first sentence, and the continuation is what puts
+    // a word into the test. Legitimate ("for the avoidance of doubt, cash taxes
+    // paid shall also be deducted") or not (section prose in the same paragraph),
+    // and only the document can say which.
+    const parts = sentences(d.text);
+    if (parts.length > 1) {
+      const first = parts[0];
+      const added = Object.entries(words)
+        .filter(([, re]) => re.test(d.text) && !re.test(first))
+        .map(([name]) => name);
+      if (added.length > 0) {
+        out.push({
+          code: "definition_extent_ambiguous",
+          field,
+          citation: d.citation,
+          message: `${added.join(", ")} appears in "${term}" (${d.citation}) only after its first sentence: "${parts[1].slice(0, 140)}". It was read as part of the definition. If that sentence is separate section prose, ${field} is being checked against the wrong extent.`,
+        });
+      }
+    }
+  }
+  return out;
+}
+
 
 export function termsWarnings(
   terms: Obj,
@@ -890,13 +1063,16 @@ export function termsWarnings(
   //    Not a refusal — refusing would make every agreement drafted without a
   //    `"Term" means` definitions clause unboardable.
   for (const [field, term] of Object.entries(DEFINED_BY_SERVER)) {
-    if (locateDefinition(term, chunks).length === 0) {
+    const located = locateDefinition(term, chunks);
+    if (located.length === 0) {
       out.push({
         code: "definition_not_located",
         field,
         message: `No clause defining "${term}" could be found in the agreement or amendments on file, so the completeness of ${field} was NOT verified against the document. Read the definition and check this list yourself.`,
       });
+      continue;
     }
+    out.push(...definitionWarnings(field, term, located, chunks));
   }
 
   // 1. An amendment on file that no term cites. If it changes the covenant, the terms omit it.
@@ -986,11 +1162,19 @@ export async function loadSourceChunks(client: Db, facilityId: string): Promise<
       .in("metadata->>doc_type", [...SOURCE_DOC_TYPES]),
     "select doc_chunks",
   ) as { content: string; metadata: { doc_type?: string; doc_title?: string; section?: string | null } }[] | null;
+  // The chunk metadata does not carry a date, and precedence between two
+  // documents defining the same term is decided by date, so bring it along.
+  const docs = check(
+    await client.from("documents").select("title, effective_date").eq("facility_id", facilityId),
+    "select documents",
+  ) as { title: string; effective_date: string | null }[] | null;
+  const effective = new Map((docs ?? []).map((d) => [d.title, d.effective_date]));
   return (rows ?? []).map((r) => ({
     content: r.content,
     doc_type: r.metadata?.doc_type ?? null,
     doc_title: r.metadata?.doc_title ?? null,
     section: r.metadata?.section ?? null,
+    effective_date: effective.get(r.metadata?.doc_title ?? "") ?? null,
     citation: citationFor(r.metadata?.doc_type ?? null, r.metadata?.doc_title ?? null, r.metadata?.section ?? null),
   }));
 }
@@ -1161,6 +1345,21 @@ const fail = (status: number, error: string, extra: Record<string, unknown> = {}
   body: { error, ...extra },
 });
 
+/**
+ * PostgREST's "that column does not exist" for `warnings`. Migration 0008 adds
+ * it; until the owner applies it, propose and approve fail, and they should fail
+ * saying WHY rather than with a schema error nobody can act on. Silently
+ * dropping the warnings instead would be the exact failure the column exists to
+ * prevent: no record that a check did not run.
+ */
+function missingWarningsColumn(error: { message?: string; code?: string }): string | null {
+  const m = String(error?.message ?? "");
+  const undefinedColumn = error?.code === "42703" || error?.code === "PGRST204";
+  return undefinedColumn && /warnings/i.test(m)
+    ? `${m} — apply supabase/migrations/0008_terms_warnings.sql, which adds covenant_terms.warnings`
+    : null;
+}
+
 function asResult(err: unknown): ToolResult {
   if (err instanceof TermsError) return fail(err.status, err.message, err.details);
   throw err;
@@ -1203,12 +1402,16 @@ export async function runPropose(body: unknown, deps: TermsDeps = {}): Promise<T
         terms: proposal.terms,
         source_citations: proposal.source_citations,
         status: "proposed",
+        // Recorded ON the row, not only returned. A warning that only ever
+        // reaches the screen cannot be audited a year later, and the one that
+        // matters most says a machine check DID NOT RUN.
+        warnings,
       })
       .select("id")
       .single();
     if (inserted.error) {
       if (inserted.error.code === UNIQUE_VIOLATION) return fail(409, "Another proposal for this facility was written at the same moment. Try again.");
-      throw new TermsError(500, `insert covenant_terms: ${inserted.error.message}`);
+      throw new TermsError(500, `insert covenant_terms: ${missingWarningsColumn(inserted.error) ?? inserted.error.message}`);
     }
 
     return {
@@ -1285,6 +1488,8 @@ export async function runApprove(body: unknown, deps: TermsDeps = {}): Promise<T
       });
     }
 
+    const warnings = termsWarnings(terms, citations, chunks, await loadAmendmentTitles(client, found.facility_id));
+
     const effectiveFrom = await resolveEffectiveFrom(client, found.facility_id, terms);
     const others = (await loadVersions(client, found.facility_id)).filter((r) => r.id !== found.id);
     const latest = others.filter((r) => r.status !== "proposed").sort((a, b) => b.effective_from.localeCompare(a.effective_from))[0];
@@ -1311,6 +1516,11 @@ export async function runApprove(body: unknown, deps: TermsDeps = {}): Promise<T
           status: "approved",
           approved_by: approvedBy,
           approved_at: approvedAt,
+          // RECOMPUTED here, from the chunks in this database and the terms as
+          // edited, never taken from what propose returned: the client sits in
+          // between and may have changed anything. This is the same reason
+          // provenance is re-verified rather than trusted.
+          warnings,
         })
         .eq("id", found.id)
         .eq("status", "proposed")
@@ -1324,7 +1534,7 @@ export async function runApprove(body: unknown, deps: TermsDeps = {}): Promise<T
       const repaired = await settleAfterFailedClaim(client, found.facility_id, retired, found.id);
       const note = repaired ? "" : " The previous version's end date could not be repaired; report this.";
       if (claimed.error && claimed.error.code !== UNIQUE_VIOLATION) {
-        throw new TermsError(500, `approve covenant_terms: ${claimed.error.message}.${note}`);
+        throw new TermsError(500, `approve covenant_terms: ${missingWarningsColumn(claimed.error) ?? claimed.error.message}.${note}`);
       }
       return fail(
         409,
