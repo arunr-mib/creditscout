@@ -11,7 +11,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\"",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\"",
+    "generate:data": "node data/generate.mjs",
     "test:calc": "node --test \"calc/*.test.js\"",
     "eval": "node evals/run.mjs"
   },

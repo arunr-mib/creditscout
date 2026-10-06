@@ -1,0 +1,17 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+COASTAL MARINE — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+
+Period ended: December 31, 2025
+Basis: trailing twelve months
+
+§1 Debt Service Coverage Inputs
+Consolidated EBITDA: 6,720,000
+Unfinanced Capital Expenditures: 400,000
+Cash Taxes Paid: 360,000
+Scheduled Principal Payments: 3,000,000
+Cash Interest Paid: 1,440,000
+
+§2 Add-Back Items
+Amounts incurred during the period, before any limit under the Credit Agreement.
+Dry-dock and vessel overhaul charges: 300,000

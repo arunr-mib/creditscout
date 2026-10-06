@@ -1,0 +1,17 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+NORTHGATE FOODS — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+
+Period ended: June 30, 2026
+Basis: trailing twelve months
+
+§1 Debt Service Coverage Inputs
+Consolidated EBITDA: 2,884,000
+Unfinanced Capital Expenditures: 220,000
+Cash Taxes Paid: 180,000
+Scheduled Principal Payments: 1,600,000
+Cash Interest Paid: 700,000
+
+§2 Add-Back Items
+Amounts incurred during the period, before any limit under the Credit Agreement.
+Owner compensation normalisation: 530,000
