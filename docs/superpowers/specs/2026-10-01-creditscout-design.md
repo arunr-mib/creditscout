@@ -39,7 +39,7 @@ Commercial credit analysts monitor 30+ borrower facilities and investigate poten
 
 **In scope**
 - One covenant: **DSCR**, tested quarterly on a trailing-twelve-month (TTM) basis.
-- 6 synthetic facilities, each with: credit agreement (~15–20 pp text PDF), one amendment or waiver (2–3 pp), quarterly financials, borrower compliance certificate.
+- **3 synthetic facilities** — F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine — each with: credit agreement (~15–20 pp text PDF), an amendment or waiver (2–3 pp) where the twist calls for one, quarterly financials, borrower compliance certificate. F5 carries three quarters so all three outcomes of §4.1b are demonstrable. F2, F4 and F6 are parked, not dropped (`docs/parking-lot.md` §4.1); they are the two that exercise `request` and `abstain`, and they are first to restore.
 - Text-based PDFs ingested via the application.
 - **Covenant setup:** the agent maps the agreement + amendments into executable terms, **a human analyst approves them**, and approved terms are versioned and effective-dated.
 - **Independent quarterly testing of every borrower** — CreditScout computes the DSCR itself from approved terms and the financials. The borrower's reported figure is reconciled against ours, not used as the trigger.
@@ -59,8 +59,10 @@ Commercial credit analysts monitor 30+ borrower facilities and investigate poten
 
 | Layer | Technology | Course tie-in |
 |---|---|---|
-| Orchestration (reasoning layer) | **Azure AI Foundry Agent Service**, Connected Agents, `gpt-5-mini` | Wk 4 multi-agent · Wk 5 lab |
+| Orchestration (reasoning layer) | **Azure AI Foundry Agent Service**, Connected Agents, `gpt-4.1-mini` | Wk 4 multi-agent · Wk 5 lab |
 | Specialist sub-agents | Foundry **connected agents** (`document_agent`, `definition_agent`, `research_agent`), `gpt-5-mini` | Wk 2/4 |
+
+The orchestrator model is **forced by the platform**: `gpt-5-mini` is rejected at agent-creation time for `connected_agent` tools, which the 2026-10-05 spike confirmed live. Both models are already deployed, so neither is a new billable resource. See §13.
 | Application + API | **Next.js (App Router) on Vercel** — screens, analyst routes, and the OpenAPI tool endpoints the agent calls | Wk 5 lab |
 | Retrieval | **Supabase Vector Store** (pgvector), section-level chunks | Wk 2 RAG |
 | Deterministic calculation | `calc/dscr.js`, zero-dependency, imported by the app and exposed to the agent as an OpenAPI tool | mentor: "calc tool" |
@@ -148,7 +150,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 
 1. Create `casefiles` row (`status = investigating`).
 2. **Load memory:** facility's prior exceptions/casefiles; build an *exception profile* string (reported vs required DSCR, document types on file, industry); similarity search over past casefile summaries and review lessons; take top 3 lessons.
-3. **CreditScout Orchestrator** (Foundry Agent Service, `gpt-5-mini`, step cap from `policy.max_steps`). The three specialists are Foundry **connected agents** (`document_agent`, `definition_agent`, `research_agent`), also `gpt-5-mini` — they read and quote rather than judge, and every quote they return is verified by the §6.1 guardrail. System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
+3. **CreditScout Orchestrator** (Foundry Agent Service, `gpt-4.1-mini`, step cap from `policy.max_steps`). The three specialists are Foundry **connected agents** (`document_agent`, `definition_agent`, `research_agent`), also `gpt-5-mini` — they read and quote rather than judge, and every quote they return is verified by the §6.1 guardrail. System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
 
 | Tool | Type | Purpose | Returns |
 |---|---|---|---|
@@ -303,11 +305,11 @@ Not included: login, multi-user, mobile.
 
 ### 8.1 Labeled eval set
 
-24 cases = 6 facilities × 4 variations (quarter, figures, documents present/missing). Each case: inputs (document set, certificate figures) and expected `{outcome, dscr (2 dp, computed independently in a spreadsheet), key_citation, pattern_tag}`. Claude drafts; **owner reviews and signs off every label** before they are called expert-validated.
+The eval set is drawn from the three facilities' **five quarterly tests** — F1 Q2-2026, F3 Q2-2026, F5 Q4-2025, F5 Q1-2026, F5 Q2-2026. Three of those run an investigation (F1, F3, F5 Q2-2026); two are code-only outcomes that still assert the right thing happened (F5 Q4-2025 compliant, F5 Q1-2026 variance logged without investigation). `docs/parking-lot.md` §4.2 caps the set at **6 cases and commits to reporting 6 as 6, never 24** — the sixth case, a documents-missing variation, is an open item (§14.5). Each case: inputs (document set, certificate figures) and expected `{outcome, dscr (2 dp, computed independently in a spreadsheet), key_citation, pattern_tag}`. Claude drafts; **owner reviews and signs off every label** before they are called expert-validated.
 
 ### 8.2 Runner
 
-`evals/run.mjs` (Node, same toolchain as the calculator tests): for each case → set up documents → POST `/investigate` → poll until terminal → score. Two passes: **cold** (memory cleared for the eval `run_id`) and **warm** (lessons from scripted analyst overrides loaded). During development the runner is used against a **6-case subset** (one per facility) — enough to catch regressions; all 24 cases run twice only when producing reportable numbers. Outputs: `results.csv`, `report.md`, `foundry.jsonl` (`query`, `response`, `context`, `ground_truth`) for upload to Azure AI Foundry Evaluations (groundedness, gpt-4.1 judge), and an `eval_runs` row for the in-app scoreboard.
+`evals/run.mjs` (Node, same toolchain as the calculator tests): for each case → set up documents → POST `/investigate` → poll until terminal → score. Two passes: **cold** (memory cleared for the eval `run_id`) and **warm** (lessons from scripted analyst overrides loaded). The set is small enough that no development subset is needed — every case runs in both passes. Outputs: `results.csv`, `report.md`, `foundry.jsonl` (`query`, `response`, `context`, `ground_truth`) for upload to Azure AI Foundry Evaluations (groundedness, gpt-4.1 judge), and an `eval_runs` row for the in-app scoreboard.
 
 ### 8.3 Engineering tests
 
@@ -319,7 +321,7 @@ Not included: login, multi-user, mobile.
 
 ## 9. Synthetic data
 
-Generated by script into `data/facilities/F1..F6/` as text-based PDFs with realistic structure (definitions article, financial covenants article with DSCR in §7.11-style section, events of default, notices; amendment with effective date and amended definitions; compliance certificate in a standard borrower form). Clearly marked "SYNTHETIC — FOR DEMONSTRATION". Borrower names fictional. The financials document states each of the six calculator inputs as its own labeled line (e.g. `Consolidated EBITDA: 4,250,000`), so the agent can read and cite them without table extraction — this is what keeps statement extraction out of scope (§2) while still supplying §4.2. Expected DSCR values computed in a separate spreadsheet **by the owner** (not by the calculator under test, and not by Claude) — Claude supplies a template listing each case's covenant terms and the six financial inputs; the owner fills in the expected DSCR and signs it off. This keeps the test oracle independent of both the implementation and its author.
+Generated by script into `data/facilities/F1|F3|F5/` as text-based PDFs with realistic structure (definitions article, financial covenants article with DSCR in §7.11-style section, events of default, notices; amendment with effective date and amended definitions; compliance certificate in a standard borrower form). Clearly marked "SYNTHETIC — FOR DEMONSTRATION". Borrower names fictional. The financials document states each of the six calculator inputs as its own labeled line (e.g. `Consolidated EBITDA: 4,250,000`), so the agent can read and cite them without table extraction — this is what keeps statement extraction out of scope (§2) while still supplying §4.2. Expected DSCR values computed in a separate spreadsheet **by the owner** (not by the calculator under test, and not by Claude) — Claude supplies a template listing each case's covenant terms and the six financial inputs; the owner fills in the expected DSCR and signs it off. This keeps the test oracle independent of both the implementation and its author.
 
 ---
 
@@ -360,7 +362,7 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 | Model hallucinated figures or quotes | Code guardrails force abstain; tested with fabricated outputs |
 | Agent tool endpoints are publicly reachable | Shared header key on every `/api/tools/*` route; `search-documents` filters by `facility_id` inside the database function so a caller cannot omit it |
 | Covenant terms approved with an error corrupt every later test | Four-eyes approval (§4.1a); terms versioned and effective-dated so a correction supersedes rather than overwrites |
-| Eval run slow or flaky | 24 cases, retries per case, runner resumable; 6-case subset during development |
+| Eval run slow or flaky | ≤6 cases, retries per case, runner resumable |
 | Time | Gmail trigger and MCP are stretch; cut order: MCP → Gmail → Foundry upload (keep local metrics) |
 | Credentials / privacy | Owner enters all keys; dedicated demo Gmail only; synthetic data only |
 
@@ -386,7 +388,8 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 
 ## 14. Open items for owner
 
-1. Validate realism of the six facility twists (§4.3).
-2. Review and sign off the 24 eval labels (§8.1) once drafted.
+1. Validate realism of the **three** facility twists (§4.3) — F1/F5 covenant boarding lag, F3 unsupported add-back with a false-compliant certificate. F2, F4 and F6 are parked (`docs/parking-lot.md` §4.1).
+2. Review and sign off the eval labels (§8.1) once drafted.
+5. **Decide the sixth eval case.** Five come from the quarterly tests the synthetic data produces; the parking lot allows six. The obvious candidate is a documents-missing variation that exercises `abstain`, which nothing else in the cut-down set reaches.
 3. ~~Confirm Supabase project to use~~ — **resolved 2026-10-02:** reusing existing Supabase project `rngsejqplndmygrozasc` (region ca-central-1, org "House of Credit"); free plan caps the org at 2 projects, so no new project was created. `vector` 0.8.2 enabled. ~~Still open: confirm the n8n Cloud plan…~~ — **closed 2026-10-05**, n8n is no longer used.
 4. ~~Anthropic API key available for n8n~~ — **closed.** Azure credentials already verified; `text-embedding-3-small` deployed at 1536 dimensions.
