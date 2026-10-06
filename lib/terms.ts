@@ -511,11 +511,28 @@ export function definingDocuments(term: string, chunks: readonly SourceChunk[]):
 /** Any defined term's opener: where this one's block stops. */
 const ANY_DEFINITION = /"[^"\n]{1,160}"\s+(?:means|shall\s+mean)\b/gi;
 /**
- * A structural break the DOCUMENT draws, at the start of a line: a blank line,
- * a section or article heading, or an enumerator. Not a full stop — a full stop
- * marks a sentence, and a definition may be written in several.
+ * A structural break the DOCUMENT draws. Two kinds, and the second needs a
+ * condition the first does not:
+ *
+ *   - A BLANK LINE always ends the block. Nothing legitimate continues a
+ *     definition across one.
+ *   - A HEADING or ENUMERATOR at the start of a line ends it ONLY when the
+ *     previous line ended in a full stop, i.e. only when the sentence before it
+ *     was finished. Without that condition the marker is just as likely to be
+ *     INSIDE the definition, and the block was cut silently:
+ *       · a definition with a sub-list — "means the ratio of:" / "(i) …" / "(ii) …"
+ *       · a hard wrap that lands a line on "(i) Consolidated EBITDA …",
+ *         "Section 7.11, minus …" or "7.11(b) …"
+ *     Both truncated the clause, so the emptied list was ACCEPTED and the
+ *     correct list REFUSED, with no warning. Requiring the finished sentence
+ *     keeps every one of those inside the definition.
+ *
+ * A full stop alone is still NOT a break — a definition may be written in
+ * several sentences ("For the avoidance of doubt, …"), and a wrap after an
+ * abbreviation ("Northgate Foods, Inc.") is not the end of anything. It takes
+ * BOTH a finished sentence and a structural marker opening the next line.
  */
-const BLOCK_BREAK = /\n(?:\n|\s*(?:§|ARTICLE\b|Article\b|Section\s+\d|\([a-z0-9ivx]+\)|\d+\.\d))/g;
+const BLOCK_BREAK = /\n\n|(?<=\.)\n(?:§|ARTICLE\b|Article\b|Section\s+\d|\([a-z0-9ivx]+\)|\d+\.\d)/g;
 
 function findDefinitions(
   term: string,
