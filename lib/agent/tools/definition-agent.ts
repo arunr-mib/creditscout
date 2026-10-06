@@ -133,8 +133,8 @@ source_citations "field" paths (exact):
 
 WHAT EACH QUOTE MUST CONTAIN (a program checks every item, and a miss means the analyst sees your terms refused)
 - threshold.min_dscr: the whole sentence stating the minimum, including how it is tested ("trailing four-quarter basis"), with the ratio written as the clause writes it ("1.25 to 1.00").
-- numerator.deductions: the whole sentence that defines the ratio, so it names Consolidated EBITDA and every item subtracted. List exactly the deductions that sentence subtracts, no more and no fewer. Cite this field even when deductions is [].
-- denominator.components: the whole sentence that defines Debt Service, naming every component. List exactly the components it names.
+- numerator.deductions: cite the excerpt containing the clause that DEFINES the Debt Service Coverage Ratio (the one reading '"Debt Service Coverage Ratio" means ...'), and quote that whole sentence, so it names Consolidated EBITDA and every item subtracted. List exactly the deductions that sentence subtracts, no more and no fewer. Cite this field even when deductions is []. A citation pointing anywhere else is refused: the program finds the defining clause itself and compares.
+- denominator.components: cite the excerpt containing the clause that DEFINES Debt Service (the one reading '"Debt Service" means ...'), and quote that whole sentence, naming every component. List exactly the components it names. The same rule applies: a citation pointing elsewhere is refused.
 - numerator.addbacks[i].cap: the sentence permitting that add-back, containing its name exactly as you wrote it in "name" and the dollar limit. For an add-back with no limit, quote the sentence that says so ("without limit") and set "cap" to null.
 - effective_amendments[i].effective: the sentence giving the amendment's effective date, in the amendment itself.`;
 

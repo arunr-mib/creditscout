@@ -89,11 +89,29 @@ function statedRatios(text) {
  * `knownRatios` decides which "N to 1" pairs are ratios. Omitted, every one is:
  * the right mode for a DOCUMENT's text, where "1.25 to 1.00" is a ratio by its
  * form. Given a list, only a pair whose N is in it is: the right mode for text a
- * MODEL wrote, where its choice of verb or wording must decide nothing. A "1.00"
- * after a number that is not a ratio the documents or calculations state
- * ("from 0.92 to 1.00", "improved 0.92 to 1.00") is an ordinary figure and is
- * traced like any other. Accepted residue: "from 1.31 to 1.00" with 1.31 the
- * logged DSCR reads as a ratio pair.
+ * MODEL wrote, where its choice of verb or wording must decide nothing.
+ *
+ * WHAT THIS REFUSES: a "1.00" written after a number that is NOT a ratio the
+ * cited documents or the logged calculations state — "rose from 0.92 to 1.00",
+ * "improved 0.92 to 1.00", "went from $1.17 to 1.00". That 1.00 is an ordinary
+ * figure and is traced like any other, so an unsupported one forces an abstain.
+ *
+ * WHAT IT MUST KEEP ALLOWING: a figure a document states, written as a ratio —
+ * "requires 1.25 to 1.00", "the floor is 1.25:1", "coverage is 1.31 to 1.00".
+ * Refusing those is the trap at the top of this file: the metric would read a
+ * perfect zero while every well-formed explanation abstained.
+ *
+ * ACCEPTED RESIDUE, stated plainly because it is wider than "the logged DSCR":
+ * ANY N in `knownRatios` makes the "1.00" after it unchecked. The caller builds
+ * that list from the threshold (present in every casefile, and usually the
+ * clause's own ratio), every logged DSCR including prior quarters, and every
+ * ratio figure a cited chunk states. So "DSCR fell from 1.25 to 1.00" and
+ * "fell from 1.40 to 1.00" (1.40 a prior quarter's logged DSCR) both read as
+ * ratio pairs, and the verb is irrelevant. The only figure that goes unchecked
+ * is the trailing 1 / 1.00 itself, so the available false statement is "the
+ * ratio is exactly 1.00x". That is inherent to a form-based rule — "from 1.25
+ * to 1.00" IS textually the covenant ratio — and the zero-false-resolve claim
+ * carries this caveat.
  */
 export function extractFigures(text, knownRatios) {
   if (typeof text !== "string" || text === "") return [];
@@ -227,6 +245,13 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   // Which "N to 1" pairs the MODEL wrote are ratios: only those whose N a cited
   // document states as a ratio, or a logged calculation produced as the DSCR or
   // its threshold. Wording and verbs decide nothing.
+  //
+  // REFUSES: an "N to 1" whose N is not on this list, so its 1.00 stays traced.
+  // KEEPS ALLOWING: every ratio form the corpus actually uses. `ratioFigures`,
+  // not `statedRatios`, because documents write a floor as "1.25x" or
+  // "1.25 times" as often as "1.25 to 1.00"; reading only the pair form made a
+  // model that restated such a floor as "1.25 to 1.00" abstain on the `1`.
+  // The widening is bounded: the N must still be a ratio a cited chunk states.
   const knownRatios = [];
   for (const entry of calcs) {
     const o = entry && entry.outputs;
@@ -234,7 +259,7 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
       if (o && typeof o[k] === "number" && Number.isFinite(o[k])) knownRatios.push(o[k]);
     }
   }
-  for (const content of chunkByCitation.values()) knownRatios.push(...statedRatios(content));
+  for (const content of chunkByCitation.values()) knownRatios.push(...ratioFigures(content));
 
   const stated = [
     ...extractFigures(out.explanation || "", knownRatios),

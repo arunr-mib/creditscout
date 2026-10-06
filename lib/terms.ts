@@ -64,9 +64,12 @@ export interface TermsRow {
   approved_at: string | null;
 }
 
+type Scalar = string | number | boolean | null;
+
 export interface TermsEdit {
   field: string;
-  value: string | number | boolean | null;
+  /** A single value, or a whole list for a list-valued field (a deduction list, the denominator components). */
+  value: Scalar | Scalar[];
   citation: string;
   quote: string;
 }
@@ -290,6 +293,19 @@ function getAtPath(root: unknown, path: string): unknown {
  * What the marker is NOT: it is not a bypass. The citation stays a real
  * citation, because `verifyTermsProvenance` resolves it to a chunk; replacing
  * it with the literal "analyst-corrected" would make every edit unapprovable.
+ *
+ * WHAT A LIST EDIT IS FOR. A gate that can refuse a deduction list but only
+ * repair single numbers is a dead end, not a control: the analyst's only way
+ * out is to re-propose and hope, and the pressure moves to editing whatever the
+ * checker will swallow. So an edit may also replace a LIST of scalars
+ * (`numerator.deductions`, `denominator.components`) wholesale.
+ *
+ * WHAT IT REFUSES, so this is not a hole: the value's SHAPE must match what is
+ * already there — a list for a list, a scalar for a scalar — the path must
+ * already exist, no object may be replaced, and every element must be a scalar.
+ * Nothing about the checks changes: `validateTerms` and the provenance check
+ * re-run on the edited terms afterwards, so an edited list is held to the
+ * server-located definition exactly like the model's.
  */
 export function applyEdits(
   terms: Obj,
@@ -305,10 +321,13 @@ export function applyEdits(
     if (!isObj(e)) throw new TermsError(400, `${at} must be an object`);
     const { field, value, citation, quote } = e;
     if (!isText(field)) throw new TermsError(400, `${at}.field is required`);
-    if (!(value === null || ["string", "number", "boolean"].includes(typeof value))) {
-      throw new TermsError(400, `${at}.value must be a string, number, boolean or null`);
+    const scalar = (v: unknown) => v === null || ["string", "number", "boolean"].includes(typeof v);
+    if (!(scalar(value) || (Array.isArray(value) && value.every(scalar)))) {
+      throw new TermsError(400, `${at}.value must be a string, number, boolean, null, or a list of those`);
     }
-    if (typeof value === "number" && !Number.isFinite(value)) throw new TermsError(400, `${at}.value must be finite`);
+    for (const v of Array.isArray(value) ? value : [value]) {
+      if (typeof v === "number" && !Number.isFinite(v)) throw new TermsError(400, `${at}.value must be finite`);
+    }
     if (!isText(citation) || !isText(quote)) {
       throw new TermsError(400, `${at} needs a citation and a verbatim quote: an edited term is held to the same standard as a proposed one`);
     }
@@ -320,10 +339,14 @@ export function applyEdits(
     for (const s of parentPath) parent = typeof s === "number" ? (Array.isArray(parent) ? parent[s] : undefined) : isObj(parent) ? parent[s] : undefined;
     const last = segs[segs.length - 1];
     const existing = typeof last === "number" ? (Array.isArray(parent) ? parent[last] : undefined) : isObj(parent) ? parent[last] : undefined;
-    // Only an existing scalar may be edited. Adding or removing structure is
-    // not an edit; it is a different proposal.
-    const isScalar = existing === null || ["string", "number", "boolean"].includes(typeof existing);
-    if (!isScalar) throw new TermsError(400, `${at}.field "${field}" is not an existing scalar value in the terms`);
+    // An existing scalar, or an existing list of scalars, may be edited. Adding
+    // a path, or replacing an object, is not an edit; it is a different proposal.
+    const isScalar = scalar(existing);
+    const isList = Array.isArray(existing) && existing.every(scalar);
+    if (!isScalar && !isList) throw new TermsError(400, `${at}.field "${field}" is not an existing scalar or list value in the terms`);
+    if (isList !== Array.isArray(value)) {
+      throw new TermsError(400, `${at}.value must be ${isList ? "a list, because that field holds a list" : "a single value, because that field holds a single value"}`);
+    }
     if (typeof last === "number") (parent as unknown[])[last] = value;
     else (parent as Obj)[last] = value;
 
@@ -357,6 +380,124 @@ function foldText(s: string): string {
     .replace(/[‐-―]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Like `foldText`, but KEEPS line breaks. A line break is the one boundary in
+ * legal prose that can be trusted: a full stop cannot (abbreviations, "(i)",
+ * decimals), and a semicolon cannot (it joins clauses as often as it ends them).
+ * Used only to bound a located definition, never to match a quote.
+ */
+function foldLines(s: string): string {
+  return String(s)
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[‐-―]/g, "-")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .trim();
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// ------------------------------------------- the server's own ground truth
+
+/**
+ * WHOEVER CHOOSES THE SCOPE DEFINES THE TRUTH, so the server chooses it.
+ *
+ * Completeness ("did the proposal drop a deduction?") cannot be judged against
+ * anything the proposer picked. Judging the QUOTE let a short quote define its
+ * own ground truth; judging the enclosing SENTENCE was defeated by punctuation;
+ * judging the CITED CHUNK let the proposer pick a chunk that happens to mention
+ * the base and no deduction (`numerator.deductions = []` citing CA §7.11 read
+ * as valid on real data). Each time the scope moved up, the proposer moved with
+ * it, because the proposer was still the one choosing.
+ *
+ * So for the definitional fields the server locates the defining clause itself,
+ * in the chunks IT loaded for the facility, and ignores the citation for the
+ * purpose of deciding what the truth is. The citation is then checked AGAINST
+ * that location (it must point at the defining clause), which is the opposite
+ * direction of trust.
+ *
+ * A definition is located by its drafting form: `"Term" means` / `"Term" shall
+ * mean`. Quoted terms are preferred and are self-delimiting, so looking for
+ * `"Debt Service" means` can never land inside `"Debt Service Coverage Ratio"
+ * means`; the unquoted form is a fallback for documents that do not quote
+ * defined terms.
+ *
+ * The clause ends at the earliest of: the next definition's opener, the end of
+ * the line the definition sits on (a full stop immediately before a line
+ * break), or the end of the section. That is deliberately NARROW:
+ *
+ *   - too wide and an unrelated definition in the same §1.01 dump ('"Net
+ *     Income" means net income after taxes paid in cash') forces a deduction
+ *     into terms that do not have one — a FALSE REFUSAL of correct terms, which
+ *     stops an analyst boarding a covenant at all
+ *   - too narrow and a deduction stated later in the same definition is not
+ *     required — omission, which `termsWarnings` reports to a human
+ *
+ * Returns every location found. More than one can be legitimate: an amendment
+ * may restate a definition, and an amendment's wins (it amends the agreement).
+ * Returns an empty array when no definition of that form is on file, and the
+ * caller must then NOT fall back to the cited chunk — see `checkTermsProvenance`.
+ */
+export interface LocatedDefinition {
+  /** The citation of the chunk the defining clause sits in, e.g. "CA §1.01". */
+  citation: string;
+  /** The defining clause only, not the whole section. This is the completeness scope. */
+  text: string;
+  /** The whole section the clause sits in. Used only where the narrow scope would refuse correct terms. */
+  section_text: string;
+}
+
+export function locateDefinition(term: string, chunks: readonly SourceChunk[]): LocatedDefinition[] {
+  const quoted = findDefinitions(term, chunks, true);
+  const found = quoted.length > 0 ? quoted : findDefinitions(term, chunks, false);
+  // An amendment that restates a definition supersedes the agreement's wording.
+  const fromAmendments = found.filter((f) => f.doc_type === "amendment");
+  return (fromAmendments.length > 0 ? fromAmendments : found).map(({ citation, text, section_text }) => ({ citation, text, section_text }));
+}
+
+/** Any definition's opener, used only to find where the located one stops. */
+const ANY_DEFINITION = /"[^"\n]{1,160}"\s+(?:means|shall\s+mean)\b/gi;
+/** A full stop that ends a line: the only end-of-clause marker legal prose is reliable about. */
+const END_OF_LINE = /\.[^\S\n]*(?:\n|$)/g;
+
+function findDefinitions(
+  term: string,
+  chunks: readonly SourceChunk[],
+  requireQuotes: boolean,
+): (LocatedDefinition & { doc_type: string | null })[] {
+  const t = escapeRe(foldText(term));
+  const opener = requireQuotes
+    ? new RegExp(`"${t}"\\s+(?:means|shall\\s+mean)\\b`, "gi")
+    : new RegExp(`(?<![\\w"])${t}\\s+(?:means|shall\\s+mean)\\b`, "gi");
+  const out: (LocatedDefinition & { doc_type: string | null })[] = [];
+  for (const chunk of chunks) {
+    const text = foldLines(chunk.content);
+    for (const m of text.matchAll(opener)) {
+      const start = m.index ?? 0;
+      const bodyFrom = start + m[0].length;
+      let end = text.length;
+      for (const re of [ANY_DEFINITION, END_OF_LINE]) {
+        for (const n of text.slice(bodyFrom).matchAll(re)) {
+          const at = bodyFrom + (n.index ?? 0) + (re === END_OF_LINE ? 1 : 0);
+          if (at < end) end = at;
+          break; // the FIRST boundary of each kind is the only one that matters
+        }
+      }
+      out.push({ citation: chunk.citation, doc_type: chunk.doc_type, text: text.slice(start, end).trim(), section_text: text });
+    }
+  }
+  return out;
+}
+
+/** Two citations naming the same (document, section) — "CA §1.01" and "CA §1.01(a)" do. */
+function sameClause(a: string, b: string): boolean {
+  const x = resolveCitation(a);
+  const y = resolveCitation(b);
+  return x.section !== null && x.section === y.section && x.doc_title === y.doc_title;
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -420,7 +561,17 @@ function requiredCitationFields(terms: Obj): string[] {
  *   - an amendment's effective date feeds `effective_from`, so it must be written
  *     in its own quote
  *   - names and lists (add-backs, deductions, components, base, basis) must be
- *     supported by the quote cited for them: see `checkNamedTerms`
+ *     supported by the text cited for them: see `checkNamedTerms`
+ *
+ * For the DEFINITIONAL fields it also refuses to take the proposer's word for
+ * what the question is. `locateDefinition` finds the defining clause in the
+ * chunks the SERVER loaded, and completeness is judged against that; the
+ * citation has to point at it. If no definition of that drafting form is on
+ * file the completeness check does NOT run and does NOT fall back to the cited
+ * chunk — falling back would hand scope selection straight back to the
+ * proposer, which is the bug this exists to fix. `termsWarnings` then raises
+ * `definition_not_located` so the human knows the check did not run rather
+ * than believing it passed.
  *
  * Returns every violation with the field, the value and the reason, so a human
  * can act on it. Pure; callers supply the chunks.
@@ -477,9 +628,24 @@ export function checkTermsProvenance(
     const e = entry(field);
     return e ? rawByCitation.get(String(e.citation).trim()) ?? "" : "";
   };
-  checkNamedTerms(terms, entry, chunkOf, flag);
+  checkNamedTerms(terms, entry, chunkOf, definitionsIn(chunks), flag);
 
   return { valid: violations.length === 0, violations };
+}
+
+/** The terms whose definition the server locates for itself, and the field each governs. */
+export const DEFINED_BY_SERVER = {
+  "numerator.deductions": "Debt Service Coverage Ratio",
+  "denominator.components": "Debt Service",
+} as const;
+
+export type ServerDefinitions = Record<string, LocatedDefinition[]>;
+
+/** Every server-located definition the provenance check needs, computed once. */
+export function definitionsIn(chunks: readonly SourceChunk[]): ServerDefinitions {
+  const out: ServerDefinitions = {};
+  for (const [field, term] of Object.entries(DEFINED_BY_SERVER)) out[field] = locateDefinition(term, chunks);
+  return out;
 }
 
 // ---------------------------------------------------- non-numeric support
@@ -509,31 +675,46 @@ const sameFigure = (a: number, b: number) => Math.abs(a - b) <= 1e-6 * Math.max(
  * The guardrail proves a NUMBER is in its quote. A named add-back, a deduction,
  * a denominator component, the basis and the base are just as capable of being
  * wrong, and a fabricated add-back name is the same class of lie as a fabricated
- * cap. So each is tied to the text cited for it, and there are two different
- * questions with two different scopes, on purpose:
+ * cap. There are three questions here with three different scopes, on purpose,
+ * and the scope is chosen by whoever can be trusted to choose it:
  *
- *   COMPLETENESS ("did the proposal drop something?") is judged against the WHOLE
- *   CITED CHUNK. A chunk is one section, the natural legal unit, so no sentence
- *   has to be found: a proposer that quotes half a definition, or stops at a ";"
- *   or an "Inc.", cannot choose its own ground truth. The quote must still be
- *   verbatim in the chunk (checked before this runs); that anchors provenance.
+ *   COMPLETENESS ("did the proposal drop a deduction?") is judged against the
+ *   DEFINING CLAUSE THE SERVER LOCATED (`locateDefinition`), never against
+ *   anything the proposer chose. A proposer that quotes half a definition, stops
+ *   at a ";" or an "Inc.", or cites a different section altogether changes
+ *   nothing about the answer.
  *
- *     deductions        the set the chunk names, exactly: one it names that the
- *                       terms drop is as wrong as one invented
- *     components        the same, for the Debt Service definition's chunk
- *     numerator.base    appears in the ratio definition's chunk
- *     basis             the threshold's chunk states it ("trailing four-quarter")
- *     cap: null         no list item of the chunk that names the add-back states
- *                       a limit, and the quote says it is uncapped
+ *     deductions        exactly the set the DSCR definition names: one it names
+ *                       that the terms drop is as wrong as one invented
+ *     components        exactly the set the Debt Service definition names
+ *     numerator.base    appears in the DSCR definition
+ *     citation          must point AT the defining clause, so the provenance
+ *                       record shows the clause the check actually used
+ *
+ *   What that refuses: emptying or trimming either list. What it must keep
+ *   allowing: correct terms whose definition sits in a §1.01 definitions dump
+ *   alongside unrelated definitions that happen to use a deduction's words
+ *   ('"Net Income" means net income after taxes paid in cash'). Judging the
+ *   whole section refused those, and a refusal of correct terms stops an
+ *   analyst boarding a covenant at all.
+ *
+ *   CLAUSE SCOPE: `cap: null` is not a definition, so its ground truth is the
+ *   clause that PERMITS the add-back, which is cited and whose quote is
+ *   verbatim. The quote must say uncapped, and no list item of the cited chunk
+ *   naming the add-back may state a limit; so a quote cut away from "not to
+ *   exceed $500,000" cannot support an uncapped term. `basis` likewise: the
+ *   chunk whose quote states the threshold must state the period.
  *
  *   PAIRING ("does this cap belong to this add-back?") is judged against the
  *   DELIMITED LIST ITEM, because the delimiter that is wrong for completeness is
- *   right for pairing: in "may add back A, up to $500,000; and B, up to $800,000"
- *   both numbers are in the quote, and only the item says which is A's.
- *
- *     add-back name     appears in the quote cited for its cap
- *     capped add-back   the cap's figure is in the list item that names it
- *     amendment doc     is the document its effective-date citation points into
+ *   right for pairing: in "may add back A, up to $500,000; and B, up to
+ *   $800,000" both numbers are in the quote, and only the item says which is A's.
+ *   It refuses a cap that sits in the item of a DIFFERENT add-back the terms
+ *   name — a swap. It keeps allowing a figure in an item that names no other
+ *   add-back: a list sharing one cap ("A, B, and C ... not to exceed $500,000"),
+ *   a name that itself contains ", and", and a quote carrying the source's hard
+ *   line wraps. Those are correct terms, and refusing them bought nothing: the
+ *   figure is still proved present in the quote by the guardrail.
  *
  * `entry(field)` is undefined when that field has no usable citation (absent, or
  * already flagged), in which case there is nothing to check against and the
@@ -543,6 +724,7 @@ function checkNamedTerms(
   terms: Obj,
   entry: (field: string) => Obj | undefined,
   chunkOf: (field: string) => string,
+  definitions: ServerDefinitions,
   flag: (field: string, reason: string) => void,
 ): void {
   const quoteOf = (field: string): string | undefined => {
@@ -552,6 +734,7 @@ function checkNamedTerms(
 
   const nu = isObj(terms.numerator) ? terms.numerator : {};
   const addbacks = Array.isArray(nu.addbacks) ? nu.addbacks : [];
+  const addbackNames = addbacks.filter(isObj).map((a) => (typeof a.name === "string" ? a.name : "")).filter(Boolean);
   addbacks.forEach((ab, i) => {
     if (!isObj(ab) || typeof ab.name !== "string") return;
     const name: string = ab.name;
@@ -562,11 +745,17 @@ function checkNamedTerms(
       flag(`numerator.addbacks[${i}].name`, `add-back "${name}" does not appear in the quote cited for it`);
       return;
     }
-    const mine = listItems(q).filter((it) => has(it, name));
+    const items = listItems(q);
+    const mine = items.filter((it) => has(it, name));
     if (typeof ab.cap === "number") {
       const cap = ab.cap;
-      if (!mine.some((it) => extractFigures(it).some((n: number) => sameFigure(n, cap)))) {
-        flag(field, `cap ${cap} is not in the same list item as add-back "${name}" in its cited quote`);
+      const hasCap = (it: string) => extractFigures(it).some((n: number) => sameFigure(n, cap));
+      // Refuse only a cap that belongs to a DIFFERENT add-back these terms name.
+      // A figure in an item naming no add-back at all is a shared or trailing
+      // cap, which is how lists are drafted, so it is allowed.
+      const theirs = items.filter((it) => !has(it, name) && addbackNames.some((other) => other !== name && has(it, other)));
+      if (!mine.some(hasCap) && theirs.some(hasCap)) {
+        flag(field, `cap ${cap} sits with another add-back, not with "${name}", in its cited quote`);
       }
     } else if (ab.cap === null) {
       const named = listItems(chunkOf(field)).filter((it) => has(it, name));
@@ -578,24 +767,50 @@ function checkNamedTerms(
     }
   });
 
+  /**
+   * The ground truth for a definitional field: what the server found, not what
+   * was cited. `null` means no definition of that form is on file, and then
+   * nothing here runs — see `checkTermsProvenance` and `definition_not_located`.
+   */
+  const groundTruth = (field: string): { text: string; where: string } | null => {
+    const found = definitions[field] ?? [];
+    if (found.length === 0) return null;
+    const term = DEFINED_BY_SERVER[field as keyof typeof DEFINED_BY_SERVER];
+    const where = `the clause that defines "${term}" (${[...new Set(found.map((d) => d.citation))].join(", ")})`;
+    const e = entry(field);
+    if (e && typeof e.citation === "string" && !found.some((d) => sameClause(e.citation as string, d.citation))) {
+      flag(field, `this term must cite ${where}, not ${e.citation}`);
+      return null;
+    }
+    return { text: found.map((d) => d.text).join("\n"), where };
+  };
+
   const exactSet = (field: string, listed: unknown, words: Record<string, RegExp>) => {
-    const chunk = foldText(chunkOf(field));
-    if (chunk === "" || !Array.isArray(listed)) return;
+    if (!Array.isArray(listed)) return;
+    const truth = groundTruth(field);
+    if (truth === null) return;
     const problems: string[] = [];
     for (const [name, re] of Object.entries(words)) {
-      const named = re.test(chunk);
+      const named = re.test(foldText(truth.text));
       const included = listed.includes(name);
-      if (included && !named) problems.push(`terms include ${name} but the cited chunk does not mention it`);
-      if (named && !included) problems.push(`the cited chunk mentions ${name} but the terms leave it out`);
+      if (included && !named) problems.push(`terms include ${name} but ${truth.where} does not mention it`);
+      if (named && !included) problems.push(`${truth.where} mentions ${name} but the terms leave it out`);
     }
     if (problems.length > 0) flag(field, problems.join("; "));
   };
   exactSet("numerator.deductions", nu.deductions, DEDUCTION_WORDS);
   exactSet("denominator.components", isObj(terms.denominator) ? terms.denominator.components : undefined, DENOMINATOR_WORDS);
 
-  const ratioDefinition = chunkOf("numerator.deductions");
-  if (ratioDefinition !== "" && typeof nu.base === "string" && !has(ratioDefinition, nu.base)) {
-    flag("numerator.base", `base "${nu.base}" does not appear in the chunk cited for the deductions`);
+  // The base is a NAME, not a completeness question, so its scope is the whole
+  // section the located definition sits in — still chosen by the server, never by
+  // the proposer. Refuses a fabricated base ("Adjusted EBITDA" is nowhere in the
+  // definitions article); keeps allowing a definition that writes the base once
+  // and refers to it by a short form afterwards, which the clause-only scope
+  // would have refused.
+  const ratioDefinition = definitions["numerator.deductions"] ?? [];
+  const baseScope = ratioDefinition.map((d) => `${d.text}\n${d.section_text}`).join("\n");
+  if (baseScope !== "" && typeof nu.base === "string" && !has(baseScope, nu.base)) {
+    flag("numerator.base", `base "${nu.base}" does not appear in the article that defines "${DEFINED_BY_SERVER["numerator.deductions"]}"`);
   }
 
   const thresholdChunk = chunkOf("threshold.min_dscr");
@@ -639,7 +854,7 @@ export function thresholdProvenance(
  * provenance cannot (it proves what is stated, not what was left out).
  */
 export interface TermsWarning {
-  code: "amendment_not_cited" | "clause_amended" | "addback_not_in_terms";
+  code: "amendment_not_cited" | "clause_amended" | "addback_not_in_terms" | "definition_not_located";
   message: string;
   citation?: string;
   field?: string;
@@ -667,6 +882,22 @@ export function termsWarnings(
   const cites = (Array.isArray(sourceCitations) ? sourceCitations : []).filter(
     (c): c is Obj & { field: string; citation: string } => isObj(c) && typeof c.field === "string" && typeof c.citation === "string",
   );
+
+  // 0. The server could not find a defining clause, so the completeness check on
+  //    that field DID NOT RUN. It deliberately does not fall back to the chunk
+  //    the proposer cited (that is the bug it exists to prevent), so the only
+  //    honest thing is to say so: a human must read the definition themselves.
+  //    Not a refusal — refusing would make every agreement drafted without a
+  //    `"Term" means` definitions clause unboardable.
+  for (const [field, term] of Object.entries(DEFINED_BY_SERVER)) {
+    if (locateDefinition(term, chunks).length === 0) {
+      out.push({
+        code: "definition_not_located",
+        field,
+        message: `No clause defining "${term}" could be found in the agreement or amendments on file, so the completeness of ${field} was NOT verified against the document. Read the definition and check this list yourself.`,
+      });
+    }
+  }
 
   // 1. An amendment on file that no term cites. If it changes the covenant, the terms omit it.
   const titles = new Set<string>([...amendmentTitles, ...chunks.filter((c) => c.doc_type === "amendment" && c.doc_title).map((c) => c.doc_title as string)]);

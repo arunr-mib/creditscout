@@ -419,8 +419,42 @@ test("N2: a known ratio stated as a pair is a ratio, whatever the surrounding wo
   for (const text of ["The covenant requires 1.25 to 1.00", "The ratio floor is 1.25:1", "Coverage is 1.31 to 1.00 against a floor of 1.25 to 1"]) {
     assert.equal(verdict(text), "resolve", text);
   }
-  // Accepted residue: 1.31 IS the logged DSCR, so "from 1.31 to 1.00" reads as a ratio pair.
-  assert.equal(verdict("Coverage went from 1.31 to 1.00"), "resolve");
+});
+
+test("N2: the accepted residue is EVERY known ratio, not only the logged DSCR", () => {
+  // This is the behaviour the code has, written down so nobody reads the rule as
+  // narrower than it is. What goes unchecked is only the trailing 1.00.
+  //  - 1.31 is the logged DSCR
+  //  - 1.25 is the calc threshold AND the clause's own ratio: known in every casefile
+  //  - the verb is irrelevant to all of them
+  for (const text of ["Coverage went from 1.31 to 1.00", "DSCR fell from 1.25 to 1.00", "DSCR 1.25 to 1.00"]) {
+    assert.equal(verdict(text), "resolve", text);
+  }
+  // A prior quarter's logged DSCR is known too, so it waives its own 1.00.
+  const withPrior = [...CALCS, { calc_id: "calc_a0", outputs: { dscr: 1.4, threshold: 1.25, pass: true } }];
+  assert.equal(applyGuardrail(explain("DSCR fell from 1.40 to 1.00"), withPrior, WITH_PRIOR).casefile.recommendation, "resolve");
+  // Without that prior calculation, 1.40 is not a known ratio and the 1.00 is traced.
+  assert.equal(verdict("DSCR fell from 1.40 to 1.00"), "abstain");
+});
+
+test("N2: a floor a clause states only as '1.25x' is a known ratio too, so restating it as a pair does not abstain", () => {
+  // The false abstain this closes: the clause writes its floor "1.25x"; the calc
+  // threshold is a different number; the model restates the floor as "1.25 to
+  // 1.00" and used to abstain on the `1`. Documents do use the x / times forms.
+  const calcs = [{ calc_id: "calc_b1", outputs: { dscr: 1.31, threshold: 1.1, pass: true } }];
+  const chunks = [{ citation: "CA §7.11", content: "The Borrower shall maintain a Debt Service Coverage Ratio of not less than 1.25x at all times." }];
+  const cf = base({
+    explanation: "The former floor was 1.25 to 1.00 and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "not less than 1.25x" }],
+  });
+  assert.equal(applyGuardrail(cf, calcs, chunks).casefile.recommendation, "resolve", "a stated 1.25x floor must not force an abstain when restated as a pair");
+
+  // It stays bounded: a pair whose N no document states as a ratio is still traced.
+  const unknown = base({
+    explanation: "The former floor was 1.40 to 1.00 and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "not less than 1.25x" }],
+  });
+  assert.equal(applyGuardrail(unknown, calcs, chunks).casefile.recommendation, "abstain");
 });
 
 test("N2: in a document's text every 'N to 1' is a ratio by its form; a model's text must name a known N", () => {
