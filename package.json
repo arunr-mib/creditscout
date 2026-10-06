@@ -2,14 +2,33 @@
   "name": "creditscout",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "description": "Covenant exception investigation agent — DSCR decision support",
+  "type": "module",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test calc/ evals/",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test calc/ guardrails/",
     "test:calc": "node --test calc/",
     "eval": "node evals/run.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.0"
   }
 }

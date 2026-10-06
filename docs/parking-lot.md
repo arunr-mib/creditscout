@@ -55,7 +55,7 @@ an estimate in the document.
 |---|---|---|---|
 | 3.1 | 🔴 **Validate the three facility twists** (F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine) for credit realism | **Owner** | Before synthetic document generation |
 | 3.2 | 🔴 **Compute and sign off 3 expected DSCR values** in a spreadsheet. The eval runner refuses to run while any row says `NO`. | **Owner** | Before the eval runs — *not* before the build starts |
-| 3.3 | 🔴 **Does Foundry Connected Agents (preview) work reliably here?** Fallback is demoting the three specialists to plain OpenAPI tools. | Claude | **First hour of the build** |
+| 3.3 | ✅ **Does Foundry Connected Agents work here?** **Resolved 2026-10-05 — yes, spiked live.** Orchestrator must be `gpt-4.1-mini`; `gpt-5-mini` is rejected for `connected_agent` tools. Delegation shows as a discrete run step, which is the trace the UI needs. Fallback not required. | Claude | Done |
 | 3.4 | 🟠 Copy the cohort HHH evaluation spreadsheet and link it into PRD §6.1 | Owner | Before submission |
 
 ---

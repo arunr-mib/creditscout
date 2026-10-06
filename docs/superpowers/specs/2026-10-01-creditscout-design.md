@@ -373,7 +373,7 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 - **End-to-end covenant monitoring, not exception triage (2026-10-05).** CreditScout computes every covenant test itself from human-approved terms; the borrower's reported figure is evidence, not the trigger.
 - **Covenant terms require analyst approval** (four-eyes) and are versioned and effective-dated.
 - **A variance between our number and the borrower's, where both clear the threshold, is logged and not investigated.**
-- **`gpt-5-mini` for the orchestrator and all three specialists (2026-10-05).** Already deployed, so no new billable resource, and one prompt surface to tune. The guardrail is code, so a weaker model cannot produce an unverifiable number. Whether a *stronger* orchestrator buys enough accuracy to justify its cost is the post-demo experiment — a negative result is the more interesting finding.
+- **Models (2026-10-05, amended after a live spike):** orchestrator `gpt-4.1-mini`, specialists `gpt-5-mini`. The orchestrator model is **forced by the platform** — `gpt-5-mini` cannot carry `connected_agent` tools on the Assistants API. Both are already deployed, so there is still no new billable resource. Original owner decision was `gpt-5-mini` throughout. Already deployed, so no new billable resource, and one prompt surface to tune. The guardrail is code, so a weaker model cannot produce an unverifiable number. Whether a *stronger* orchestrator buys enough accuracy to justify its cost is the post-demo experiment — a negative result is the more interesting finding.
 - Supabase (plain Postgres + pgvector) for data, vectors, memory.
 - Text PDFs in scope; OCR out. Citations by document + section.
 - Pattern tag: model suggests, analyst confirms.

@@ -118,8 +118,8 @@ DeepSeek, Cohere. Model choice costs no new infrastructure, only a deployment.
 
 | Role | Model | Why |
 |---|---|---|
-| Orchestrator | **`gpt-5-mini`** | **Owner decision, 2026-10-05.** Already deployed, so no new billable deployment and no setup. The spec's reasoning for a stronger orchestrator still stands — but whether it is *needed* is an open measurement, not an assumption, and the eval set is what answers it. |
-| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, and every quote is code-verified anyway. |
+| **Orchestrator** | **`gpt-4.1-mini`** | **Forced by a platform constraint, verified live 2026-10-05.** `gpt-5-mini` **cannot** be used with `connected_agent` tools — the Assistants API rejects it with *"This model only supports Responses API compatible tools."* Connected Agents is how the orchestrator delegates to the three specialists, so the orchestrator must run a compatible model. `gpt-4.1-mini` works and is **already deployed**, so this is still no new billable resource. |
+| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | Specialists hold no `connected_agent` tool, so the constraint does not apply. They read and quote rather than judge, and every quote is code-verified. Owner's choice preserved. |
 | Eval judge (§8.2) | `gpt-4.1` | Deliberately a different family/generation from the agents, so the judge is not grading its own kind. |
 | Embeddings | `text-embedding-3-small` | **1536 dimensions** — the schema's `vector(1536)` columns depend on this number. Already deployed. |
 
@@ -624,6 +624,7 @@ network beyond the schema migration, and now no platform dependency either.
 
 | Risk | Mitigation |
 |---|---|
+| ~~**Connected Agents may not work**~~ | **RETIRED 2026-10-05 — spiked and verified live.** An orchestrator on `gpt-4.1-mini` delegated to a `gpt-5-mini` specialist via a `connected_agent` tool, and the delegation appears as a discrete step in the run-steps API — which is also the trace the UI renders. A separate spike confirmed a function-tool round trip: the agent called `dscr_calculator`, did **not** compute the ratio itself, and reported back exactly the number the tool returned. |
 | **Connected Agents is a preview feature.** Preview features change and can be flaky — and this one is load-bearing for the learning goal. | Fallback: demote the three specialists from connected agents to plain OpenAPI tools on the orchestrator. Same behaviour, less elegant, no preview dependency. Decide after the first working run, not before. |
 | Foundry Agent Service adds platform-specific learning time | That is the point of the exercise, and the course taught it in Week 5 |
 | Agent path too uniform, looks like a pipeline | Unchanged from spec §12: the six facility twists force different paths; the F1 vs F5 trace comparison is in the demo |
