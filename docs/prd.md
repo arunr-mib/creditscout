@@ -173,6 +173,9 @@ survey percentages. The honest position for a course MVP is that the problem is
 grounded in practitioner experience and market data, and that primary user
 research is a Launch gate, not an MVP gate.
 
+> **Parked for discussion — see `docs/parking-lot.md` §1.** The owner has
+> deliberately deferred closing this gap rather than letting it block the build.
+
 **Why now**
 
 Three things that were not simultaneously true 18 months ago:
