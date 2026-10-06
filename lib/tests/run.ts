@@ -381,12 +381,17 @@ export async function runTest(
       required_dscr: calc.threshold,
     };
     const existing = check(
-      await client.from("exceptions").select("id").eq("test_id", saved.id).limit(1).maybeSingle(),
+      await client.from("exceptions").select("id, status").eq("test_id", saved.id).limit(1).maybeSingle(),
       "read exceptions",
-    ) as { id: string } | null;
+    ) as { id: string; status: string } | null;
     if (existing) {
-      // Refresh the figures only. The status belongs to the analyst's workflow.
-      check(await client.from("exceptions").update(figures).eq("id", existing.id), "update exceptions");
+      // Refresh the figures. Status belongs to the analyst's workflow, with ONE exception: a
+      // `closed` exception is reopened. Closed means "no breach", and we have just found one.
+      // Leaving it closed would be a false resolve sitting in the database. This holds
+      // whoever closed it (an earlier re-run or an analyst): a later breach is new
+      // information, not a re-litigation of their call. The casefile, if any, stays linked.
+      const reopen = existing.status === "closed" ? { status: "new" } : {};
+      check(await client.from("exceptions").update({ ...figures, ...reopen }).eq("id", existing.id), "update exceptions");
       exceptionId = existing.id;
     } else {
       const created = check(
