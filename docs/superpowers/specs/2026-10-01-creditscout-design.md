@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-01
 **Owner:** Arun Rajendiran (product) · Claude Code (engineering)
-**Status:** Draft for owner review
+**Status:** Current — amended 2026-10-05 (orchestration, deployment, end-to-end monitoring)
 **Context:** Keystone project, Maven "Master Agentic AI for PMs and FDEs" Cohort 10. Pitch Day Oct 9–10, 2026 (3-minute pre-recorded video). Doubles as an AI PM portfolio piece on GitHub.
 
 ---
@@ -40,14 +40,16 @@ Commercial credit analysts monitor 30+ borrower facilities and investigate poten
 **In scope**
 - One covenant: **DSCR**, tested quarterly on a trailing-twelve-month (TTM) basis.
 - 6 synthetic facilities, each with: credit agreement (~15–20 pp text PDF), one amendment or waiver (2–3 pp), quarterly financials, borrower compliance certificate.
-- Text-based PDFs ingested via n8n.
+- Text-based PDFs ingested via the application.
+- **Covenant setup:** the agent maps the agreement + amendments into executable terms, **a human analyst approves them**, and approved terms are versioned and effective-dated.
+- **Independent quarterly testing of every borrower** — CreditScout computes the DSCR itself from approved terms and the financials. The borrower's reported figure is reconciled against ours, not used as the trigger.
 - Manual upload of documents; optional Gmail trigger for incoming compliance certificates.
 - Investigation agent, deterministic DSCR calculator, guardrails, policy, casefile memory, analyst review, eval harness, analyst web UI with governance/eval page.
 
 **Out of scope**
 - Other covenants (leverage, fixed charge coverage, liquidity).
 - Scanned/image PDFs (OCR); complex table extraction from audited statements (SpreadSense's domain).
-- Auth, multi-user, roles, mobile layout, deployment (runs locally; n8n is on n8n Cloud).
+- Auth, multi-user, roles, mobile layout. **Deployment is now in scope** — the app is deployed to Vercel.
 - Editing facility terms in the UI.
 - Any real bank data. All documents are synthetic.
 
@@ -57,24 +59,27 @@ Commercial credit analysts monitor 30+ borrower facilities and investigate poten
 
 | Layer | Technology | Course tie-in |
 |---|---|---|
-| Orchestration (reasoning layer) | **n8n Cloud** AI Agent node, Claude Opus 5.5 (`claude-opus-5-5`) | Wk 4 multi-agent (Lab 4.5) |
-| Specialist tools | n8n AI Agent tool sub-agents + Code nodes | Wk 2/4 |
+| Orchestration (reasoning layer) | **Azure AI Foundry Agent Service**, Connected Agents, `gpt-5-mini` | Wk 4 multi-agent · Wk 5 lab |
+| Specialist sub-agents | Foundry **connected agents** (`document_agent`, `definition_agent`, `research_agent`), `gpt-5-mini` | Wk 2/4 |
+| Application + API | **Next.js (App Router) on Vercel** — screens, analyst routes, and the OpenAPI tool endpoints the agent calls | Wk 5 lab |
 | Retrieval | **Supabase Vector Store** (pgvector), section-level chunks | Wk 2 RAG |
-| Deterministic calculation | n8n **Code node** (JavaScript); identical source file in repo with unit tests | mentor: "calc tool" |
+| Deterministic calculation | `calc/dscr.js`, zero-dependency, imported by the app and exposed to the agent as an OpenAPI tool | mentor: "calc tool" |
 | Memory & records | **Supabase** Postgres | Wk 3–5 |
-| Analyst UI | Vite + React app built with Claude Code, local | Lab 1.2 / 2.3.1 |
+| Analyst UI | **Next.js + React on Vercel**, design system in `docs/design.md` | Lab 1.2 / 2.3.1 / Wk 5 |
 | Evaluation | Local eval runner + **Azure AI Foundry Evaluations** (JSONL upload) | Wk 3 Lab 3.2 |
-| Optional | Gmail trigger; n8n MCP Server exposing the DSCR calculator | Wk 5 MCP |
+| Optional | Gmail intake as a scheduled route; MCP server exposing the DSCR calculator | Wk 5 MCP |
 
-**Production path (roadmap, not built):** orchestrator on Microsoft Foundry Agent Service inside the bank's Azure tenant; Postgres on Azure Database for PostgreSQL; documents from the bank's loan document system (e.g., nCino). Nothing in the MVP depends on Supabase-specific features (no Supabase auth, edge functions, or browser-side writes).
+**Production path:** the orchestrator now **runs on** Microsoft Foundry Agent Service — what remains for production is moving it inside the bank's own Azure tenant; Postgres on Azure Database for PostgreSQL; documents from the bank's loan document system (e.g., nCino). Nothing in the MVP depends on Supabase-specific features (no Supabase auth, edge functions, or browser-side writes).
 
-**Why n8n for the MVP:** fastest path the owner already knows, visual execution trace for the demo, editable by the owner, and n8n + Foundry evals is the course's own pairing (Lab 3.2). Trade-off accepted: less fine-grained loop control than hand-written code, compensated by post-agent guardrail and policy nodes and the agent node's iteration cap.
+**Why Foundry Agent Service (amended 2026-10-05):** it runs the loop natively with Connected Agents, so the orchestrator-to-specialist delegation is visible and traceable in the Foundry portal — which is both the course's week-5 path and a stated learning objective. It also closes the unresolved n8n Cloud licensing question, removes the node-version and byte-identical-copy risks, and makes §3's production path the thing actually built rather than a roadmap slide. Full reasoning: `docs/engineering/engineering-doc.md`. Trade-off accepted: Connected Agents is a preview feature; the fallback is demoting the three specialists to plain OpenAPI tools, which changes nothing else.
 
 ### Agentic vs deterministic boundary
 
 | Responsibility | Owner |
 |---|---|
-| Flagging a potential exception (reported DSCR < threshold) | Code |
+| Computing the DSCR independently each quarter, for every borrower | **Code** |
+| Flagging an exception (**our** DSCR < threshold) | **Code** |
+| Approving the executable covenant terms before they govern any test | **Human analyst, always** |
 | Deciding what to inspect next | Model (orchestrator) |
 | Reading agreement, amendments, waivers, certificate | Model |
 | Mapping the DSCR definition into structured terms (add-backs, period, threshold, amendment precedence) | Model, schema-validated |
@@ -89,9 +94,9 @@ The investigation path must genuinely vary by case (see §4.3); this is what dis
 
 ---
 
-## 4. Workflows (n8n)
+## 4. Workflows
 
-All workflows are exported as JSON into `n8n/` in the repo. The owner imports them into n8n Cloud and attaches credentials (Anthropic, Supabase, optionally Gmail).
+Implemented as Next.js route handlers plus Foundry agent definitions. Agent definitions live in `n8n/` no longer; see `docs/engineering/implementation-specs.md` for the file-by-file blueprint.
 
 ### 4.1 Ingest
 
@@ -101,12 +106,40 @@ Trigger: webhook `POST /ingest` (multipart: PDF, `facility_id`, `doc_type`) — 
 2. Extract from File (PDF → text).
 3. Code: split text into section chunks using section headings (`§`, `Section`, `ARTICLE`); attach metadata `{facility_id, document_id, doc_type, section, doc_title}`.
 4. Supabase Vector Store insert (embeddings model: whichever embeddings credential the owner has; OpenAI embeddings as in the labs).
-5. If `doc_type = compliance_certificate`: run **Certificate check**:
-   - Model extracts `{borrower_name, test_period_end, reported_dscr, required_dscr_stated}` into a fixed schema (validated; failure → `needs_filing`).
-   - Code compares `reported_dscr` to the facility's threshold as stated on the certificate. Below → insert `exceptions` row (`status = new`). Otherwise → log "compliant, no action".
+5. If `doc_type = compliance_certificate`: extract `{borrower_name, test_period_end, reported_dscr, required_dscr_stated}` into a fixed schema (validated; failure → `needs_filing`). **This figure is stored as evidence. It does not decide anything** — see §4.1b.
 6. Respond with document id and, if created, exception id.
 
 Note: page numbers are not preserved by PDF extraction; citations are by **document + section**.
+
+### 4.1a Covenant setup (four-eyes)
+
+Runs once per facility, and again whenever an amendment arrives.
+
+1. `definition_agent` reads the definitions article, amendments and waivers, and proposes executable `terms` — **every line carrying a citation and a verbatim quote**.
+2. Terms are written to `covenant_terms` with `status = proposed`.
+3. **The analyst reviews each term beside its source clause and approves.** Approval records `approved_by` and `approved_at`.
+4. Approved terms are **versioned and effective-dated**. An amendment creates `version + 1` and supersedes the previous row; it never overwrites, because a Q1 test must remain reproducible against the terms in force in Q1.
+5. **Only `status = approved` terms may govern a test.**
+
+Maker-checker (the four-eyes principle) is the standard control for covenant boarding, and a setup error here would silently corrupt every future test for that borrower.
+
+### 4.1b Quarterly test — every borrower, every quarter
+
+1. Load the **approved** terms in force for the test period. No approved terms → refuse to run.
+2. Read the six financial figures from the facility's financials document, each quoted and cited.
+3. **Code computes the DSCR** and compares it to the threshold. Three outcomes:
+
+| Our number | Borrower's number | Result |
+|---|---|---|
+| Passes | Agrees within `variance_tolerance` | Log compliant, no action |
+| Passes | Differs beyond tolerance | **Log the variance. No investigation.** Their arithmetic is off; the conclusion stands. |
+| **Fails** | Anything | **Exception → Investigate (§4.2)** |
+
+4. Every test writes a `tests` row and a `calc_log` row, whether or not it fails.
+
+A missing or uncitable financial input produces `calc_error` and a NULL DSCR — **never a zero and never an exception**.
+
+**Why this changed (2026-10-05):** the original design read the borrower's reported DSCR and investigated only when *that* figure was below threshold. A borrower whose arithmetic was wrong in their own favour was therefore invisible. CreditScout now computes independently for every borrower, and the reported figure becomes evidence to reconcile against.
 
 ### 4.2 Investigate
 
@@ -114,7 +147,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 
 1. Create `casefiles` row (`status = investigating`).
 2. **Load memory:** facility's prior exceptions/casefiles; build an *exception profile* string (reported vs required DSCR, document types on file, industry); similarity search over past casefile summaries and review lessons; take top 3 lessons.
-3. **CreditScout Orchestrator** (AI Agent node, Claude Opus 5.5, max iterations from `policy.max_steps`). The three sub-agent tools (`document_agent`, `definition_agent`, `research_agent`) run Claude Sonnet 5.5 (`claude-sonnet-5-5`) — they read and quote rather than judge, and every quote they return is verified by the §6.1 guardrail. System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
+3. **CreditScout Orchestrator** (Foundry Agent Service, `gpt-5-mini`, step cap from `policy.max_steps`). The three specialists are Foundry **connected agents** (`document_agent`, `definition_agent`, `research_agent`), also `gpt-5-mini` — they read and quote rather than judge, and every quote they return is verified by the §6.1 guardrail. System prompt contains role, rules (never compute numbers, cite everything, abstain when unsupported, prohibited actions), the exception, and the memory lessons. Tools:
 
 | Tool | Type | Purpose | Returns |
 |---|---|---|---|
@@ -126,7 +159,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 
    Every tool call appends a step `{n, tool, input_summary, output_summary, ts}` to `casefiles.trace` (for the live UI).
 
-   **Anthropic node settings** (confirmed available in n8n 2.41.6 node definitions; verify in the Cloud instance): model via **By ID**; `Prompt Caching: 1h` — the main cost lever, the system prompt and agreement text repeat on every step; `Thinking Mode: adaptive` with `Effort: medium` to start; `Force Tool Call on First Iteration: off`; agent max iterations 8 (`policy.max_steps`).
+   **Agent configuration:** the calculator, document search and past-case search are **OpenAPI 3.0 tools served by the application** and authenticated with a shared header key. Forced tool choice stays off. The step cap is read from `policy.max_steps` on every sync, so the Risk Officer's lever is live rather than baked into a deployment.
 4. **Guardrail** (Code node) — §6.1.
 5. **Policy** (Code node) — §6.2.
 6. Update casefile: final fields, `status = pending_review` (or `failed`).
@@ -187,8 +220,10 @@ Dedicated demo Gmail account (created by owner; never personal or work mail). On
 | `facilities` | `id`, `borrower_name`, `industry`, `sender_domain`, `created_at` |
 | `documents` | `id`, `facility_id`, `doc_type` (agreement, amendment, waiver, compliance_certificate, financials), `title`, `effective_date`, `source` (upload, email), `created_at` |
 | `doc_chunks` | `id`, `content`, `embedding`, `metadata` jsonb `{facility_id, document_id, doc_type, section, doc_title}` |
-| `exceptions` | `id`, `facility_id`, `test_period_end`, `reported_dscr`, `required_dscr`, `status` (new, investigating, pending_review, closed, needs_filing), `created_at` |
-| `casefiles` | `id`, `exception_id`, `status` (investigating, pending_review, approved, overridden, awaiting_docs, failed), `trace` jsonb, `terms` jsonb, `recommendation`, `explanation`, `claims` jsonb, `calc_ids` uuid[], `missing_evidence` jsonb, `suggested_tag`, `guardrail_notes` jsonb, `steps_count`, `summary`, `summary_embedding`, `run_id`, `created_at` |
+| `covenant_terms` | `id`, `facility_id`, `version`, `effective_from`, `effective_to`, `terms` jsonb, `source_citations` jsonb, `status` (proposed, approved, superseded), `approved_by`, `approved_at`, `created_at` |
+| `tests` | `id`, `facility_id`, `covenant_terms_id`, `test_period_end`, `computed_dscr`, `reported_dscr`, `threshold`, `passed`, `variance`, `variance_flagged`, `calc_id`, `calc_error`, `created_at` |
+| `exceptions` | `id`, `facility_id`, `test_id`, `test_period_end`, `reported_dscr`, `required_dscr`, `status` (new, investigating, pending_review, closed, needs_filing), `created_at` |
+| `casefiles` | `id`, `exception_id`, `status` (investigating, pending_review, approved, overridden, awaiting_docs, failed), `trace` jsonb, `terms` jsonb, `recommendation`, `explanation`, `claims` jsonb, `calc_ids` uuid[], `missing_evidence` jsonb, `suggested_tag`, `guardrail_notes` jsonb, `steps_count`, `summary`, `summary_embedding`, `run_id`, `foundry_thread_id`, `foundry_run_id`, `last_step_at`, `created_at` |
 | `calc_log` | `calc_id`, `casefile_id`, `inputs` jsonb, `outputs` jsonb, `calculator_version`, `created_at` |
 | `reviews` | `id`, `casefile_id`, `decision`, `reason`, `corrected_outcome`, `pattern_tag`, `lesson_text`, `lesson_embedding`, `created_at` |
 | `policy` | `key`, `value` jsonb, `updated_at` |
@@ -243,7 +278,7 @@ n8n, model, or Supabase failure → casefile `failed` with error message and a R
 
 ## 7. Analyst web UI
 
-Vite + React (SpreadSense conventions), local. Reads Supabase for display (read-only anon key, RLS read policies); all writes go through n8n webhooks. Visual language matches the architecture diagram: dark navy, teal = model steps, amber = code steps ("computed by code · calc_id").
+**Next.js (App Router) + React, deployed to Vercel.** Reads Supabase directly for display (read-only anon key, RLS read policies); all writes go through the application's API routes. The design system is `docs/design.md`. Visual language matches the architecture diagram: dark navy, teal = model steps, amber = code steps ("computed by code · calc_id").
 
 1. **Portfolio / exception queue** — table (borrower, period, reported vs required DSCR, status, "seen similar" badge); KPI strip (open exceptions, pending review, avg steps per case); Upload quarterly package; facility documents view.
 2. **Investigation** — live step trace (poll `casefiles.trace` every 1s) and casefile placeholder.
@@ -267,9 +302,8 @@ Not included: login, multi-user, mobile.
 ### 8.3 Engineering tests
 
 - DSCR calculator unit tests: all facility expected values; caps; deductions; rounding; errors on missing inputs, zero/negative denominator, unknown component.
-- Sync check: calculator source in exported n8n workflow JSON is byte-identical to `calc/dscr.js`.
 - Guardrail unit tests with fabricated agent outputs (untraceable number, fake quote, resolve without passing calc) → must force the correct downgrade.
-- Workflow JSON exported to repo after every change.
+- Foundry agent definitions and the OpenAPI tool spec committed to the repo after every change.
 
 ---
 
@@ -311,11 +345,11 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 
 | Risk | Mitigation |
 |---|---|
-| Generated n8n JSON needs node-version fixes | Build and test one workflow at a time; owner imports, Claude reads executions and fixes |
+| Connected Agents is a preview feature | Fallback: demote the three specialists to plain OpenAPI tools on the orchestrator. Same behaviour, no preview dependency. |
 | Agent path too uniform (looks like a pipeline) | Facility twists designed to force different paths; F1 vs F5 trace comparison in demo |
 | Model hallucinated figures or quotes | Code guardrails force abstain; tested with fabricated outputs |
-| n8n AI Agent node forces a specific tool | **Resolved** (node definitions, n8n 2.41.6): forcing is behind the `Force Tool Call on First Iteration` option, default `false`. Leave it off — both chosen models reject forced `tool_choice` with a 400. |
-| n8n model list predates these models | **Resolved**: the model field accepts `mode: 'id'` ("Choose from the list, or specify an ID"). Node default is `claude-sonnet-5`, so set `claude-opus-5-5` / `claude-sonnet-5-5` via **By ID**. |
+| Agent tool endpoints are publicly reachable | Shared header key on every `/api/tools/*` route; `search-documents` filters by `facility_id` inside the database function so a caller cannot omit it |
+| Covenant terms approved with an error corrupt every later test | Four-eyes approval (§4.1a); terms versioned and effective-dated so a correction supersedes rather than overwrites |
 | Eval run slow or flaky | 24 cases, retries per case, runner resumable; 6-case subset during development |
 | Time | Gmail trigger and MCP are stretch; cut order: MCP → Gmail → Foundry upload (keep local metrics) |
 | Credentials / privacy | Owner enters all keys; dedicated demo Gmail only; synthetic data only |
@@ -325,8 +359,11 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 ## 13. Decisions log
 
 - New standalone repo `~/Documents/projects/creditscout`; unrelated to atomic_helper.
-- n8n Cloud orchestrator over Azure Foundry agent (time, owner familiarity, course pairing); Foundry used for evals; Foundry Agent Service is the stated production path.
-- Claude as agent model (aligned with Anthropic certification track): Claude Opus 5.5 orchestrates (the abstain/resolve judgement drives the headline false-resolve metric), Claude Sonnet 5.5 runs the retrieval sub-agents at half the token price. Whether Sonnet 5.5 can also orchestrate without hurting accuracy is an open measurement, run on the eval set — a finding worth reporting either way.
+- ~~n8n Cloud orchestrator over Azure Foundry agent~~ — **reversed 2026-10-05.** Azure AI Foundry Agent Service runs the loop with Connected Agents; Foundry also provides traces and evals; the app and its tool endpoints are Next.js on Vercel. Reasoning in `docs/engineering/engineering-doc.md`.
+- **End-to-end covenant monitoring, not exception triage (2026-10-05).** CreditScout computes every covenant test itself from human-approved terms; the borrower's reported figure is evidence, not the trigger.
+- **Covenant terms require analyst approval** (four-eyes) and are versioned and effective-dated.
+- **A variance between our number and the borrower's, where both clear the threshold, is logged and not investigated.**
+- **`gpt-5-mini` for the orchestrator and all three specialists (2026-10-05).** Already deployed, so no new billable resource, and one prompt surface to tune. The guardrail is code, so a weaker model cannot produce an unverifiable number. Whether a *stronger* orchestrator buys enough accuracy to justify its cost is the post-demo experiment — a negative result is the more interesting finding.
 - Supabase (plain Postgres + pgvector) for data, vectors, memory.
 - Text PDFs in scope; OCR out. Citations by document + section.
 - Pattern tag: model suggests, analyst confirms.
@@ -341,5 +378,5 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 
 1. Validate realism of the six facility twists (§4.3).
 2. Review and sign off the 24 eval labels (§8.1) once drafted.
-3. ~~Confirm Supabase project to use~~ — **resolved 2026-10-02:** reusing existing Supabase project `rngsejqplndmygrozasc` (region ca-central-1, org "House of Credit"); free plan caps the org at 2 projects, so no new project was created. `vector` 0.8.2 enabled. Still open: confirm the n8n Cloud plan includes the AI Agent node and the Supabase Vector Store node.
-4. Anthropic API key available for n8n; embeddings credential (OpenAI as in labs).
+3. ~~Confirm Supabase project to use~~ — **resolved 2026-10-02:** reusing existing Supabase project `rngsejqplndmygrozasc` (region ca-central-1, org "House of Credit"); free plan caps the org at 2 projects, so no new project was created. `vector` 0.8.2 enabled. ~~Still open: confirm the n8n Cloud plan…~~ — **closed 2026-10-05**, n8n is no longer used.
+4. ~~Anthropic API key available for n8n~~ — **closed.** Azure credentials already verified; `text-embedding-3-small` deployed at 1536 dimensions.

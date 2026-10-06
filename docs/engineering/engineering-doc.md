@@ -634,9 +634,13 @@ implementation task under any of the options considered.
 
 ---
 
-## 14. Spec amendments — owner approval needed
+## 14. Spec amendments — APPLIED 2026-10-05
 
-The spec is owner-owned. Proposed, not applied.
+**Applied to `docs/superpowers/specs/2026-10-01-creditscout-design.md` on
+2026-10-05 at the owner's instruction ("keep it latest").** The spec is now
+current; this table is the record of what changed. 27 edits across §2, §3, §4,
+§5, §7, §8.3, §12, §13 and §14 — plus two new subsections, §4.1a covenant setup
+and §4.1b the quarterly test.
 
 | § | Current | Proposed |
 |---|---|---|
