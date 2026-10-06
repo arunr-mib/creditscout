@@ -36,6 +36,27 @@ appended. For traceability:
 
 # Section 1. PROBLEM DEFINITION
 
+## 1.0 Hypothesis
+
+> **We believe that independently recomputing every covenant test from
+> human-approved, citation-backed terms — instead of trusting the borrower's
+> reported figure — will let a credit analyst at a regional bank, commercial
+> lender or credit union close a covenant exception in under 30 minutes instead
+> of ~2.5 hours, with zero false resolutions, because the evidence that resolves
+> an exception is scattered across an agreement, its amendments and a
+> certificate that no rules engine can read.**
+
+Three things make this testable rather than aspirational:
+
+| Claim | How it fails |
+|---|---|
+| Under 30 minutes | Measured time-to-decision stays above 30 min on the eval set |
+| Zero false resolutions | A single `resolve` on a case whose expected outcome is not resolve |
+| Independent recomputation adds value | No eval case exists where our number fails while the borrower's passes |
+
+The third is the one worth watching. If it never fires, the end-to-end
+redesign bought nothing over exception triage, and we should say so.
+
 ## 1.1 What problem is this solving?
 
 Commercial credit analysts monitor portfolios of 30+ borrower facilities and
@@ -132,6 +153,40 @@ credit committee.
 *Note on the vendor figures above: these are supplier-published claims, not
 independent studies. They are directionally useful for sizing the pain, and are
 treated as marketing claims rather than measurements throughout this PRD.*
+
+**Customer evidence — the weakest part of this PRD, stated plainly**
+
+A PRD without customer evidence is built on assumptions. Here is exactly what we
+have and what we don't:
+
+| Evidence type | Status |
+|---|---|
+| Practitioner domain input | **Have** — the author has commercial credit-systems experience. Legitimate, but it is **n=1 and the author is also the product owner**, which is the weakest possible form of user research. |
+| Published market data | **Have** — BLS headcount, category sizing, institution counts (cited below) |
+| Vendor benchmarks | **Have, discounted** — supplier marketing, treated as directional only |
+| **Analyst interviews** | **`[NEED: 5 interviews with credit analysts at regional banks / credit unions]`** — Owner · before design-partner outreach |
+| **Support tickets / usage data** | **`[NEED: n/a pre-launch]`** — unavailable until a design partner is live |
+| **Direct customer quotes** | **`[NEED: 3+ verbatim quotes on covenant investigation pain]`** — Owner · before Launch gate |
+
+**This is not fabricated and will not be.** No invented quotes, no invented
+survey percentages. The honest position for a course MVP is that the problem is
+grounded in practitioner experience and market data, and that primary user
+research is a Launch gate, not an MVP gate.
+
+**Why now**
+
+Three things that were not simultaneously true 18 months ago:
+
+1. **Frontier models can now hold a full credit agreement plus amendments in one
+   context** (1M-token windows), which is what makes amendment-precedence
+   reasoning tractable at all.
+2. **Tool-calling and multi-agent orchestration became managed infrastructure**
+   (Azure AI Foundry Agent Service, Connected Agents) rather than something each
+   team hand-rolls — so a small team can build this.
+3. **Covenant exception volume rises when credit quality softens**, precisely
+   when regional lenders are least able to add analyst headcount.
+   `[NEED: current SMB/middle-market delinquency trend data to support this]` —
+   Owner · before the pitch. Stated as a mechanism, not yet as a measured trend.
 
 **The market gap**
 
@@ -265,6 +320,21 @@ quote from a cited document, or a code guardrail forces the recommendation to
 | Cost per investigation | < $1 | Azure usage metrics per run |
 | Analyst override rate | Tracked, not targeted | `reviews.decision` distribution |
 
+**Guardrail metrics — what must not get worse**
+
+Targets tell you what to chase. Guardrails stop you chasing one metric off a
+cliff. Each of these has a ceiling, and breaching one blocks a release even if
+every target above is met.
+
+| Guardrail | Ceiling | Why it exists |
+|---|---|---|
+| **Abstain rate** | **≤ 25% of cases** | **The most important guardrail in the product.** A system that abstains on everything scores a perfect 0 false resolves while delivering nothing. Without a ceiling, the headline metric can be gamed by cowardice. |
+| `request` rate | ≤ 25% of cases | Same failure in a different costume — endlessly asking for documents instead of concluding |
+| Cost per investigation | ≤ $1 | Runaway agent loops; also the lever that keeps gross margin honest |
+| Steps per investigation | ≤ `policy.max_steps` (8) | Caps cost and latency; breaching it forces abstain rather than a guess |
+| Guardrail-forced abstain rate | ≤ 15% of cases | A high rate means the *prompt* is broken, not that the model is dangerous |
+| Calculation errors returned | 0 unexplained | The calculator erroring is correct behaviour on missing input; an error with complete inputs is a defect |
+
 **Why false-resolve is the gate and not just a metric.** A product that
 escalates too often wastes analyst time. A product that resolves a real breach
 creates regulatory and credit exposure. Those failures are not symmetric, so the
@@ -277,6 +347,47 @@ explanation — because legitimate explanations quote figures from the covenant
 the product did nothing useful. Quoted figures are therefore valid evidence, and
 numbers are compared after normalisation rather than as text. This is tested
 explicitly.
+
+---
+
+## 1.6 Non-Goals
+
+Stated before the solution, deliberately — this is the cheapest defence against
+scope creep, and several of these have already been argued once.
+
+**We are NOT:**
+
+- **Making credit decisions.** Ever. `require_human_review` is a locked policy
+  value, not a setting. This is a regulatory boundary, not a product choice.
+- **Building other covenants in V1.** DSCR only, quarterly, trailing-twelve-month.
+  Leverage, fixed-charge coverage and liquidity are MVP-1 at the earliest.
+- **Doing OCR.** Text-based PDFs only. A scanned agreement is rejected, not
+  guessed at.
+- **Extracting financials from statement tables.** That is a spreading problem
+  and a different product. Our synthetic financials print each figure as a
+  labeled line, and the agent cites it.
+- **Scoring borrower creditworthiness.** We check whether a contractual ratio was
+  met against contractual terms. We never touch protected characteristics —
+  which is what keeps this out of fair-lending model territory.
+- **Replacing the rules engine.** It still flags thresholds. We start where it
+  stops.
+- **Building auth, multi-user, roles or mobile** in the MVP.
+- **Selling to large money-centre banks** as the first customer. Long
+  procurement, build-vs-buy bias, existing platform investment.
+- **Investigating a variance when both numbers clear the threshold.** We log it.
+  Investigations are reserved for real exceptions — a deliberate cost choice.
+- **Using real bank data.** 100% synthetic, every document marked
+  `SYNTHETIC — FOR DEMONSTRATION`.
+
+**Considered and cut, with reasons:**
+
+| Cut | Why |
+|---|---|
+| n8n Cloud as orchestrator | Unresolvable licensing unknown; replaced by Foundry Agent Service, which also gives traces and matches the production story |
+| Per-seat pricing | Penalises adding reviewers — the opposite of the oversight behaviour the product depends on |
+| Per-investigation pricing | Charges most in the quarters when borrowers are most distressed, which is when the tool matters most |
+| Volume pricing tiers | Premature before measured usage; flat $5 until there is evidence |
+| Facilities F2, F4, F6 | F1/F3/F5 already cover resolve, escalate and the memory effect |
 
 ---
 
@@ -417,6 +528,64 @@ P0 = required to prove the hypothesis · P1 = ship if possible · P2 = stretch
 | `search_past_cases` | Exception profile | Matching lessons from prior casefiles | Autonomous | — |
 | **Guardrail** | Draft casefile | Validated casefile + guardrail notes | **Deterministic code** | Any forced downgrade is displayed to the analyst |
 | **Policy** | Validated casefile | Final recommendation | **Deterministic code** | Prohibited action proposed → forced `escalate` |
+
+## 2.3 AI behaviour specification
+
+Twenty behaviours that define correct operation. **This table is the source for
+the eval cases and the guardrail unit tests** — it is a build artifact, not
+documentation.
+
+### A. Calculation layer — code, must be exactly right
+
+| # | Input / situation | Expected output | Why it matters |
+|---|---|---|---|
+| 1 | Terms + all six financial figures present and valid | `{calc_id, components, dscr, threshold, pass, margin}` | The happy path |
+| 2 | DSCR computes to 1.2549 | **1.25** (half-up to 2dp) | Half-up, not banker's rounding — 1.2549 → 1.25, but 1.2550 → **1.26** |
+| 3 | Add-back of 800,000 against a cap of 500,000 | Add-back applied as **500,000** | Caps are contractual limits, not suggestions |
+| 4 | Add-back with **no `cap` field**, or `cap: null` | Treated as **uncapped** | Reading absent-as-zero flips F1 from a correct resolve to a false escalation |
+| 5 | EBITDA is **negative** | Returns a **negative DSCR**, `pass: false` | A struggling borrower is a legitimate result, not an error |
+| 6 | Denominator is **0** or negative | `{error}` — never a number | Division by zero must never silently produce Infinity |
+| 7 | A required financial figure is **missing** | `{error: missing input}` | **Never defaults to zero.** Defaulting understates the numerator and fabricates a breach |
+| 8 | Terms name an add-back absent from the financials | `{error}` | Silent zero would understate the numerator |
+| 9 | Unknown component name in `terms.denominator` | `{error: unknown component}` | Refuse rather than guess what the drafter meant |
+| 10 | `calcId` not supplied by the caller | `{error}` | The pure function never generates its own id — that is what makes tests deterministic |
+
+### B. Agent layer — judgment, must be well-bounded
+
+| # | Input / situation | Expected behaviour | Why it matters |
+|---|---|---|---|
+| 11 | Our DSCR fails; an amendment permits an add-back that fixes it | Find the amendment, **re-map terms, recompute**, then `resolve` with both calculations cited | F1 — the core investigation |
+| 12 | Our DSCR fails; nothing in the file explains it | `escalate` — do **not** keep searching to manufacture a reason | F3. Finding nothing is a valid finding |
+| 13 | Certificate cites a waiver that is not in the document set | `abstain` + `missing_evidence: ["Waiver referenced in certificate §3"]` | Never infer the contents of a document you cannot read |
+| 14 | A near-identical case was resolved last quarter | Retrieve the lesson, **check amendments first**, resolve in fewer steps | F5 — the memory effect, and the demo's centrepiece |
+| 15 | Our number passes, borrower's number passes, they differ by more than tolerance | **Log the variance. Do not investigate.** | Investigations are reserved for real exceptions |
+| 16 | Our number **passes**, borrower reported a **failure** | Investigate — the borrower may have mis-stated their own compliance | The mirror image of the case the old design missed |
+| 17 | Step cap reached before a conclusion | `abstain` ("investigation incomplete") | Never a guess because time ran out |
+
+### C. Rejection criteria — what the guardrail must refuse
+
+| # | Agent produces | Guardrail response | Why it matters |
+|---|---|---|---|
+| 18 | A figure in the explanation matching **no** calculation and **no** quote | Force **`abstain`** ("unverified figure") | The core trust claim |
+| 19 | A figure quoted verbatim from a cited clause — e.g. *"the covenant requires 1.25x"* | **ACCEPT** | **The subtlest failure mode in the design.** A guardrail accepting only *calculated* numbers abstains on every well-formed explanation — scoring a perfect 0 false resolves while the product does nothing |
+| 20 | Same figure in a different format — `1,250,000` vs `1250000`, `1.25` vs `1.25x`, `$4.25m` | **ACCEPT** — compare after normalisation | Naive string matching would false-abstain on correct work |
+| 21 | A claim whose quote does **not** appear in the cited chunk | Remove the claim; if the recommendation depended on it, force `abstain` | Fabricated citations are worse than no citation |
+| 22 | `resolve` with no passing calculation, or without cited effective terms | Downgrade to **`escalate`** | Confidence must be earned by evidence |
+| 23 | Explanation proposing to waive a covenant, amend terms, or contact the borrower | Force **`escalate`** with a note | Prohibited actions — a regulatory boundary |
+| 24 | Output that fails the casefile schema | One retry, then **`abstain`** ("malformed output") | Never render a broken response as a recommendation |
+
+### D. Malformed and unexpected input
+
+| # | Input | Expected behaviour |
+|---|---|---|
+| 25 | Scanned/image PDF | Rejected at ingest with a reason. **Not** OCR'd, not guessed |
+| 26 | Certificate whose borrower name matches no facility | Routed to `needs_filing`. **Never** guesses the facility |
+| 27 | Agreement with no recognisable DSCR definition | Covenant setup returns "not found" for the analyst to resolve — no invented threshold |
+| 28 | Model, platform or database failure mid-run | Casefile `failed` with the error and a Retry action. **A failure is never presented as a recommendation** |
+
+**Coverage note:** behaviours 1–10 and 18–24 are unit-testable with no model call
+at all, which is why the deterministic core is the cheapest place to build
+confidence. Behaviours 11–17 need the eval set.
 
 ---
 
@@ -709,6 +878,29 @@ DSCR | Citations returned | Steps | Pass/Fail | Notes.
   the pitch.
 - **Prompt versioning:** orchestrator system prompts are versioned; changes are
   A/B'd against the eval set before adoption.
+
+### Rollback plan
+
+Every layer can be reverted independently, and none of them requires a redeploy
+except the last.
+
+| What went wrong | How to undo it | Time to revert |
+|---|---|---|
+| A prompt change degraded outcome accuracy | Revert to the previous pinned prompt version | Minutes — config, no deploy |
+| A policy threshold is mis-tuned (too many escalations, tolerance too tight) | Update the `policy` table row | Immediate — the Risk Officer's lever, by design |
+| A model change made judgment worse | Revert the deployment name in config | Minutes — no code change |
+| Covenant terms were approved with an error | Terms are **versioned and effective-dated** — supersede with a corrected version; prior tests remain reproducible against the terms actually in force | Minutes, and auditable |
+| The agent is producing unusable output generally | **Kill switch:** stop creating investigations. Quarterly testing still runs — ingest, calculate, compare, flag — because that path is pure code. The lender keeps compliance testing and loses only the investigation | Immediate |
+| A bad release reaches users | Revert the deployment; casefiles are persisted, so in-flight investigations resume rather than being lost | One deploy cycle |
+
+**The kill switch is the important row.** Because calculation and guardrails are
+deterministic code rather than model behaviour, the product degrades to "automated
+covenant testing without investigation" rather than to nothing. That is a real
+fallback, not a theoretical one.
+
+**What is explicitly not rollback-able:** an analyst decision already recorded.
+Decisions and their lessons are append-only — a wrong lesson is superseded by a
+new one, never deleted, because the audit trail is the product.
 
 ---
 
@@ -1175,7 +1367,22 @@ numbers rest on domain judgment rather than published data:
 | Pricing unit and level | $5 per borrower per month | §9.5, §9.6, §9.7 |
 | Target segment | Regional banks, commercial lenders, credit unions — not large banks | §1.2, §9.4 |
 
-### Still unconfirmed — flagged, not assumed away
+### Open questions — with owners and deadlines
+
+| # | Question | Owner | Deadline | Blocks |
+|---|---|---|---|---|
+| 1 | Validate the three facility twists (F1, F3, F5) for realism | **Owner** | Before synthetic doc generation | The build |
+| 2 | Compute and sign off 3 expected DSCR values | **Owner** | Before the eval runs | The scoreboard, not the build |
+| 3 | `[NEED: 5 analyst interviews]` — primary user research | **Owner** | Before design-partner outreach | Launch gate, not MVP |
+| 4 | `[NEED: 3+ verbatim customer quotes]` | **Owner** | Before Launch gate | Credibility of §1.3 |
+| 5 | `[NEED: SMB/middle-market delinquency trend data]` for "why now" | **Owner** | Before the pitch | One claim in §1.3 |
+| 6 | Fully-loaded analyst cost per hour | **Owner** | Before the pitch | ROI precision, not direction |
+| 7 | Analyst hours per contested exception | **Owner** | Before the pitch | North Star baseline |
+| 8 | Does Foundry **Connected Agents** (preview) work reliably here? | Claude | **First hour of the build** | The whole agent design — fallback is plain tools |
+| 9 | India domestic lender market size | **Owner** | Post-MVP | §9.4 completeness |
+| 10 | Copy the cohort HHH evals spreadsheet and link it | **Owner** | Before submission | Checklist item |
+
+### Still unconfirmed figures — flagged, not assumed away
 
 | Figure | Placeholder in use | Why it matters |
 |---|---|---|
