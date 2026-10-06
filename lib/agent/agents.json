@@ -1,0 +1,12 @@
+{
+  "api_version": "2025-05-01",
+  "orchestrator_model": "gpt-4.1-mini",
+  "specialist_model": "gpt-5-mini",
+  "updated_at": "2026-10-06T14:41:26.210Z",
+  "agents": {
+    "document_agent": "asst_9uA6GecZYo6gbLQtHWKS5UdH",
+    "definition_agent": "asst_ineGgmYeDKaIgFqxZ7lF4L7Q",
+    "research_agent": "asst_X0Mqe3yvN4YxI4YUq2Yg1Xtk",
+    "creditscout_orchestrator": "asst_bDZGauLoNw8ZzBSg75zj4jKe"
+  }
+}
