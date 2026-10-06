@@ -80,7 +80,9 @@ const dscrFinancials = {
   type: "object",
   description:
     "The period's figures, each quoted from a cited document. A figure you cannot cite is missing: omit it and the tool says so. Never send 0 for a figure you do not have.",
-  required: ["ebitda", "unfinanced_capex", "cash_taxes", "scheduled_principal", "cash_interest"],
+  // Deliberately no `required` list: the description tells the agent to omit a
+  // figure it cannot cite, so the schema must not call it mandatory. A mandatory
+  // field invites the model to send 0, a fabricated figure that looks real.
   properties: {
     ebitda: number,
     addback_amounts: { type: "object", additionalProperties: number, description: "Keyed by add-back name from the terms." },

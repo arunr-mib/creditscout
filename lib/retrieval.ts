@@ -101,27 +101,38 @@ function requireDocTypes(v: unknown): string[] | null {
 
 /**
  * The string an agent cites, and the string the guardrail later matches a quote
- * against. For the two document types `resolveCitation` (lib/chunk.ts) knows,
- * it is the vocabulary that function parses back to this document and section:
+ * against. It is the vocabulary `resolveCitation` (lib/chunk.ts) parses back to
+ * this document and section, so the two must change together:
  *
- *   agreement, "Credit Agreement", "§7.11"      -> "CA §7.11"
- *   amendment, "Amendment No. 2",  "§3"         -> "Amd 2 §3"
+ *   agreement, "Credit Agreement", "§7.11"                  -> "CA §7.11"
+ *   amendment, "Amendment No. 2",  "§3"                     -> "Amd 2 §3"
+ *   financials, "Financials — Q2 2026", "§1"                -> "Fin Q2 2026 §1"
+ *   compliance_certificate, "Compliance Certificate — Q2 2026", "§2" -> "CC Q2 2026 §2"
+ *   waiver, "Waiver Request Letter — unexecuted", "§1"      -> "WR §1"
  *
- * Other documents (financials, certificates, waiver letters) have no prefix in
- * that vocabulary, and several can exist per facility, so their citation leads
- * with the full title: "Financials — Q2 2026 §1". That is unique and the
- * guardrail's exact-string match works, but `resolveCitation` cannot parse it.
+ * A document whose title fits none of these falls back to its full title, which
+ * is unique but not parseable; the corpus-wide round-trip test fails if a
+ * seeded document ever lands there.
  */
 export function citationFor(docType: string | null, docTitle: string | null, section: string | null): string {
   const sec = section ?? "";
-  let prefix: string;
-  if (docType === "agreement" && docTitle === "Credit Agreement") {
+  const title = docTitle ?? "";
+  let prefix: string | null = null;
+  if (docType === "agreement" && title === "Credit Agreement") {
     prefix = "CA";
-  } else {
-    const amd = docType === "amendment" ? /^Amendment No\. (\d+)$/.exec(docTitle ?? "") : null;
-    prefix = amd ? `Amd ${amd[1]}` : (docTitle ?? docType ?? "");
+  } else if (docType === "amendment") {
+    const m = /^Amendment No\. (\d+)$/.exec(title);
+    if (m) prefix = `Amd ${m[1]}`;
+  } else if (docType === "financials") {
+    const m = /^Financials — (Q[1-4] \d{4})$/.exec(title);
+    if (m) prefix = `Fin ${m[1]}`;
+  } else if (docType === "compliance_certificate") {
+    const m = /^Compliance Certificate — (Q[1-4] \d{4})$/.exec(title);
+    if (m) prefix = `CC ${m[1]}`;
+  } else if (docType === "waiver" && title === "Waiver Request Letter — unexecuted") {
+    prefix = "WR";
   }
-  return `${prefix} ${sec}`.trim();
+  return `${prefix ?? (title || docType || "")} ${sec}`.trim();
 }
 
 // ---------------------------------------------------------------------- search

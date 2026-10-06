@@ -53,7 +53,9 @@ export interface ResolvedCitation {
 // A section id is only unique within one document: in F1, `§1` exists in four.
 // A caller must therefore match on the (document, section) pair, never on the
 // section alone. The prefix vocabulary is what data/facilities.js cites with:
-// "CA" is the Credit Agreement, "Amd N" is Amendment No. N. Titles match the
+// "CA" is the Credit Agreement, "Amd N" is Amendment No. N, "Fin Qn YYYY" and
+// "CC Qn YYYY" are that quarter's financials and compliance certificate, and
+// "WR" is the waiver request letter. Titles match the
 // `documents.title` values the seed writes, which are the `doc_title` metadata.
 const DOCUMENT_PREFIXES: { pattern: RegExp; resolve: (m: RegExpExecArray) => { doc_type: string; doc_title: string } }[] = [
   {
@@ -63,6 +65,24 @@ const DOCUMENT_PREFIXES: { pattern: RegExp; resolve: (m: RegExpExecArray) => { d
   {
     pattern: /^(?:Amd\.?|Amendment)\s*(?:No\.?\s*)?(\d+)\s*/,
     resolve: (m) => ({ doc_type: "amendment", doc_title: `Amendment No. ${m[1]}` }),
+  },
+  // Quarterly documents are one per period, so the quarter is part of the
+  // prefix: "Fin Q2 2026 §1" and "CC Q4 2025 §3". Titles match the seed's
+  // `documents.title` (`Financials — Q2 2026`), which is the `doc_title` metadata.
+  {
+    pattern: /^(?:Fin\b|Financials\b)\.?\s*(?:—\s*)?(Q[1-4])\s+(\d{4})\b\s*/,
+    resolve: (m) => ({ doc_type: "financials", doc_title: `Financials — ${m[1]} ${m[2]}` }),
+  },
+  {
+    pattern: /^(?:CC\b|Compliance Certificate\b)\.?\s*(?:—\s*)?(Q[1-4])\s+(\d{4})\b\s*/,
+    resolve: (m) => ({ doc_type: "compliance_certificate", doc_title: `Compliance Certificate — ${m[1]} ${m[2]}` }),
+  },
+  // The corpus holds one waiver document: the lender has not executed it, and
+  // the seed's title says so. If a granted waiver is ever ingested it needs a
+  // prefix of its own, because resolving it to this title would be wrong.
+  {
+    pattern: /^(?:WR\b|Waiver Request Letter\b)\s*/,
+    resolve: () => ({ doc_type: "waiver", doc_title: "Waiver Request Letter — unexecuted" }),
   },
 ];
 

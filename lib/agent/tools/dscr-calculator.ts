@@ -40,10 +40,11 @@ const bad = (error: string): ToolResult => ({ status: 400, body: { error } });
  * What is checked here is what the calculator would otherwise ACCEPT SILENTLY:
  * it reads `addbacks`, `deductions` and `components` with
  * `Array.isArray(x) ? x : []`, so `addbacks: {...}` (an object where a list
- * belongs) would be treated as "no add-backs" and return a confident, wrong
- * ratio. A figure that is present but not a number is likewise rejected rather
- * than coerced. What is merely ABSENT is not checked: the calculator reports a
- * missing input as `{error}`, which the agent reasons about as evidence.
+ * belongs), or a list left out altogether, would be treated as "no add-backs"
+ * and return a confident, wrong ratio. A figure that is present but not a
+ * number is likewise rejected rather than coerced. A missing FINANCIAL figure
+ * is not checked: the calculator reports it as `{error}`, which the agent
+ * reasons about as evidence.
  */
 function malformedField(terms: unknown, financials: unknown): string | null {
   if (!isObject(terms)) return "terms must be an object";
@@ -55,12 +56,14 @@ function malformedField(terms: unknown, financials: unknown): string | null {
     return "terms.threshold.min_dscr must be a number";
   }
 
-  if (terms.numerator !== undefined && !isObject(terms.numerator)) return "terms.numerator must be an object";
-  if (isObject(terms.numerator)) {
-    const { addbacks, deductions } = terms.numerator;
-    if (addbacks !== undefined && !Array.isArray(addbacks)) return "terms.numerator.addbacks must be an array";
-    if (deductions !== undefined && !Array.isArray(deductions)) return "terms.numerator.deductions must be an array";
-  }
+  // numerator, addbacks and deductions are REQUIRED, not merely type-checked:
+  // the calculator reads an absent list as an empty one, so omitting
+  // `deductions` yields a confident ratio with capex and cash taxes never
+  // deducted, and that wrong number gets a calc_id the guardrail would trust.
+  // "No add-backs" is stated as `addbacks: []`, never by leaving the field out.
+  if (!isObject(terms.numerator)) return "terms.numerator is required and must be an object";
+  if (!Array.isArray(terms.numerator.addbacks)) return "terms.numerator.addbacks is required and must be an array";
+  if (!Array.isArray(terms.numerator.deductions)) return "terms.numerator.deductions is required and must be an array";
 
   if (terms.denominator !== undefined && !isObject(terms.denominator)) return "terms.denominator must be an object";
   if (isObject(terms.denominator) && terms.denominator.components !== undefined) {
