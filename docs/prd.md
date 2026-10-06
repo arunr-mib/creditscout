@@ -76,14 +76,23 @@ override becomes memory for later cases.
 
 | Attribute | Detail |
 |---|---|
-| Role | Credit analyst / portfolio monitoring analyst at a bank or commercial lender |
-| Industry | Commercial lending to SMB borrowers and startups — community and regional banks, specialty lenders, private credit funds, venture debt providers |
-| Portfolio | 30+ borrower facilities under active monitoring |
+| Role | Credit analyst / portfolio monitoring analyst |
+| Institution type | **Regional banks, commercial lenders, and credit unions.** Explicitly **not** the large money-centre banks — they have internal platform teams and multi-year procurement cycles. |
+| Industry served | Commercial lending to SMB borrowers and startups |
+| **Where they sit** | **Onshore (US/UK) and offshore.** A large share of covenant monitoring for Western lenders is performed from **India-based global capability centres** — India hosts 130+ BFSI GCCs employing 537,000+ professionals. The persona is as likely to be in Bengaluru as in Charlotte, which has product consequences: asynchronous handoffs between offshore preparation and onshore approval, and a reviewer who may never have spoken to the borrower. |
+| Portfolio | 30+ borrowers under active monitoring |
+| **Share of their time on covenant monitoring** | **20–30%** *(owner's figure, from credit-systems experience)* — this is the slice of the job CreditScout addresses |
 | Workflow | Quarterly covenant testing cycles driven by borrower compliance certificates; periodic full credit reviews |
 | Inputs they work from | Credit agreements, amendments, waivers, compliance certificates, borrower financial statements, prior credit notes |
 | Measured on | Timely, accurate reviews; defensible credit files; no missed breaches |
 | Pain | The investigation behind a single contested exception consumes hours. Published vendor figures put the DSCR recomputation alone at **30–40 minutes manual vs. under 3 minutes AI-assisted**; the document archaeology around it takes longer still. |
 | Current tooling | Spreadsheets, email, the loan document system, and institutional memory |
+
+**Why not large banks.** They are the obvious-looking buyer and the wrong first
+customer: long procurement, internal build-vs-buy bias, and existing platform
+investments. Regional banks, commercial lenders and credit unions have the same
+covenant obligations and the same analyst constraints, with none of the internal
+engineering capacity — which is exactly the gap a product fills.
 
 **Secondary "persona" — the Credit Risk Officer, implemented as configuration**
 
@@ -109,9 +118,16 @@ credit committee.
 - Vendor-reported benchmarks claim **~75% reduction in manual covenant review
   effort** and **50%+ analyst time reduction** from automation, with DSCR
   calculation specifically dropping from **30–40 minutes to under 3 minutes**.
+- **Covenant monitoring consumes 20–30% of a commercial credit analyst's time**
+  *(owner's figure, from credit-systems experience)*. That is the addressable
+  slice — not a sliver of the job, but a quarter of it.
 - There were **73,200 credit analysts employed in the US** as of May 2023 (BLS),
   **33,550** of them in Credit Intermediation and Related Activities — the
-  segment containing commercial banks.
+  segment containing commercial banks and credit unions.
+- The target institution base is large and fragmented: **4,214 federally insured
+  credit unions** (NCUA, June 2026) plus roughly **4,600 FDIC-insured banks**,
+  of which only a few dozen are money-centre institutions. Fragmentation is the
+  opportunity — none of these can build this themselves.
 
 *Note on the vendor figures above: these are supplier-published claims, not
 independent studies. They are directionally useful for sizing the pain, and are
@@ -870,9 +886,10 @@ Calculator output (code, not model):
 | Support and customer success | Per lender account | The dominant cost at scale, not inference |
 
 **The structural point:** inference is not the cost driver. A lender with 500
-monitored facilities might generate ~100 investigations per quarter — under $100
-of inference. The business is priced on the analyst time it saves, not the
-tokens it burns.
+monitored borrowers, at the owner's **10% contested-exception rate**, generates
+~50 investigations per quarter — under $50 of inference, against $2,500/month of
+revenue at $5 per borrower. Gross margin is not the constraint; distribution is.
+The business is priced on the analyst time it saves, not the tokens it burns.
 
 ## 9.4 Market size
 
@@ -881,91 +898,139 @@ tokens it burns.
 **~$2.87B (2026), growing to ~$5.14B by 2030 at 15.7% CAGR.** This is the
 category budget line CreditScout competes within.
 
-**SAM — bottom-up, US commercial lending**
+**SAM — bottom-up, US regional banks / commercial lenders / credit unions**
 
 | Input | Value | Source |
 |---|---|---|
-| Credit analysts employed in the US | 73,200 | BLS, May 2023 |
-| Of whom in Credit Intermediation (commercial banks and related) | 33,550 | BLS, May 2023 |
-| Estimated share doing commercial portfolio monitoring with covenant testing | ~40% → **~13,400 analysts** | *Owner estimate, not measured* |
-| Facilities per analyst | ~30 | Persona definition |
-| **Addressable monitored facilities (US)** | **~400,000** | Derived |
-| At $10 per facility per month | **~$48M/year** | Derived |
+| Credit analysts in Credit Intermediation (US) | 33,550 | BLS, May 2023 |
+| Less those at money-centre banks (out of segment) | ~40% | *Owner-directed segmentation; share is an estimate* |
+| **Analysts at target institutions** | **~20,000** | Derived |
+| Borrowers monitored per analyst | ~30 | Persona |
+| **Addressable monitored borrowers (US)** | **~600,000** | Derived |
+| At **$5 per borrower per month** | **~$36M/year** | Derived |
 
-**SAM: ~$50M/year in the US**, widening to roughly **$120–150M** globally if the
-same ratios hold in UK/EU/APAC commercial lending *(scaling assumption, not
-researched)*.
+**US SAM: ~$36M/year.** Applying comparable ratios to UK, EU and APAC commercial
+lending puts global SAM at roughly **$90–110M/year** *(scaling assumption, not
+researched — flagged as an open item rather than presented as a finding)*.
+
+**On India, and why it is not simply additive**
+
+India matters here, but it belongs in two different places and conflating them
+would overstate the market:
+
+1. **As a user base, already counted.** A large share of covenant monitoring for
+   Western lenders is executed from India-based GCCs — 130+ BFSI GCCs employing
+   537,000+ professionals. Those analysts use seats that the *lender* buys, and
+   that lender is already in the US/UK SAM above. **Not additive to revenue** —
+   but it changes the product (offshore preparation, onshore approval, async
+   handoff) and it widens the user base per account.
+2. **As a separate buyer market, not yet sized.** Indian domestic banks and
+   NBFCs are their own buyers with their own covenant practices. This is a real
+   second market and **this PRD does not size it** — doing so honestly needs
+   primary research on Indian commercial lending covenant practice, which hasn't
+   been done. Noted as an open item rather than estimated.
 
 **SOM — realistic 3-year obtainable share**
 
-Mid-market and regional lenders — large enough to have covenant portfolios, too
-small to build this in-house. Capturing **2% of the US SAM ≈ $1M ARR** within
-three years, roughly 15–25 lender accounts. Bank sales cycles are long (the
-mentor review flagged this correctly), so this assumes a design-partner-led
-motion rather than outbound sales.
+Regional banks, commercial lenders and credit unions: enough covenant exposure
+to need this, no engineering capacity to build it. Capturing **~2% of the US SAM
+≈ $700K ARR** within three years, roughly **25–30 lender accounts**. Sales cycles
+in regulated lending are long — the mentor review flagged this correctly — so
+this assumes a design-partner-led motion, not outbound sales.
 
 ## 9.5 Revenue potential
 
-| Scenario | Accounts | Avg. facilities | Price / facility / mo | ARR |
+| Scenario | Accounts | Avg. borrowers | Price / borrower / mo | ARR |
 |---|---|---|---|---|
-| **Conservative** | 8 lenders | 300 | $8 | **$230K** |
-| **Base** | 20 lenders | 400 | $10 | **$960K** |
-| **Optimistic** | 45 lenders | 600 | $12 | **$3.9M** |
+| **Conservative** | 8 lenders | 300 | $5 | **$144K** |
+| **Base** | 20 lenders | 400 | $5 | **$480K** |
+| **Optimistic** | 45 lenders | 600 | $5 | **$1.6M** |
 
-*All three are scenarios built on the pricing assumptions below, not forecasts.*
+*All three are scenarios built on the pricing assumption below, not forecasts.
+They hold price flat at $5 deliberately — the owner's view is that tiering above
+$5 is premature until the value is measured with real users.*
 
 ## 9.6 Pricing models considered
 
 | Model | Fit | Verdict |
 |---|---|---|
-| **Per monitored facility / month** | Scales with the thing that generates work; predictable for the lender; easy to forecast | **Chosen** |
+| **Per monitored borrower / month** | Scales with the thing that generates work; predictable for the lender; easy to forecast | **Chosen** |
+| Per facility / month | Finer-grained, but one borrower often has several facilities tested on the same certificate — charging per facility bills twice for one review | **Rejected** — the unit of work is the borrower, so the unit of price should be too |
 | Per seat (per analyst) | Simple, familiar | **Rejected** — penalises a lender for adding reviewers, which is the opposite of the oversight behaviour we want |
 | Per investigation (usage-based) | Closest to value delivered | **Rejected as primary** — unpredictable budgeting, and it charges most in the quarters when borrowers are most distressed, which is when the tool matters most |
 | Outcome-based (share of analyst hours saved) | Compelling narrative | **Rejected** — unmeasurable without deep instrumentation and a long, contentious sales conversation |
 | Freemium | Standard SaaS motion | **Rejected** — enterprise banking buyers do not self-serve, and credit documents cannot sit in a free tier |
 
-**Why per-facility wins:** it aligns price with portfolio size, is predictable
-for a credit department's budget, grows naturally as the lender grows, and does
-not disincentivise the human review the product depends on.
+**Why per-borrower wins:** it aligns price with portfolio size, is predictable
+for a credit department's budget, grows naturally as the lender grows, matches
+the unit of work (one borrower, one certificate, one review), and does not
+disincentivise the human review the product depends on.
 
 ## 9.7 Directional pricing
 
-**$8–12 per monitored facility per month**, tiered by volume, with a platform
-minimum of **$2,000/month** per lender.
+**$5 per monitored borrower per month.** Flat, no tiering, no platform minimum
+for now.
 
-| Tier | Facilities | Price / facility / mo |
-|---|---|---|
-| Starter | up to 250 | $12 |
-| Growth | 251–1,000 | $10 |
-| Enterprise | 1,000+ | $8, with negotiated minimums |
+Volume tiering and a floor are **deliberately parked** until there is measured
+value from real users. Introducing a price ladder before anyone has used the
+product is designing a pricing page, not a business.
 
-**The ROI argument, with every assumption on the table:**
+### The ROI argument, with every assumption on the table
+
+Modelled per analyst, covering 30 borrowers:
 
 | Input | Value | Basis |
 |---|---|---|
-| Fully-loaded analyst cost | ~$60/hour | *Estimate from BLS credit analyst salary plus overhead* |
-| Facilities per analyst | 30 | Persona |
-| Share of facilities raising a contested exception per quarter | ~20% | *Owner estimate* |
-| Analyst time per contested exception today | ~2.5 hours | *Owner estimate, consistent with published manual-review figures* |
-| Time with CreditScout | ~0.5 hours | Target from the North Star metric |
-| **Hours saved per facility per year** | **~1.6** | Derived |
-| **Value per facility per year** | **~$96** | Derived |
-| **Price per facility per year (Growth tier)** | **$120** | — |
+| Fully-loaded analyst cost | ~$60/hour → ~$125K/year | ⚠️ *Still an estimate — not confirmed by the owner* |
+| Borrowers per analyst | 30 | Persona |
+| Covenant monitoring as a share of analyst time | **20–30%, modelled at 25%** → ~520 hrs/year | **Owner's figure** |
+| Share of borrowers raising a contested exception per quarter | **10%** | **Owner's figure** |
+| Analyst time per contested exception today | ~2.5 hours | ⚠️ *Still an estimate — not confirmed by the owner* |
+| Time per contested exception with CreditScout | ~0.5 hours | Target from the North Star metric |
 
-At the Growth tier the direct time-saving roughly matches the price — which is
-**deliberately stated rather than massaged**. The purchase case does not rest on
-time saved alone; it rests on three things the time-saving arithmetic does not
-capture:
+**Where the 520 hours go, and what the MVP actually touches:**
+
+| Activity | Hours/year | CreditScout MVP | Hours saved |
+|---|---|---|---|
+| Routine quarterly testing — receive certificate, rekey figures, recompute ratio, file | ~40 (120 tests × ~20 min) | Automated ingest, schema extraction, **code** comparison to threshold | **~30** |
+| Contested exception investigation | ~30 (12/year × 2.5 hrs) | The agent investigation — the core product | **~24** |
+| Document chasing, reporting, portfolio review | ~450 | Not addressed in MVP | 0 |
+| **Total** | **~520** | | **~54** |
+
+| | |
+|---|---|
+| **Value per analyst per year** | 54 hrs × $60 = **~$3,240** |
+| **Price per analyst per year** | 30 borrowers × $5 × 12 = **$1,800** |
+| **ROI** | **~1.8×** |
+
+**Two honest observations about this number:**
+
+- **It is deliberately conservative.** 54 hours is ~10% of the analyst's
+  covenant-monitoring time. Vendor marketing in this category claims 50–75%
+  reductions. We are modelling a fifth of what competitors advertise, and the
+  case still works.
+- **It is sensitive to the two inputs still unconfirmed.** At a $40/hour loaded
+  cost the ROI falls to ~1.2×; at $80/hour it rises to ~2.4×. Confirming the
+  real loaded rate and the real hours per contested exception is the single
+  highest-value correction left in this document.
+
+**The offshore case is different, and worth stating plainly.** Where monitoring
+is executed from an India-based GCC at a materially lower loaded rate, 54 hours
+saved is worth roughly $1,100–1,350 against a $1,800 price — **the labour-
+arbitrage argument does not carry the sale.** For those accounts the purchase
+case has to rest on the three things below, and positioning should say so rather
+than recycling an onshore ROI slide.
+
+**What the time-saving arithmetic does not capture:**
 
 1. **Avoided loss.** A single missed covenant breach that should have escalated
    can cost orders of magnitude more than the annual contract.
 2. **Audit defensibility.** A cited, logged, reproducible casefile for every
-   exception is worth real money at examination time.
+   exception has real value at examination time — and more so for a regional
+   bank or credit union without a large model-risk function.
 3. **Capacity rather than headcount.** The same team covers a growing portfolio
-   without hiring — which is how credit departments actually buy.
-
-Pricing is anchored on the second and third points. The time saving is the proof
-that the tool works, not the reason to buy it.
+   without hiring. This is how credit departments actually buy, and it is the
+   argument that works onshore and offshore alike.
 
 ---
 
@@ -1046,6 +1111,33 @@ for the deck, and a copy of the cohort HHH evaluation spreadsheet linked from
 - [Automated financials and covenant monitoring — Cardo AI](https://cardoai.com/automated-financials-and-covenant-monitoring/)
 - [Manual Loan Monitoring vs. Automated Software — Covaleyo](https://covaleyo.com/blog/manual-loan-monitoring-vs-automated-software-which-protects-your-portfolio-best)
 - [Loan Covenant Monitoring Software: Automate Portfolio Risk — Crediflow](https://www.crediflow.ai/blog/automate-loan-covenant-monitoring)
+- [Quarterly Credit Union Data Summary 2026 Q2 — NCUA](https://espanol.ncua.gov/files/publications/analysis/quarterly-data-summary-2026-Q2.pdf)
+- [NCUA Releases First Quarter 2026 Credit Union System Performance Data](https://ncua.gov/newsroom/press-release/2026/ncua-releases-first-quarter-2026-credit-union-system-performance-data)
+- [Top 10 GCCs in Banking & Financial Services India (2026) — Gladwin International](https://www.gladwininternational.com/intelligence/gccs/top-gccs-bfsi)
+- [The India GCC Index 2026 — Astravise Services](https://astraviseservices.com/insights/the-india-gcc-index-2026-companies-cities-sectors-and-functions/)
+- [BFSI Hiring Trends 2026 — Taggd](https://taggd.in/blogs/bfsi-hiring-trends/)
 
 *Vendor-published performance claims above are treated as marketing claims, not
 independent measurements, and are labeled as such wherever used.*
+
+### Owner-supplied figures (not sourced externally)
+
+These come from the owner's commercial credit-systems experience and are the
+backbone of the business case. They are stated here so a reader knows which
+numbers rest on domain judgment rather than published data:
+
+| Figure | Value | Used in |
+|---|---|---|
+| Covenant monitoring as a share of a credit analyst's time | 20–30% | §1.2, §1.3, §9.7 |
+| Share of borrowers raising a contested exception per quarter | 10% | §9.3, §9.7 |
+| Pricing unit and level | $5 per borrower per month | §9.5, §9.6, §9.7 |
+| Target segment | Regional banks, commercial lenders, credit unions — not large banks | §1.2, §9.4 |
+
+### Still unconfirmed — flagged, not assumed away
+
+| Figure | Placeholder in use | Why it matters |
+|---|---|---|
+| Fully-loaded analyst cost per hour | ~$60 | Drives the entire ROI ratio (§9.7) |
+| Analyst hours per contested exception today | ~2.5 | Drives the North Star baseline (§1.5) and the ROI (§9.7) |
+| Target time-to-decision with the product | < 30 min | The North Star target itself (§1.5) |
+| India domestic lender market size | Not sized | §9.4 — needs primary research, deliberately left blank |
