@@ -15,13 +15,13 @@ export function CalcValue({
 }) {
   return (
     <span className="inline-flex items-baseline gap-2">
-      <span className="text-xs font-medium uppercase tracking-wide text-text-muted">
+      <span className="text-label uppercase tracking-wide text-text-muted">
         {label}
       </span>
-      <span className="font-mono text-sm font-medium text-code-bright">
+      <span className="font-mono text-num text-code-bright">
         {value.toFixed(2)}
       </span>
-      <span className="rounded-sm bg-code-bg px-1.5 py-0.5 font-mono text-[11px] text-code">
+      <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
         ⟡ computed by code · {calcId}
       </span>
     </span>

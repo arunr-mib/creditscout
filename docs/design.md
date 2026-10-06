@@ -271,3 +271,43 @@ Respect `prefers-reduced-motion`: drop transforms, keep opacity.
 - Don't render a number without its `calc_id` or its quote.
 - Don't use shadows for elevation.
 - Don't animate longer than 240ms, and don't fake progress.
+
+---
+
+## 10. Tokenisation report
+
+*Produced by `/frontend-setup`, 2026-10-05. Which rules in this file are
+enforced by `tailwind.config.ts`, and which are not expressible as tokens and
+must therefore be enforced by `/design-system` at review time.*
+
+### Enforced by the config
+
+| Rule | How |
+|---|---|
+| Colour palette | All 18 colours are named tokens. A raw hex in a component is a review failure. |
+| Type scale | `fontSize` is **replaced**, not extended: `title`, `section`, `card`, `body`, `label`, `num`, `quote`, `badge` — each with its line height and weight baked in. |
+| Spacing scale | `spacing` is **replaced** with only `4,8,12,16,24,32,48,64` (plus `0`/`px`). An off-scale value fails to compile a class. |
+| No shadows | `boxShadow` is replaced with `{ none }`. `shadow-lg` no longer exists. |
+| Radii | `sm`/`md`/`lg` = 4/8/12px. |
+| Motion durations | `fast`/`panel`/`step` = 120/200/240ms, plus the panel easing curve. |
+| Monospace tabular figures | `.font-mono` sets `font-variant-numeric: tabular-nums` in `globals.css`. |
+| Focus rings | Global `:focus-visible` rule; cannot be dropped per-component without overriding it visibly. |
+| Reduced motion | Global `@media (prefers-reduced-motion)` block. |
+
+### NOT expressible as tokens — must be caught at review
+
+These five are behavioural contracts. `tailwind.config.ts` cannot enforce any of
+them, which is exactly why `/design-system` runs on every component:
+
+1. **Hue carries meaning.** Nothing stops a developer writing `text-code` on a
+   model-produced value. Only review catches a semantic misuse.
+2. **Every calculated value shows provenance** (`⟡ computed by code · calc_id`).
+   A component contract, not a style.
+3. **A claim without a citation chip must not render.** Conditional-render logic.
+4. **Contrast ratios** (4.5:1 body, 3:1 UI). Token pairs are compliant *as
+   designed*, but a new combination can fail. Needs measuring, not declaring.
+5. **No skeleton shimmer on the step trace.** A product-honesty rule — faking
+   progress misrepresents what the system is doing.
+
+**Nothing in §1–§9 failed to tokenise for technical reasons.** The five above are
+rules about *meaning and behaviour*, which no config can express.

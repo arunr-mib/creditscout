@@ -1,13 +1,38 @@
 import type { Config } from "tailwindcss";
 
 /**
- * Tokens are generated from docs/design.md. That file is the source of truth.
- * Never add a colour here that isn't there, and never use a raw hex in a
- * component — the semantic names are what make the model/code boundary legible.
+ * Tokens generated from docs/design.md. That file is the source of truth.
+ *
+ * Three scales below are REPLACED rather than extended, deliberately:
+ *   spacing   — design.md §4 permits only 4,8,12,16,24,32,48,64
+ *   fontSize  — design.md §3 defines the full type scale with line heights
+ *   boxShadow — design.md §4: "elevation is borders, not shadows"
+ *
+ * Replacing them makes an off-system value a build-visible mistake instead of
+ * a silent drift. Never use an arbitrary value (`text-[28px]`) in a component.
  */
 export default {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   theme: {
+    // --- replaced scales (not `extend`) ---
+    spacing: {
+      0: "0px", px: "1px",
+      1: "4px", 2: "8px", 3: "12px", 4: "16px",
+      6: "24px", 8: "32px", 12: "48px", 16: "64px",
+    },
+    fontSize: {
+      title:   ["28px", { lineHeight: "34px", fontWeight: "700" }],
+      section: ["20px", { lineHeight: "28px", fontWeight: "600" }],
+      card:    ["16px", { lineHeight: "24px", fontWeight: "600" }],
+      body:    ["14px", { lineHeight: "22px", fontWeight: "400" }],
+      label:   ["12px", { lineHeight: "16px", fontWeight: "500" }],
+      num:     ["14px", { lineHeight: "20px", fontWeight: "500" }],
+      quote:   ["13px", { lineHeight: "21px", fontWeight: "400" }],
+      badge:   ["11px", { lineHeight: "16px", fontWeight: "500" }],
+    },
+    // design.md §4 — on a dark background shadows read as mud
+    boxShadow: { none: "none" },
+
     extend: {
       colors: {
         bg: "#0A1628",
@@ -46,6 +71,7 @@ export default {
       borderRadius: { sm: "4px", md: "8px", lg: "12px" },
       maxWidth: { content: "1280px" },
       transitionDuration: { fast: "120ms", panel: "200ms", step: "240ms" },
+      transitionTimingFunction: { panel: "cubic-bezier(0.16,1,0.3,1)" },
     },
   },
   plugins: [],

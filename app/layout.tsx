@@ -16,8 +16,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen">
         <header className="border-b border-border">
           <div className="mx-auto flex max-w-content items-baseline gap-3 px-6 py-4">
-            <span className="text-lg font-semibold text-text">CreditScout</span>
-            <span className="text-xs text-text-muted">
+            <span className="text-card text-text">CreditScout</span>
+            <span className="text-label text-text-muted">
               recommends — a human analyst always decides
             </span>
           </div>
