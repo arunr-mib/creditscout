@@ -93,7 +93,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 
 | # | Experiment | Why it's worth the cost |
 |---|---|---|
-| 6.1 | 🟡 **Does a stronger orchestrator beat `gpt-5-mini`?** The MVP runs mini everywhere (owner decision, 2026-10-05), so the experiment is now "does paying more buy accuracy?" rather than "can the cheap one cope?" | A negative result — mini holds accuracy because the guardrail is code — is the more interesting finding, and it is a model-selection artifact most people never produce |
+| 6.1 | 🟡 **Does a stronger orchestrator beat `gpt-4.1-mini`?** **Owner decision 2026-10-06: parked, revisit after the demo.** The MVP runs `gpt-4.1-mini` as orchestrator (platform-forced) with specialists demoted to plain tools. Live evidence now exists to design the experiment against: F1 resolves in 7 of 8 steps; F3 needed ~10 under delegation and hit the cap in all four attempts. | A negative result — a cheap orchestrator holds accuracy because the guardrail is code — is the more interesting finding, and it is a model-selection artifact most people never produce. There is now a measured baseline to compare against rather than an assumption. |
 | 6.2 | 🟡 **Guardrail ablation** — run the eval with guardrails disabled | Quantifies how many false resolves the code layer actually catches. **This is the single most persuasive number for the pitch** and it isn't currently planned into the run. |
 | 6.3 | ⚪ Memory ablation (cold vs warm) | Already built into every eval run — no extra work |
 
@@ -106,7 +106,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 7.1 | 🔴 **Plan 1 Task 2 cannot pass as written** — `calc/dscr.js` uses a guarded CommonJS export while the test imports it as ESM under `"type": "module"`. | Fix during build: plain ESM `export`. Files stay zero-dependency and import-free. |
 | 7.2 | ✅ **Spec §3 and §4 still describe n8n.** **Resolved 2026-10-06** — the amendments were applied and the last factual leftovers swept. |
 | 7.3 | ✅ **Spec §8.3 sync check is obsolete** (byte-identical n8n copy). **Resolved** — removed with 7.2. |
-| 7.4 | ⚪ **Connected Agents is a preview feature** carrying the learning goal. | Fallback documented (plain tools). Decide after the first working run. |
+| 7.4 | ✅ **Connected Agents is a preview feature** carrying the learning goal. | **Decided 2026-10-06 after the first working runs: take the fallback.** Not because the preview failed — `connected_agent` behaved exactly as the spike showed — but because **a connected agent cannot carry a function tool** (the parent run hangs). Specialists therefore cannot retrieve, so the orchestrator fetches evidence and pastes it, and each delegation spends a step asking for an opinion on text the orchestrator already holds. `gpt-4.1-mini` burnt 2–4 of its 8 steps that way and F3 hit the cap in all four attempts. Specialists demoted to plain tools on the orchestrator. |
 | 7.5 | ⚪ Supabase free-plan database sleeps after ~1 week idle | Daily use avoids it; Pro removes it for ~$25 |
 | 7.6 | ⚪ Vercel function duration ceiling | Designed around — Foundry holds the long-running work |
 
@@ -132,6 +132,16 @@ the weaker defence.
 
 **S-2 fix:** the route must **fail closed** — reject when `CREDITSCOUT_TOOL_KEY`
 is unset, not only when the header mismatches.
+
+---
+
+## 7b. Agent findings — stage 8a, 2026-10-06
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| **A-1** | 🔴 **A false resolve the policy engine structurally cannot catch.** In a live diagnostic run, F3's orchestrator reproduced the borrower's unauthorised add-back to reach 1.31 and called the case resolved. `applyPolicy` judges the **last** calculation, whose margin is positive, so the deep-breach rule never fires. A prompt rule suppressed it — but a prompt is not a control, and this is the zero-false-resolve metric failing. | **High** | Fix in 8b: a calculation whose terms are not backed by a quoted clause must **block** (abstain/escalate), not merely flag |
+| A-2 | 🟠 **`/api/investigate` is unauthenticated and now spends orchestration tokens per call.** An unauthenticated endpoint that costs money per request is a different class of problem from one that only reads. | Medium | Open — close before deploy |
+| A-3 | ⚪ Agent output arrives **doubly escaped** (`\\u00a77.11`) and citations are sometimes composite (`"Fin Q2 2026 §1 and §2"`), neither of which the guardrail's verbatim matching or `resolveCitation` will accept as-is. | Info | 8b absorbs |
 
 ---
 
