@@ -11,7 +11,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/*.test.js\"",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/**/*.test.js\"",
     "generate:data": "node data/generate.mjs",
     "generate:pdf": "node data/generate.mjs --pdf",
     "ingest:demo": "node --env-file=.env data/ingest-demo.mjs",
