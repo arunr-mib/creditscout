@@ -182,7 +182,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 }
 ```
 
-**DSCR calculator contract** (pure function, no I/O except calc_log write in the n8n wrapper):
+**DSCR calculator contract** (pure function, no I/O except the `calc_log` write in the tool-route wrapper):
 - Inputs: `terms` + `financials {ebitda, addback_amounts{}, unfinanced_capex, cash_taxes, scheduled_principal, cash_interest}`.
 - **Source of `financials`:** the agent reads these six figures from the facility's financials document, where they appear as plain labeled lines (§9), and passes them in. Each figure must be quoted verbatim from a cited chunk, so the §6.1 guardrail can verify it. The calculator itself does no extraction and never infers a missing figure — a figure the agent cannot cite is missing evidence.
 - Applies add-back caps, deductions; `dscr = numerator / denominator`, rounded half-up to 2 dp.
@@ -284,7 +284,7 @@ Code guardrail checks, in order; every forced change is recorded in `guardrail_n
 
 ### 6.3 Errors
 
-n8n, model, or Supabase failure → casefile `failed` with error message and a Retry action. A failure is never presented as a recommendation.
+A Foundry, model, or Supabase failure → casefile `failed` with error message and a Retry action. A failure is never presented as a recommendation.
 
 ---
 
@@ -383,7 +383,7 @@ Backup: a recorded run is the deliverable itself; record by Wed Oct 7, submit by
 - Governance & eval page lives in the app.
 - Financial figures are printed as labeled lines in the synthetic financials document and read + cited by the agent; the calculator never extracts or infers them.
 - Claude writes all code and workflow JSON; owner owns spec, policy, twist realism, eval labels, pitch, credentials.
-- Supabase: reuse existing project `rngsejqplndmygrozasc` rather than create a new one (free-plan project cap); cloud-hosted, never local, because n8n Cloud cannot reach localhost.
+- Supabase: reuse existing project `rngsejqplndmygrozasc` rather than create a new one (free-plan project cap); cloud-hosted, never local, because Foundry and Vercel are both remote and cannot reach localhost.
 - Private GitHub repo `arunr-mib/creditscout` created 2026-10-02 for version control; making it public remains a separate decision requiring owner approval.
 
 ## 14. Open items for owner

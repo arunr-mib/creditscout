@@ -104,8 +104,8 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | # | Item | Status |
 |---|---|---|
 | 7.1 | 🔴 **Plan 1 Task 2 cannot pass as written** — `calc/dscr.js` uses a guarded CommonJS export while the test imports it as ESM under `"type": "module"`. | Fix during build: plain ESM `export`. Files stay zero-dependency and import-free. |
-| 7.2 | 🟠 **Spec §3 and §4 still describe n8n.** `docs/eng.md` §11 lists the exact amendments; owner approval outstanding. | Fold in during the build rather than stopping to re-document |
-| 7.3 | 🟠 **Spec §8.3 sync check is obsolete** (byte-identical n8n copy). | Delete with 7.2 |
+| 7.2 | ✅ **Spec §3 and §4 still describe n8n.** **Resolved 2026-10-06** — the amendments were applied and the last factual leftovers swept. |
+| 7.3 | ✅ **Spec §8.3 sync check is obsolete** (byte-identical n8n copy). **Resolved** — removed with 7.2. |
 | 7.4 | ⚪ **Connected Agents is a preview feature** carrying the learning goal. | Fallback documented (plain tools). Decide after the first working run. |
 | 7.5 | ⚪ Supabase free-plan database sleeps after ~1 week idle | Daily use avoids it; Pro removes it for ~$25 |
 | 7.6 | ⚪ Vercel function duration ceiling | Designed around — Foundry holds the long-running work |
