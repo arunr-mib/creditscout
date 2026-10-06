@@ -269,7 +269,7 @@ Code guardrail checks, in order; every forced change is recorded in `guardrail_n
 | Output matches schema | one retry; then **abstain** ("malformed output") |
 | Every number in `explanation`/`claims` matches a value in a `calc_log` output from this casefile, or a figure quoted verbatim in a cited chunk | **abstain** ("unverified figure") |
 | Every claim's `quote` appears verbatim in a chunk of the cited document/section | claim removed; if recommendation depended on it → **abstain** |
-| `resolve` requires ≥1 passing calc and cited effective terms | downgrade to **escalate** |
+| `resolve` requires the **governing** calculation — the last one logged for this casefile — to pass, with cited effective terms. (Amended 2026-10-06: "≥1 passing calc" let a pass on unsupported terms followed by a failing re-run earn a resolve.) | downgrade to **escalate** |
 | Step cap reached | **abstain** ("investigation incomplete") |
 
 ### 6.2 Risk Officer policy (`policy` table, editable without code)

@@ -358,7 +358,8 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   for (const content of chunkByCitation.values()) knownRatios.push(...ratioFigures(content));
 
   // EVERY field an analyst reads is checked, not only the explanation and the
-  // claims (owner ruling, 2026-10-06). The rule in CLAUDE.md is that every
+  // claims (controller ruling 2026-10-06 from the CLAUDE.md principle; owner
+  // informed, not overruled). The rule in CLAUDE.md is that every
   // figure the analyst sees traces to a calculation or a quote; "missing
   // evidence: a waiver covering the $500,000 add-back" is a figure the analyst
   // reads, and so is a confidence basis that says "a DSCR of 1.31 passes".
@@ -406,7 +407,8 @@ export function applyGuardrail(casefile, calcLogEntries, citedChunks) {
   // ---- check: resolve must be earned -------------------------------------
   // Earned by the GOVERNING calculation passing — the LAST one in
   // `calcLogEntries`, which the caller orders oldest first — not by ANY
-  // calculation passing (owner ruling, 2026-10-06). One definition of "the
+  // calculation passing (proposed by the controller to close a false-resolve
+  // path; owner confirmed 2026-10-06, spec §6.1 amended). One definition of "the
   // calculation the recommendation rests on" for every check: the policy's
   // deep-breach rule and the terms comparison already judge the last one, and
   // prompt rule 7 tells the model the same.
