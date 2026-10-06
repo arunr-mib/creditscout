@@ -34,7 +34,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "request body must be a JSON object" }, { status: 400 });
   }
   try {
-    const result = await startInvestigation(body.exception_id);
+    // run_id is optional and defaults to the demo run. A verification or eval
+    // run passes its own, so its casefile never lands among the demo's.
+    const result = await startInvestigation(body.exception_id, { runId: body.run_id ?? undefined });
     return NextResponse.json({ casefile_id: result.casefileId, status: result.status, reused: result.reused });
   } catch (err) {
     if (err instanceof InvestigationError) return NextResponse.json({ error: err.message }, { status: err.status });

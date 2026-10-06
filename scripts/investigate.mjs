@@ -22,6 +22,10 @@
  * goes through a Server Action that does what steps 1 and 2 do here.
  *
  * Options:
+ *   --run-id ID       the run the casefile belongs to (default: the demo run).
+ *                     Use one per verification or eval pass, investigating an
+ *                     exception raised by a quarterly test under the same run_id,
+ *                     so nothing is written among the demo's casefiles.
  *   --max-minutes N   give up after N minutes (default 15)
  *   --quiet           do not print a heartbeat between steps
  */
@@ -34,19 +38,23 @@ const POLL_GAP_MS = 1_000;
 const MAX_CONSECUTIVE_ERRORS = 3;
 
 const args = process.argv.slice(2);
-const exceptionId = args.find((a) => !a.startsWith("--"));
+const VALUED = new Set(["--max-minutes", "--run-id"]);
+const exceptionId = args.find((a, i) => !a.startsWith("--") && !VALUED.has(args[i - 1]));
 const flag = (name) => args.includes(name);
-const option = (name, fallback) => {
+const text = (name) => {
   const i = args.indexOf(name);
-  return i >= 0 && args[i + 1] !== undefined ? Number(args[i + 1]) : fallback;
+  return i >= 0 && args[i + 1] !== undefined ? args[i + 1] : undefined;
 };
+const option = (name, fallback) => (text(name) === undefined ? fallback : Number(text(name)));
+const runId = text("--run-id");
 
 function die(message, code = 1) {
   console.error(`investigate: ${message}`);
   process.exit(code);
 }
 
-if (!exceptionId || !UUID.test(exceptionId)) die("usage: node --env-file=.env scripts/investigate.mjs <exception_id> [--max-minutes N] [--quiet]");
+if (!exceptionId || !UUID.test(exceptionId)) die("usage: node --env-file=.env scripts/investigate.mjs <exception_id> [--run-id ID] [--max-minutes N] [--quiet]");
+if (args.includes("--run-id") && (runId === undefined || runId.startsWith("--"))) die("--run-id needs a value");
 const key = process.env.CREDITSCOUT_TOOL_KEY;
 if (!key) die("CREDITSCOUT_TOOL_KEY is not set (run with --env-file=.env)");
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) die("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set");
@@ -85,10 +93,14 @@ async function read(table, columns, column, value) {
 
 // ---------------------------------------------------------------- 1. start
 
-const started = await post("/api/investigate", { exception_id: exceptionId });
+const started = await post("/api/investigate", runId === undefined ? { exception_id: exceptionId } : { exception_id: exceptionId, run_id: runId });
 if (started.status !== 200) die(`POST /api/investigate -> ${started.status}: ${started.json.error ?? JSON.stringify(started.json)}`);
 const casefileId = started.json.casefile_id;
 console.log(`casefile ${casefileId}  (${started.json.reused ? `reused, ${started.json.status}` : "new investigation started"})`);
+if (runId !== undefined) {
+  const [own] = await read("casefiles", "run_id", "id", casefileId);
+  console.log(`run_id ${own?.run_id}${own?.run_id === runId ? "" : `  — NOT ${runId}: this casefile was reused from another run`}`);
+}
 console.log("");
 
 // ----------------------------------------------------------------- 2. poll

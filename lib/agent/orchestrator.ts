@@ -98,6 +98,13 @@ export interface OrchestratorDeps {
   /** The HTTP call to one of our own tool routes. Injected only by tests. */
   callRoute?: (name: string, args: unknown, ctx: ToolContext) => Promise<string>;
   agentId?: string;
+  /**
+   * The run this investigation belongs to. Defaults to the demo run. It is
+   * written to the casefile, so it scopes every later tool call's memory search
+   * as well as the lesson search at the start: a verification or eval run
+   * reads and writes its own rows and never the demo's.
+   */
+  runId?: string;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   deadlineMs?: number;
@@ -115,6 +122,9 @@ const check = <T>(res: { data?: T | null; error: { message: string } | null }, w
 };
 
 const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The quarterly test's rule for a run_id (lib/tests/run.ts): a non-empty string, at most 200 characters. */
+const MAX_RUN_ID_LENGTH = 200;
 
 /**
  * One sync at a time per casefile (review finding I-2).
@@ -220,6 +230,10 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   if (typeof exceptionId !== "string" || !UUID.test(exceptionId)) {
     throw new InvestigationError(400, "exception_id must be a UUID");
   }
+  const runId: unknown = deps.runId === undefined || deps.runId === null ? DEFAULT_RUN_ID : deps.runId;
+  if (typeof runId !== "string" || runId.trim() === "" || runId.length > MAX_RUN_ID_LENGTH) {
+    throw new InvestigationError(400, `run_id must be a non-empty string of at most ${MAX_RUN_ID_LENGTH} characters`);
+  }
   const client = deps.client ?? (await defaultClient());
   const now = deps.now ?? Date.now;
 
@@ -251,7 +265,7 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   // of this insert; migration 0009's partial unique index closes it.
   const claimed = await client
     .from("casefiles")
-    .insert({ exception_id: exceptionId, status: "investigating", run_id: DEFAULT_RUN_ID, trace: [] })
+    .insert({ exception_id: exceptionId, status: "investigating", run_id: runId, trace: [] })
     .select("id")
     .single();
   if (claimed.error) {
@@ -273,7 +287,7 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   // 10's runner can filter on it.
   let lessons: PastCaseHit[] = [];
   try {
-    lessons = await (deps.lessons ?? topLessons)(bundle.facility.id, bundle.profile, 3, {}, DEFAULT_RUN_ID);
+    lessons = await (deps.lessons ?? topLessons)(bundle.facility.id, bundle.profile, 3, {}, runId);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.error("the lesson search failed; this investigation runs cold", err);
