@@ -24,3 +24,6 @@ evals/out/
 # Next.js
 .next/
 next-env.d.ts
+
+# TypeScript incremental build artifact
+*.tsbuildinfo
