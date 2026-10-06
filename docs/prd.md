@@ -328,9 +328,19 @@ Analyst reviews  ────► Approve / Override / Request  Outcome recorded;
                                                      lesson in memory
 ```
 
-*A visual version of this diagram is required for the pitch deck — swimlanes
-separating what the analyst does from what the system does, with the guardrail
-and human-review checkpoints marked.*
+> **Visual diagram:** `docs/diagrams/creditscout-user-flow.svg` — deck-ready,
+> colour-coded (teal = model, amber = code, white = human), showing Flow A
+> (covenant setup, with the four-eyes approval checkpoint) and Flow B (quarterly
+> monitoring, with all three test outcomes). The conceptual framing behind it is
+> in `docs/mental-model.md`.
+
+**Note — the flow below describes end-to-end monitoring.** Earlier drafts of
+this PRD started the loop at "the borrower reported a figure below threshold".
+That was too narrow: it meant the system only ever checked borrowers whose own
+arithmetic had already raised a flag, and a borrower wrong in their own favour
+was invisible. The flow now **computes independently for every borrower every
+quarter**, and treats the borrower's reported figure as evidence to reconcile
+against rather than as the trigger.
 
 ### Detailed flow
 
@@ -377,7 +387,9 @@ and human-review checkpoints marked.*
 
 | ID | User story | Acceptance criteria | Priority |
 |---|---|---|---|
-| **US-001** | As an analyst, I want to upload a borrower's quarterly package so the system can flag whether a covenant exception exists | Accepts text PDFs; extracts and chunks by section; for a compliance certificate, code compares reported DSCR to threshold and creates an exception row when below | **P0** |
+| **US-000** | As an analyst, I want the agent to extract the covenant from the credit agreement into executable terms that **I approve**, so every future quarter is tested against terms a human has signed off | Agent proposes threshold, EBITDA basis, add-backs, caps, denominator components and effective dates, **each with a citation and verbatim quote**; analyst reviews each beside its source clause and approves or edits; approved terms are versioned and effective-dated; an amendment creates a new version rather than overwriting | **P0** |
+| **US-001** | As an analyst, I want the system to **independently compute** the covenant each quarter for every borrower, so a borrower whose arithmetic is wrong in their own favour is still caught | Accepts text PDFs; loads the approved terms in force for the test period; **code computes DSCR from the financials and compares it to the threshold** — the borrower's reported figure is reconciled against ours, not used as the trigger; failing calculation creates an exception | **P0** |
+| **US-001b** | As an analyst, I want to be told when our number and the borrower's disagree even though both pass, so I know their reporting is unreliable before it matters | Variance beyond `variance_tolerance` is **logged against the facility**; no investigation is started (deliberate — investigations are reserved for real exceptions) | **P1** |
 | **US-002** | As an analyst, I want the agent to investigate a flagged exception and produce a recommendation, so I don't have to do the document archaeology myself | Returns `resolve` / `request` / `escalate` / `abstain` with explanation ≤150 words, claims, calculation IDs, missing evidence and a suggested tag | **P0** |
 | **US-003** | As an analyst, I want every number in the explanation to be traceable, so I can defend the conclusion in the credit file | Each figure matches a logged calculation output or a verbatim quote in a cited chunk; untraceable figures force `abstain` with a visible note | **P0** |
 | **US-004** | As an analyst, I want to see each clause the agent relied on, so I can verify it myself in seconds | Citation chips open a side panel with the exact clause text and the quote highlighted | **P0** |
@@ -540,8 +552,9 @@ terms in the UI.
 
 | Release | Features | Duration |
 |---|---|---|
-| **MVP (Evaluable)** | US-001 → US-008 plus US-009/010 if time allows. One covenant (DSCR), 6 synthetic facilities, 24 labeled eval cases, deterministic calculator, guardrails, policy, memory, analyst UI, eval harness, deployed app | **Weeks 1–6** (course build) |
-| **MVP 1** | Email intake (US-011); second covenant (fixed-charge coverage); multi-quarter trend view; PDF export of the casefile for the credit file; analyst-configurable notification rules | Months 2–4 |
+| **MVP (demo build)** | End-to-end flow: covenant setup with analyst approval → independent quarterly calculation for every borrower → exception → investigation → cited casefile → approve/override → memory. **3 synthetic facilities** (F1, F3, F5), **6 labeled eval cases**, 3 screens, deterministic calculator, guardrails, policy, deployed on Vercel | **Course build** |
+| **Post-MVP backlog** *(cut from the demo build to protect scope — first things to restore)* | Facilities **F2, F4, F6**; eval set **6 → 24 cases**; the **4th screen** (Governance & evals) as an editable page rather than a static panel; **Foundry groundedness judge** for independent scoring; **covenant setup approval screen** if it was pre-seeded in the demo; **email intake** (US-011); policy editing in the UI | Immediately after the demo |
+| **MVP 1** | Second covenant (fixed-charge coverage); multi-quarter trend view; PDF export of the casefile for the credit file; analyst-configurable notification rules | Months 2–4 |
 | **Launch** | Authentication and multi-user teams; role separation for the Risk Officer; real-document pilot with one design partner under NDA; OCR for scanned agreements; audit-log export; SOC 2 readiness | Months 5–9 |
 | **Iteration** | Remaining covenant types; integration with loan document systems (e.g. nCino); integration with spreading tools for financial inputs; fine-tuned term-mapping model once correction volume justifies it; portfolio-level early-warning view | Ongoing |
 

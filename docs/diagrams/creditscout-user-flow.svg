@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1140" viewBox="0 0 1600 1140" font-family="Inter, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#64748B"/>
+    </marker>
+    <marker id="arwT" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#2DD4BF"/>
+    </marker>
+    <marker id="arwA" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#F59E0B"/>
+    </marker>
+  </defs>
+
+  <rect width="1600" height="1140" fill="#0A1628"/>
+
+  <!-- Title -->
+  <text x="60" y="52" fill="#F8FAFC" font-size="30" font-weight="700">CreditScout — end-to-end covenant monitoring</text>
+  <text x="60" y="80" fill="#94A3B8" font-size="15">A reasoning layer decides what to inspect. A calculation layer never guesses. A human always approves.</text>
+
+  <!-- Legend -->
+  <rect x="1046" y="34" width="18" height="18" rx="4" fill="#0F3B3A" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="1074" y="48" fill="#CBD5E1" font-size="14">Model / agent</text>
+  <rect x="1196" y="34" width="18" height="18" rx="4" fill="#3B2A0A" stroke="#F59E0B" stroke-width="2"/>
+  <text x="1224" y="48" fill="#CBD5E1" font-size="14">Code — deterministic</text>
+  <rect x="1406" y="34" width="18" height="18" rx="4" fill="#1E293B" stroke="#94A3B8" stroke-width="2"/>
+  <text x="1434" y="48" fill="#CBD5E1" font-size="14">Human</text>
+
+  <!-- ============ FLOW A ============ -->
+  <text x="60" y="140" fill="#2DD4BF" font-size="15" font-weight="700" letter-spacing="1.5">FLOW A — COVENANT SETUP</text>
+  <text x="330" y="140" fill="#64748B" font-size="14">once per facility · re-runs when an amendment arrives</text>
+  <line x1="60" y1="152" x2="1540" y2="152" stroke="#1E293B" stroke-width="1"/>
+
+  <!-- A boxes -->
+  <rect x="60" y="176" width="230" height="96" rx="8" fill="#1E293B" stroke="#94A3B8" stroke-width="2"/>
+  <text x="175" y="213" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">Upload agreement</text>
+  <text x="175" y="235" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">+ amendment</text>
+  <text x="175" y="256" fill="#94A3B8" font-size="13" text-anchor="middle">analyst</text>
+
+  <line x1="296" y1="224" x2="330" y2="224" stroke="#64748B" stroke-width="2" marker-end="url(#arw)"/>
+
+  <rect x="340" y="176" width="250" height="96" rx="8" fill="#0F3B3A" stroke="#2DD4BF" stroke-width="2"/>
+  <text x="465" y="208" fill="#5EEAD4" font-size="15" font-weight="700" text-anchor="middle">definition_agent</text>
+  <text x="465" y="231" fill="#CBD5E1" font-size="13" text-anchor="middle">reads the definitions article,</text>
+  <text x="465" y="250" fill="#CBD5E1" font-size="13" text-anchor="middle">amendments and waivers</text>
+
+  <line x1="596" y1="224" x2="630" y2="224" stroke="#2DD4BF" stroke-width="2" marker-end="url(#arwT)"/>
+
+  <rect x="640" y="176" width="250" height="96" rx="8" fill="#11243D" stroke="#475569" stroke-width="2"/>
+  <text x="765" y="203" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">Executable terms</text>
+  <text x="765" y="225" fill="#94A3B8" font-size="12.5" text-anchor="middle">threshold · EBITDA basis · add-backs</text>
+  <text x="765" y="243" fill="#94A3B8" font-size="12.5" text-anchor="middle">caps · denominator · effective dates</text>
+  <text x="765" y="261" fill="#5EEAD4" font-size="12" text-anchor="middle">every line carries a citation + quote</text>
+
+  <line x1="896" y1="224" x2="930" y2="224" stroke="#64748B" stroke-width="2" marker-end="url(#arw)"/>
+
+  <rect x="940" y="176" width="250" height="96" rx="8" fill="#1E293B" stroke="#E2E8F0" stroke-width="2.5"/>
+  <text x="1065" y="205" fill="#F8FAFC" font-size="15" font-weight="700" text-anchor="middle">ANALYST APPROVES</text>
+  <text x="1065" y="227" fill="#CBD5E1" font-size="12.5" text-anchor="middle">reviews each term beside</text>
+  <text x="1065" y="245" fill="#CBD5E1" font-size="12.5" text-anchor="middle">its source clause</text>
+  <text x="1065" y="263" fill="#94A3B8" font-size="12" text-anchor="middle">four-eyes checkpoint</text>
+
+  <line x1="1196" y1="224" x2="1230" y2="224" stroke="#64748B" stroke-width="2" marker-end="url(#arw)"/>
+
+  <rect x="1240" y="176" width="250" height="96" rx="8" fill="#11243D" stroke="#475569" stroke-width="2"/>
+  <text x="1365" y="210" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">Terms v1 — LIVE</text>
+  <text x="1365" y="233" fill="#94A3B8" font-size="12.5" text-anchor="middle">versioned, effective-dated,</text>
+  <text x="1365" y="251" fill="#94A3B8" font-size="12.5" text-anchor="middle">reused every quarter</text>
+
+  <text x="60" y="302" fill="#64748B" font-size="13">A setup error here would silently corrupt every future test — which is why a human signs it off once, rather than the agent re-deriving it every quarter.</text>
+
+  <!-- ============ FLOW B ============ -->
+  <text x="60" y="366" fill="#F59E0B" font-size="15" font-weight="700" letter-spacing="1.5">FLOW B — QUARTERLY MONITORING</text>
+  <text x="400" y="366" fill="#64748B" font-size="14">every borrower · every quarter</text>
+  <line x1="60" y1="378" x2="1540" y2="378" stroke="#1E293B" stroke-width="1"/>
+
+  <rect x="60" y="402" width="230" height="86" rx="8" fill="#1E293B" stroke="#94A3B8" stroke-width="2"/>
+  <text x="175" y="434" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">Upload quarterly</text>
+  <text x="175" y="455" fill="#E2E8F0" font-size="15" font-weight="600" text-anchor="middle">package</text>
+  <text x="175" y="474" fill="#94A3B8" font-size="12.5" text-anchor="middle">certificate + financials</text>
+
+  <line x1="296" y1="445" x2="330" y2="445" stroke="#64748B" stroke-width="2" marker-end="url(#arw)"/>
+
+  <rect x="340" y="402" width="210" height="86" rx="8" fill="#3B2A0A" stroke="#F59E0B" stroke-width="2"/>
+  <text x="445" y="440" fill="#FCD34D" font-size="15" font-weight="600" text-anchor="middle">Ingest</text>
+  <text x="445" y="462" fill="#CBD5E1" font-size="12.5" text-anchor="middle">extract · chunk · embed</text>
+
+  <line x1="556" y1="445" x2="590" y2="445" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+
+  <rect x="600" y="402" width="230" height="86" rx="8" fill="#3B2A0A" stroke="#F59E0B" stroke-width="2"/>
+  <text x="715" y="433" fill="#FCD34D" font-size="15" font-weight="600" text-anchor="middle">Load approved terms</text>
+  <text x="715" y="455" fill="#CBD5E1" font-size="12.5" text-anchor="middle">the version in force</text>
+  <text x="715" y="473" fill="#CBD5E1" font-size="12.5" text-anchor="middle">for this test period</text>
+
+  <line x1="836" y1="445" x2="870" y2="445" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+
+  <rect x="880" y="396" width="300" height="98" rx="8" fill="#3B2A0A" stroke="#F59E0B" stroke-width="3.5"/>
+  <text x="1030" y="428" fill="#FBBF24" font-size="18" font-weight="700" text-anchor="middle">DSCR CALCULATOR</text>
+  <text x="1030" y="452" fill="#E2E8F0" font-size="13.5" text-anchor="middle">we compute our own number</text>
+  <text x="1030" y="474" fill="#FCD34D" font-size="13" font-style="italic" text-anchor="middle">the borrower's figure is evidence, not the trigger</text>
+
+  <!-- branch down -->
+  <line x1="1030" y1="494" x2="1030" y2="524" stroke="#F59E0B" stroke-width="2"/>
+  <line x1="300" y1="524" x2="1030" y2="524" stroke="#F59E0B" stroke-width="2"/>
+  <line x1="300" y1="524" x2="300" y2="556" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+  <line x1="665" y1="524" x2="665" y2="556" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+  <line x1="1030" y1="524" x2="1030" y2="556" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+
+  <rect x="150" y="566" width="300" height="88" rx="8" fill="#11243D" stroke="#475569" stroke-width="2"/>
+  <text x="300" y="596" fill="#86EFAC" font-size="14.5" font-weight="600" text-anchor="middle">Ours passes · borrower agrees</text>
+  <text x="300" y="620" fill="#E2E8F0" font-size="14" text-anchor="middle">Log compliant</text>
+  <text x="300" y="640" fill="#94A3B8" font-size="12.5" text-anchor="middle">no action</text>
+
+  <rect x="515" y="566" width="300" height="88" rx="8" fill="#11243D" stroke="#475569" stroke-width="2"/>
+  <text x="665" y="596" fill="#FCD34D" font-size="14.5" font-weight="600" text-anchor="middle">Ours passes · variance &gt; tolerance</text>
+  <text x="665" y="620" fill="#E2E8F0" font-size="14" text-anchor="middle">Log the variance</text>
+  <text x="665" y="640" fill="#94A3B8" font-size="12.5" text-anchor="middle">their maths is off, conclusion stands</text>
+
+  <rect x="880" y="562" width="300" height="96" rx="8" fill="#3F1D1D" stroke="#F87171" stroke-width="3"/>
+  <text x="1030" y="594" fill="#FCA5A5" font-size="15" font-weight="700" text-anchor="middle">OUR NUMBER FAILS</text>
+  <text x="1030" y="618" fill="#F8FAFC" font-size="14.5" font-weight="600" text-anchor="middle">Exception raised</text>
+  <text x="1030" y="640" fill="#CBD5E1" font-size="12.5" text-anchor="middle">even if the borrower reported compliant</text>
+
+  <text x="1215" y="600" fill="#94A3B8" font-size="12.5">← this case is</text>
+  <text x="1215" y="620" fill="#94A3B8" font-size="12.5">invisible if you trust</text>
+  <text x="1215" y="640" fill="#94A3B8" font-size="12.5">the borrower's number</text>
+
+  <line x1="1030" y1="658" x2="1030" y2="688" stroke="#64748B" stroke-width="2"/>
+  <line x1="1030" y1="688" x2="700" y2="688" stroke="#64748B" stroke-width="2"/>
+  <line x1="700" y1="688" x2="700" y2="712" stroke="#64748B" stroke-width="2" marker-end="url(#arw)"/>
+
+  <!-- Agent -->
+  <rect x="380" y="722" width="640" height="128" rx="8" fill="#0F3B3A" stroke="#2DD4BF" stroke-width="3"/>
+  <text x="700" y="754" fill="#5EEAD4" font-size="17" font-weight="700" text-anchor="middle">ORCHESTRATOR AGENT</text>
+  <text x="700" y="777" fill="#94A3B8" font-size="12.5" text-anchor="middle">decides what evidence to inspect next · live step trace</text>
+  <text x="432" y="806" fill="#CBD5E1" font-size="13.5">· document_agent</text>
+  <text x="432" y="828" fill="#CBD5E1" font-size="13.5">· definition_agent</text>
+  <text x="640" y="806" fill="#CBD5E1" font-size="13.5">· research_agent</text>
+  <text x="640" y="828" fill="#CBD5E1" font-size="13.5">· search_past_cases</text>
+  <text x="852" y="806" fill="#FCD34D" font-size="13.5" font-weight="600">· dscr_calculator</text>
+  <text x="852" y="828" fill="#94A3B8" font-size="12">  (code, not model)</text>
+
+  <line x1="700" y1="856" x2="700" y2="884" stroke="#2DD4BF" stroke-width="2" marker-end="url(#arwT)"/>
+
+  <!-- Guardrail -->
+  <rect x="380" y="894" width="640" height="84" rx="8" fill="#3B2A0A" stroke="#F59E0B" stroke-width="3"/>
+  <text x="700" y="924" fill="#FBBF24" font-size="16" font-weight="700" text-anchor="middle">GUARDRAIL  →  POLICY</text>
+  <text x="700" y="947" fill="#E2E8F0" font-size="12.5" text-anchor="middle">every number traceable to a calculation or a verbatim quote? every quote real?</text>
+  <text x="700" y="966" fill="#FCD34D" font-size="12.5" text-anchor="middle">otherwise forced to ABSTAIN · prohibited actions forced to ESCALATE</text>
+
+  <line x1="700" y1="984" x2="700" y2="1012" stroke="#F59E0B" stroke-width="2" marker-end="url(#arwA)"/>
+
+  <!-- Human -->
+  <rect x="380" y="1022" width="640" height="86" rx="8" fill="#1E293B" stroke="#E2E8F0" stroke-width="3"/>
+  <text x="700" y="1052" fill="#F8FAFC" font-size="16" font-weight="700" text-anchor="middle">ANALYST DECIDES</text>
+  <text x="700" y="1075" fill="#CBD5E1" font-size="13" text-anchor="middle">cited casefile · approve · override with a reason · request documents</text>
+  <text x="700" y="1095" fill="#94A3B8" font-size="12.5" text-anchor="middle">CreditScout never makes the credit decision</text>
+
+  <!-- feedback loop -->
+  <path d="M1020 1065 L1100 1065 L1100 786 L1026 786" fill="none" stroke="#2DD4BF" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arwT)"/>
+  <text x="1118" y="906" fill="#5EEAD4" font-size="13.5" font-weight="600">an override becomes</text>
+  <text x="1118" y="926" fill="#5EEAD4" font-size="13.5" font-weight="600">a LESSON</text>
+  <text x="1118" y="950" fill="#94A3B8" font-size="12.5">the next similar case</text>
+  <text x="1118" y="968" fill="#94A3B8" font-size="12.5">starts informed — and</text>
+  <text x="1118" y="986" fill="#94A3B8" font-size="12.5">resolves in fewer steps</text>
+
+  <!-- left note -->
+  <text x="60" y="760" fill="#64748B" font-size="13">Only exceptions reach</text>
+  <text x="60" y="780" fill="#64748B" font-size="13">the agent. The other</text>
+  <text x="60" y="800" fill="#64748B" font-size="13">two outcomes are</text>
+  <text x="60" y="820" fill="#64748B" font-size="13">settled by code alone —</text>
+  <text x="60" y="840" fill="#64748B" font-size="13">cheap and deterministic.</text>
+</svg>
