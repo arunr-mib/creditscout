@@ -216,3 +216,48 @@ test("a capped add-back can turn a breach into a pass", () => {
   assert.equal(post.components.addbacks["restructuring charges"].capped, true);
   assert.ok(post.dscr > pre.dscr, "a permitted add-back must raise the ratio");
 });
+
+// --- 11. ambiguous terms are refused, not guessed ---------------------------
+test("errors when the same add-back is named twice in terms", () => {
+  // `financials.addback_amounts` is keyed by name, so a repeated name cannot
+  // mean two different figures — it is a mapping error. Adding the same figure
+  // twice would overstate the numerator and log only one of the two entries,
+  // leaving the components unable to reconcile with the total.
+  const r = computeDscr(
+    withTerms({
+      numerator: {
+        ...TERMS.numerator,
+        addbacks: [
+          { name: "restructuring charges", cap: 500_000, citation: "CA §1.01" },
+          { name: "restructuring charges", cap: 500_000, citation: "Amd 2 §3(a)" },
+        ],
+      },
+    }),
+    withFin({ addback_amounts: { "restructuring charges": 500_000 } }),
+    opts,
+  );
+  assert.ok(r.error, "a duplicate add-back name must not silently double-count");
+  assert.match(r.error, /duplicate add-back/);
+});
+
+test("errors when the same deduction is named twice in terms", () => {
+  const r = computeDscr(
+    withTerms({
+      numerator: { ...TERMS.numerator, deductions: ["cash_taxes", "cash_taxes"] },
+    }),
+    FIN,
+    opts,
+  );
+  assert.ok(r.error);
+  assert.match(r.error, /duplicate deduction/);
+});
+
+test("errors when the same denominator component is named twice", () => {
+  const r = computeDscr(
+    withTerms({ denominator: { components: ["cash_interest", "cash_interest"] } }),
+    FIN,
+    opts,
+  );
+  assert.ok(r.error);
+  assert.match(r.error, /duplicate denominator component/);
+});

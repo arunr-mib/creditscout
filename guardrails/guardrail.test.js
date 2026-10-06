@@ -219,3 +219,60 @@ test("S-1: a capped add-back verifies against the amendment", () => {
   const r = verifyTermsProvenance(terms, cites, TERM_CHUNKS);
   assert.equal(r.valid, true, JSON.stringify(r.violations));
 });
+
+// --- scale suffixes must be attached to the figure --------------------------
+test("a word after a figure is not read as a scale suffix", () => {
+  // "$500,000 may be added back" must not become $500bn. The suffix letters
+  // b/k/m/x start plenty of words this corpus uses — below, breach, months,
+  // minimum, may — and inflating the figure abstains on correct work.
+  assert.deepEqual(extractFigures("not to exceed $500,000 may be added back"), [500000]);
+  assert.deepEqual(extractFigures("we compute 1.08 below the 1.25 minimum"), [1.08, 1.25]);
+  assert.deepEqual(extractFigures("EBITDA for the trailing 12 months"), [12]);
+  assert.deepEqual(extractFigures("reported 1.31 but we compute 1.08"), [1.31, 1.08]);
+  // attached suffixes still scale
+  assert.deepEqual(extractFigures("cap of $4.25m and 2.5k of fees"), [4250000, 2500]);
+});
+
+test("a figure quoted from a clause that continues in words is ACCEPTED", () => {
+  const chunks = [
+    {
+      citation: "Amd 2 §3(a)",
+      content:
+        "Consolidated EBITDA shall be increased by restructuring charges in an " +
+        "aggregate amount not to exceed $500,000 may be added back for the period.",
+    },
+  ];
+  const cf = base({
+    explanation: "The amendment caps the add-back at $500,000, so DSCR is 1.31.",
+    claims: [
+      {
+        text: "The add-back is capped at $500,000",
+        citation: "Amd 2 §3(a)",
+        quote: "not to exceed $500,000 may be added back",
+      },
+    ],
+  });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, chunks);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+});
+
+test("S-1: a cap whose quote continues in words still verifies", () => {
+  const chunks = [
+    {
+      citation: "Amd 2 §3(a)",
+      content: "restructuring charges not to exceed $500,000 may be added back",
+    },
+  ];
+  const r = verifyTermsProvenance(
+    { numerator: { addbacks: [{ name: "restructuring charges", cap: 500000 }] } },
+    [
+      {
+        field: "numerator.addbacks[0].cap",
+        citation: "Amd 2 §3(a)",
+        quote: "not to exceed $500,000 may be added back",
+      },
+    ],
+    chunks,
+  );
+  assert.equal(r.valid, true, JSON.stringify(r.violations));
+});

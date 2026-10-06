@@ -57,22 +57,32 @@ export function applyPolicy(casefile, policy, calcs) {
   // --- deep breaches always escalate --------------------------------------
   // A marginal shortfall may have an explanation. A deep one is a credit
   // event, and no amount of documentary justification makes it routine.
-  const worst = calculations
-    .map((c) => (c && c.outputs && typeof c.outputs.margin === "number" ? c.outputs.margin : null))
-    .filter((m) => m !== null)
-    .sort((a, b) => a - b)[0];
+  //
+  // Judged on the GOVERNING calculation — the last one run — not the worst in
+  // the casefile. On the unboarded-amendment path (F1, F5) the casefile holds a
+  // failing calc on terms that turn out to be superseded, followed by a passing
+  // calc on the terms actually in force. A discarded attempt is not a breach.
+  const governing = calculations
+    .filter((c) => c && c.outputs && typeof c.outputs.margin === "number")
+    .slice(-1)[0];
+  const margin = governing ? governing.outputs.margin : null;
+
+  // `abstain` is the guardrail's verdict that the output could not be verified.
+  // Policy does not promote it: an escalation resting on unverified figures
+  // reads more confident than the evidence behind it.
+  const escalatable = out.recommendation === "resolve" || out.recommendation === "request";
 
   if (
-    typeof worst === "number" &&
-    worst < 0 &&
-    Math.abs(worst) > p.escalate_if_breach_margin_over &&
-    out.recommendation === "resolve"
+    typeof margin === "number" &&
+    margin < 0 &&
+    Math.abs(margin) > p.escalate_if_breach_margin_over &&
+    escalatable
   ) {
     notes.push(
       note(
         "breach_depth",
         "escalate",
-        `breach margin ${worst} exceeds escalate_if_breach_margin_over ${p.escalate_if_breach_margin_over}`,
+        `breach margin ${margin} exceeds escalate_if_breach_margin_over ${p.escalate_if_breach_margin_over}`,
       ),
     );
     out.recommendation = "escalate";
@@ -80,13 +90,20 @@ export function applyPolicy(casefile, policy, calcs) {
 
   // --- step cap -----------------------------------------------------------
   // Running out of steps is not a conclusion.
-  if (typeof out.steps_count === "number" && out.steps_count >= p.max_steps) {
-    if (out.recommendation === "resolve") {
+  if (typeof out.steps_count === "number") {
+    if (out.steps_count >= p.max_steps && out.recommendation === "resolve") {
       notes.push(
         note("step_cap", "abstain", `reached max_steps ${p.max_steps} — investigation incomplete`),
       );
       out.recommendation = "abstain";
     }
+  } else {
+    // `steps_count` is not part of the §6.1 orchestrator output contract, so a
+    // caller that forwards the model's object verbatim disables this check.
+    // Record that rather than letting a safety check pass silently.
+    notes.push(
+      note("step_cap", "not_checked", "steps_count absent — step cap not applied"),
+    );
   }
 
   // --- human review is locked ---------------------------------------------

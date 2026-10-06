@@ -110,6 +110,15 @@ export function computeDscr(terms, financials, options) {
       return fail("terms.numerator.addbacks[] entries require a name");
     }
 
+    // `financials.addback_amounts` is keyed by name, so a name listed twice
+    // cannot mean two different figures — it is a mapping error. Adding the
+    // figure twice would overstate the numerator while logging a single entry,
+    // leaving `components` unable to reconcile with `numerator_total`, which is
+    // the only thing the guardrail has to verify a figure against.
+    if (Object.prototype.hasOwnProperty.call(components.addbacks, name)) {
+      return fail(`duplicate add-back in terms: "${name}"`);
+    }
+
     // Silently treating an unsupplied add-back as zero would understate the
     // numerator and fabricate a breach.
     const rawCents = toCents(supplied[name]);
@@ -160,6 +169,9 @@ export function computeDscr(terms, financials, options) {
     const field = DEDUCTIONS[name];
     // Refuse rather than guess what the drafter meant.
     if (!field) return fail(`unknown deduction component: "${name}"`);
+    if (Object.prototype.hasOwnProperty.call(components.deductions, name)) {
+      return fail(`duplicate deduction in terms: "${name}"`);
+    }
 
     const cents = toCents(financials[field]);
     if (cents === null) return fail(`missing input: financials.${field}`);
@@ -185,6 +197,9 @@ export function computeDscr(terms, financials, options) {
   for (const name of parts) {
     const field = DENOMINATOR[name];
     if (!field) return fail(`unknown denominator component: "${name}"`);
+    if (Object.prototype.hasOwnProperty.call(components.denominator_parts, name)) {
+      return fail(`duplicate denominator component in terms: "${name}"`);
+    }
 
     const cents = toCents(financials[field]);
     if (cents === null) return fail(`missing input: financials.${field}`);

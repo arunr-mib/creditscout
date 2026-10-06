@@ -74,3 +74,49 @@ test("does not mutate the casefile it was given", () => {
   applyPolicy(original, DEFAULT_POLICY, passing);
   assert.equal(JSON.stringify(original), snapshot);
 });
+
+// --- breach depth is judged on the governing calculation --------------------
+test("a deep breach escalates a request, not only a resolve", () => {
+  // F3: we compute 1.08 against 1.25. If the agent asks for the signed waiver,
+  // the breach is still deeper than the limit and must escalate anyway.
+  const deep = [{ calc_id: "c1", outputs: { dscr: 1.08, threshold: 1.25, pass: false, margin: -0.17 } }];
+  const { casefile, notes } = applyPolicy(
+    cf({ recommendation: "request", explanation: "The signed waiver is not on file." }),
+    DEFAULT_POLICY,
+    deep,
+  );
+  assert.equal(casefile.recommendation, "escalate");
+  assert.ok(notes.some((n) => n.check === "breach_depth"));
+});
+
+test("a superseded failing calculation does not escalate a resolve", () => {
+  // F1/F5: the first calc runs on terms that turn out to be superseded, the
+  // second on the amendment actually in force. The discarded attempt must not
+  // decide the case.
+  const remapped = [
+    { calc_id: "c1", outputs: { dscr: 1.05, threshold: 1.25, pass: false, margin: -0.2 } },
+    { calc_id: "c2", outputs: { dscr: 1.32, threshold: 1.25, pass: true, margin: 0.07 } },
+  ];
+  const { casefile, notes } = applyPolicy(cf(), DEFAULT_POLICY, remapped);
+  assert.equal(casefile.recommendation, "resolve", JSON.stringify(notes));
+});
+
+test("an abstain forced by the guardrail is never promoted to escalate", () => {
+  // abstain means the output could not be verified. An escalation built on
+  // unverified figures would read more confident than its evidence.
+  const deep = [{ calc_id: "c1", outputs: { dscr: 1.0, threshold: 1.25, pass: false, margin: -0.25 } }];
+  const { casefile } = applyPolicy(cf({ recommendation: "abstain" }), DEFAULT_POLICY, deep);
+  assert.equal(casefile.recommendation, "abstain");
+});
+
+// --- the step cap must not fail open ----------------------------------------
+test("a casefile with no steps_count records that the cap was not checked", () => {
+  // steps_count is not part of the §6.1 orchestrator output contract, so a
+  // caller forwarding the model's object verbatim would skip the cap silently.
+  const { casefile, notes } = applyPolicy(cf({ steps_count: undefined }), DEFAULT_POLICY, passing);
+  assert.equal(casefile.recommendation, "resolve");
+  assert.ok(
+    notes.some((n) => n.check === "step_cap" && /steps_count/.test(n.detail)),
+    "an unchecked step cap must be visible in guardrail_notes",
+  );
+});

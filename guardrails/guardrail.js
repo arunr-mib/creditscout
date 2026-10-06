@@ -85,7 +85,12 @@ export function extractFigures(text) {
     .replace(/\bq[1-4]\s*(19|20)\d{2}\b/gi, " ")
     .replace(/\b(19|20)\d{2}\b/g, " ");
 
-  const tokens = cleaned.match(/\(?\$?\s?-?\d[\d,]*(\.\d+)?\s?(bn|mm|[kmbx])?\)?/gi) || [];
+  // The scale suffix must be ATTACHED to the figure. Allowing a space before it
+  // lets the first letter of the next word act as a multiplier — "$500,000 may
+  // be added back" reads as $500bn, "1.08 below" as 1.08bn, "12 months" as
+  // 12,000,000 — and an inflated figure matches nothing, so correct work
+  // abstains. b/k/m/x start too many words in this corpus for that to be safe.
+  const tokens = cleaned.match(/\(?\$?\s?-?\d[\d,]*(\.\d+)?(bn|mm|[kmbx])?\)?/gi) || [];
 
   const out = [];
   for (const t of tokens) {
