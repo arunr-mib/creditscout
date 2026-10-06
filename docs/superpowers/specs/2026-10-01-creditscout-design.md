@@ -196,7 +196,7 @@ Trigger: webhook `POST /investigate` `{exception_id}`. Responds immediately with
 | **F1 Harbor Logistics** | Q2 2026 | 1.12 | **1.12** (agree, both fail) | Approved terms are **v1**; Amendment No. 2 (effective 2026-04-01) is **on file but not yet boarded** | terms → calc (fail) → research → spots the unboarded amendment → re-map → calc (pass) | **Resolve + re-board as v2** (~6 steps) |
 | **F3 Northgate Foods** | Q2 2026 | **1.31 — compliant** | **1.08 — breach** | Borrower took an add-back with **no basis** in the agreement or any amendment. An unexecuted waiver *request* letter is on file, dated after the period, unsigned by the lender. | calc (fail) → research → finds the request letter → determines a requested waiver is not a granted waiver | **Escalate** (~4 steps) |
 | **F5 Coastal Marine** | Q4 2025 | 1.41 | 1.41 | Agree | code only, no agent | **Compliant, no action** |
-| **F5 Coastal Marine** | Q1 2026 | **1.38** | **1.29** | Borrower took the full $900k add-back; the amendment **caps it at $500k**. Both still clear 1.25. | code only, no agent | **Variance logged, not investigated** |
+| **F5 Coastal Marine** | Q1 2026 | **1.38** | **1.29** | Borrower took the full $900k add-back; the **credit agreement caps it at $500k** (Amendment No. 2 is dated 2026-04-01, after this period, so it cannot be the source of the cap). Both still clear 1.25. | code only, no agent | **Variance logged, not investigated** |
 | **F5 Coastal Marine** | Q2 2026 | 1.30 | 1.12 | Same unboarded-amendment pattern as F1 | memory lesson → check amendments first → calc (pass) | **Resolve in ~3 steps** (warm memory) |
 
 **F3 is the headline case.** The borrower reports *compliant*; nobody would have
