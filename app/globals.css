@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { color-scheme: dark; }
+  body { @apply bg-bg text-text-secondary antialiased; }
+  /* Numeric columns must align — analysts scan columns of ratios. */
+  .font-mono { font-variant-numeric: tabular-nums; }
+  /* docs/design.md: focus rings are never removed. */
+  :focus-visible { @apply outline-none ring-2 ring-model-bright ring-offset-2 ring-offset-bg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

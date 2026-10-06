@@ -2,14 +2,38 @@
   "name": "creditscout",
   "version": "0.0.0",
   "private": true,
+  "description": "Covenant exception investigation agent \u2014 DSCR decision support",
   "type": "module",
-  "description": "Covenant exception investigation agent — DSCR decision support",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --test calc/ evals/",
-    "test:calc": "node --test calc/",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/**/*.test.js\" \"components/*.test.js\"",
+    "generate:data": "node data/generate.mjs",
+    "generate:pdf": "node data/generate.mjs --pdf",
+    "ingest:demo": "node --env-file=.env data/ingest-demo.mjs",
+    "test:calc": "node --test \"calc/*.test.js\"",
     "eval": "node evals/run.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.0",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "server-only": "^0.0.1",
+    "unpdf": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "pdf-lib": "^1.17.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.0"
   }
 }

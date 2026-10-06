@@ -1,0 +1,159 @@
+# CreditScout — One-Pager
+
+**Author:** Arun Rajendiran · **Date:** 2026-10-05 · **Status:** Draft — Solution Review
+
+> The companion to `docs/prd.md`. That document is the full nine-section cohort
+> PRD. **This is the version for someone who will not read it** — leadership, a
+> mentor, a design partner. If the two ever disagree, the full PRD wins.
+
+---
+
+## Hypothesis
+
+**We believe that independently recomputing every covenant test from
+human-approved, citation-backed terms — instead of trusting the borrower's
+reported figure — will let a credit analyst close a covenant exception in under
+30 minutes instead of ~2.5 hours, with zero false resolutions.**
+
+---
+
+## Problem
+
+**Who:** Credit analysts at regional banks, commercial lenders and credit unions,
+monitoring 30+ borrowers. Often executed from India-based GCCs. Not large banks.
+
+**How bad:** Covenant monitoring is **20–30% of their time** — ~520 hours a year,
+~4.3 hours per test cycle. Published benchmarks put the DSCR recomputation alone
+at 30–40 minutes; the document archaeology around it takes longer.
+
+**How they solve it today:** Spreadsheets, email, the loan document system, and
+institutional memory. The workaround *is* the process.
+
+**What breaks:** The investigation after a flag can't be written as rules. The
+answer lives across a 60-page agreement, its amendments, a waiver, and a
+borrower-prepared certificate. A rules engine flags the breach and stops.
+
+**Evidence quality — stated honestly:** Market data and practitioner experience,
+**not user research**. `[NEED: 5 analyst interviews]` — Owner, before
+design-partner outreach. No quotes have been invented to fill the gap.
+
+---
+
+## Strategic fit
+
+**Why now:** 1M-token context windows make amendment-precedence reasoning
+tractable; managed multi-agent orchestration (Foundry Agent Service) means a
+small team can build it; exception volume rises as credit quality softens.
+
+**Competitive gap:** Origination platforms (nCino, Baker Hill) route work.
+Covenant trackers (CovenantFlow, Covaleyo, Cardo AI) track the calendar.
+Spreading tools produce inputs. **None does the reasoning step.** A general LLM
+chat has no facility history, no governed calculation, no audit trail, and no
+safe abstain.
+
+**Moat:** Validated covenant specifications · deterministic calculation with
+citations · an eval harness that produces a number competitors can't · lender-
+specific memory that compounds per account.
+
+---
+
+## Non-Goals
+
+- **NOT** making credit decisions. Human review is locked, not configurable.
+- **NOT** other covenants in V1 — DSCR only, quarterly, TTM.
+- **NOT** OCR, and **NOT** extracting figures from statement tables.
+- **NOT** scoring creditworthiness — we check a contractual ratio against
+  contractual terms, which keeps this out of fair-lending model territory.
+- **NOT** investigating a variance when both numbers clear the threshold — we log it.
+- **NOT** selling to large money-centre banks first.
+- **NOT** using real bank data. 100% synthetic.
+
+---
+
+## Solution
+
+Two flows. Diagram: `docs/diagrams/creditscout-user-flow.svg`
+
+**A — Covenant setup** *(once per facility, re-runs on amendment)*
+Agent reads the agreement and amendments → proposes executable terms, each with
+a citation and verbatim quote → **analyst approves beside the source clause** →
+terms are versioned and effective-dated → reused every quarter.
+
+*Four-eyes control, because a setup error silently corrupts every future test.*
+
+**B — Quarterly monitoring** *(every borrower, every quarter)*
+Upload package → load the approved terms in force → **code computes our DSCR** →
+
+| Our number | Borrower's | Result |
+|---|---|---|
+| Passes | Agrees | Log compliant |
+| Passes | Differs beyond tolerance | Log the variance, no investigation |
+| **Fails** | Anything | **Exception → agent investigation** |
+
+Investigation → orchestrator delegates to three specialist agents, calls the
+deterministic calculator, searches past cases → **code guardrail** forces
+`abstain` on any untraceable number → **analyst approves or overrides** → the
+override becomes a lesson the next case retrieves.
+
+**The architecture in one line:** the model decides what to look at and never
+produces a number; code produces every number and never decides; a human always
+approves.
+
+---
+
+## Success metrics
+
+| Metric | Type | Baseline | Target |
+|---|---|---|---|
+| Time-to-decision | **North Star** | ~2.5 hrs *(estimate)* | **< 30 min** |
+| **False-resolve rate** | **Primary — hard gate** | n/a | **0** |
+| Calculation accuracy | Primary | manual, error-prone | **100%** |
+| Outcome accuracy | Primary | n/a | **≥ 85%** |
+| Memory effect (steps, cold vs warm) | Secondary | — | visible reduction |
+| Citation hit rate | Secondary | n/a | ≥ 90% |
+
+**Guardrails — what must not get worse:**
+**Abstain rate ≤ 25%** (a system that abstains on everything scores a perfect
+zero false resolves while delivering nothing — this is the metric that keeps the
+headline honest) · cost per investigation ≤ $1 · steps ≤ 8.
+
+---
+
+## Rollout & rollback
+
+**Rollout:** Internal measurement (3 facilities, 6 eval cases) → Beta (full eval,
+cold + warm) → design-partner pilot on real documents. Each gate requires **0
+false resolves**, not a low rate.
+
+**Rollback:** Prompts, policy thresholds and model choice are all config, revertible
+in minutes without a deploy. **Kill switch:** stop creating investigations —
+quarterly testing still runs, because calculation and guardrails are pure code.
+The product degrades to automated covenant testing, not to nothing.
+
+---
+
+## Business
+
+**Price:** **$5 per monitored borrower per month.** Flat — tiering is premature
+before measured usage. Per-borrower, not per-seat (per-seat penalises adding
+reviewers) and not per-investigation (that bills most when borrowers are most
+distressed).
+
+**ROI:** ~182 analyst-hours saved per year against $1,800 — **~6×**, holding
+between 4× and 8× across the plausible loaded-rate range. Modelled at ~35%
+reduction in covenant-monitoring time; vendors in the category advertise 50–75%.
+
+**Market:** US SAM ~$36M/yr · SOM ~$700K ARR over 3 years at 25–30 accounts.
+TAM (loan compliance monitoring) ~$2.87B in 2026.
+
+---
+
+## Open questions
+
+| Question | Owner | By |
+|---|---|---|
+| Validate the three facility twists | Owner | Before doc generation |
+| Compute + sign off 3 expected DSCR values | Owner | Before the eval runs |
+| Does Foundry Connected Agents (preview) work reliably? | Claude | **First hour of build** |
+| 5 analyst interviews + 3 customer quotes | Owner | Launch gate |
+| Loaded analyst cost/hr; hours per contested exception | Owner | Before the pitch |

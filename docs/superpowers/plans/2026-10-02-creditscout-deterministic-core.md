@@ -1,5 +1,13 @@
 # CreditScout Deterministic Core — Implementation Plan
 
+> **STALE — historical record, do not implement from this file.**
+> Written 2026-10-02, before the 2026-10-05 amendments. It describes six
+> facilities (now three), n8n orchestration (dropped), and a guarded CommonJS
+> export for pasting into n8n Code nodes (the shipped files are plain ESM, and
+> no second copy of them exists anywhere). Current sources of truth:
+> `docs/superpowers/specs/2026-10-01-creditscout-design.md`,
+> `docs/engineering/engineering-doc.md` §9, `docs/engineering/implementation-specs.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build and prove the code layer that CreditScout's agent is never allowed to do itself — the database schema, the DSCR calculator, the guardrail, and the policy engine — plus the synthetic documents the whole system is tested against.

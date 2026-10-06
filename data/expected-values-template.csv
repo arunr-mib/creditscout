@@ -1,0 +1,6 @@
+case_id,facility,borrower,test_period_end,threshold,terms_version_boarded,ebitda,addbacks,unfinanced_capex,cash_taxes,scheduled_principal,cash_interest,reported_dscr,expected_dscr_as_tested,expected_dscr_remapped,expected_outcome,expected_tag,owner_signed_off
+F1-2026Q2,F1,Harbor Logistics,2026-06-30,1.25,1,4020000,"restructuring charges=620000 (cap 500000 under unboarded v2 only)",300000,250000,2000000,1100000,1.12,,,resolve,amendment_addback,NO
+F3-2026Q2,F3,Northgate Foods,2026-06-30,1.25,1,2884000,"owner compensation normalisation=530000 (no clause permits this)",220000,180000,1600000,700000,1.31,,n/a,escalate,true_breach,NO
+F5-2025Q4,F5,Coastal Marine,2025-12-31,1.25,1,6720000,"dry-dock and vessel overhaul charges=300000 (cap 500000)",400000,360000,3000000,1440000,1.41,,n/a,compliant_no_action,n/a,NO
+F5-2026Q1,F5,Coastal Marine,2026-03-31,1.25,1,6028000,"dry-dock and vessel overhaul charges=900000 (cap 500000)",420000,380000,3000000,1440000,1.38,,n/a,variance_logged_no_investigation,n/a,NO
+F5-2026Q2,F5,Coastal Marine,2026-06-30,1.25,1,5313000,"dry-dock and vessel overhaul charges=520000 (cap 500000); fuel hedging mark-to-market losses=950000 (cap 800000 under unboarded v2 only)",450000,390000,3000000,1440000,1.30,,,resolve,amendment_addback,NO

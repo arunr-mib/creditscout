@@ -1,0 +1,25 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+COMPLIANCE CERTIFICATE
+
+To: Fairhaven Commercial Bank, as Lender
+From: Harbor Logistics, Inc., as Borrower
+Re: Credit Agreement dated as of March 15, 2024
+
+§1 Test Period
+This Compliance Certificate is delivered under Section 6.01 of the Credit Agreement for the test period ended June 30, 2026, measured on a trailing four-quarter basis.
+
+§2 Financial Covenant
+Required Debt Service Coverage Ratio under Section 7.11: not less than 1.25 to 1.00.
+Reported Debt Service Coverage Ratio: 1.12 to 1.00.
+Compliance status: NOT IN COMPLIANCE with Section 7.11 for this test period.
+
+§3 Add-Backs Applied
+No add-back was applied in calculating Consolidated EBITDA for this test period.
+
+§4 Certification
+The undersigned, a duly authorised officer of Harbor Logistics, Inc., certifies that the foregoing is true and correct.
+
+HARBOR LOGISTICS, INC.
+By: /s/ Chief Financial Officer
+Title: Chief Financial Officer

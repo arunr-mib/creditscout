@@ -1,0 +1,17 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+HARBOR LOGISTICS — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+
+Period ended: June 30, 2026
+Basis: trailing twelve months
+
+§1 Debt Service Coverage Inputs
+Consolidated EBITDA: 4,020,000
+Unfinanced Capital Expenditures: 300,000
+Cash Taxes Paid: 250,000
+Scheduled Principal Payments: 2,000,000
+Cash Interest Paid: 1,100,000
+
+§2 Add-Back Items
+Amounts incurred during the period, before any limit under the Credit Agreement.
+Restructuring charges: 620,000
