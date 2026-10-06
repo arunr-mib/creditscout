@@ -112,6 +112,29 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 
 ---
 
+## 7a. Security findings — `/security-foundation`, 2026-10-05
+
+Run at build stage 3. Three of six areas had no code yet, so **this audit must be
+re-run before deploy** (tracked as 8.5).
+
+| # | Finding | Severity | Status |
+|---|---|---|---|
+| **S-1** | 🔴 **Covenant terms have no code guardrail — human review only.** A casefile's numbers are verified in code against `calc_log` or a verbatim quote. A *covenant term's* numbers are not verified at all: `validateTerms()` checks shape, and Approve only requires that a citation **exists**, not that the value appears in it. A term with a real citation and a wrong value passes. **Blast radius is every future test for that borrower**, silently, not one casefile. | **High** | Open — fix in F6 |
+| **S-2** | 🟠 **`CREDITSCOUT_TOOL_KEY` can fail open.** The var is empty in `.env.example` with no generation step. A naive `header !== process.env.KEY` comparison **passes when both are undefined**. The tool routes would be publicly callable. | **Medium** | Open — fix in F5 |
+| S-3 | ⚪ RLS, tool endpoints and file upload were unassessable — no code at stage 3 | Info | Re-run before deploy |
+| S-4 | ⚪ "No Client Component imports the server client" passes **vacuously** — no Client Components exist yet | Info | Re-check at stage 9 |
+
+**S-1 fix:** reuse `normaliseNumber()` from `guardrails/guardrail.js` — every
+numeric value in `terms` must appear in its own `source_citations` quote. This is
+the same check the casefile guardrail already performs, applied one layer
+earlier, and it closes the asymmetry where the higher-blast-radius artifact has
+the weaker defence.
+
+**S-2 fix:** the route must **fail closed** — reject when `CREDITSCOUT_TOOL_KEY`
+is unset, not only when the header mismatches.
+
+---
+
 ## 8. Housekeeping
 
 | # | Item |
@@ -120,3 +143,4 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 8.2 | ⚪ Review the one-pager "as an engineer, as a designer, as a skeptic" — the `/prd` skill offers this |
 | 8.3 | ⚪ Making the GitHub repo public — **owner decision, not made** |
 | 8.4 | ⚪ Add a Stage 6 "Impact Review" section to the PRD after the demo, per the `/prd` skill's lifecycle |
+| 8.5 | 🟠 **Re-run `/security-foundation` before deploy** — RLS, tool endpoints and file upload could not be assessed at stage 3 |
