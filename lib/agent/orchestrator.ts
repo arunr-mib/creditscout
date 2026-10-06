@@ -18,7 +18,7 @@ import {
 } from "./foundry.ts";
 import { DEFAULT_BASE_URL } from "./openapi.ts";
 import { buildInvestigationPrompt, SPECIALIST_NAMES, type SpecialistName } from "./prompt.ts";
-import { SPECIALIST_RUNNERS } from "./specialists.ts";
+import { SPECIALIST_RUNNERS, type SpecialistRunner } from "./specialists.ts";
 import { mapRunStepsToTrace, type TraceEntry } from "./trace.ts";
 
 /**
@@ -79,6 +79,10 @@ export interface OrchestratorDeps {
   callTool?: (name: string, args: unknown, ctx: ToolContext) => Promise<string>;
   /** The memory lookup. Injected so a unit test never reaches the embedding service. */
   lessons?: typeof topLessons;
+  /** Individual specialist runners, injected so a test can pin what context they are handed. */
+  specialists?: Partial<Record<SpecialistName, SpecialistRunner>>;
+  /** The HTTP call to one of our own tool routes. Injected only by tests. */
+  callRoute?: (name: string, args: unknown, ctx: ToolContext) => Promise<string>;
   agentId?: string;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
@@ -158,8 +162,11 @@ interface CasefileRow {
   created_at: string;
 }
 
+// `agent_output` is in this list because `driveRun` READS it: a capped casefile
+// reports the answer it managed to produce before the run was stopped. Left out,
+// every repeat sync said "its answer was captured" and returned nothing.
 const CASEFILE_COLUMNS =
-  "id, exception_id, status, steps_count, guardrail_notes, run_id, foundry_thread_id, foundry_run_id, last_step_at, created_at";
+  "id, exception_id, status, steps_count, guardrail_notes, agent_output, run_id, foundry_thread_id, foundry_run_id, last_step_at, created_at";
 
 /**
  * Only these may be driven forward. A casefile an analyst has already acted on
@@ -405,23 +412,28 @@ const isSpecialist = (name: string): name is SpecialistName => (SPECIALIST_NAMES
  * specialists are serviced in-process: they have no route, because
  * `lib/agent/openapi.ts` is stage 10's and stays untouched.
  */
-async function callAnyTool(name: string, args: unknown, ctx: ToolContext): Promise<string> {
+export async function callAnyTool(name: string, args: unknown, ctx: ToolContext, deps: OrchestratorDeps = {}): Promise<string> {
   if (isSpecialist(name)) {
+    const runner = deps.specialists?.[name] ?? SPECIALIST_RUNNERS[name];
     try {
-      return await SPECIALIST_RUNNERS[name](args, { facilityId: ctx.facilityId, periodEnd: ctx.periodEnd });
+      // The facility and the period come from the CASEFILE, never from `args`.
+      // A model naming another borrower's facility would read a confidential
+      // agreement into this casefile, which is the worst bug available here, so
+      // `args` is not consulted and is not merged in.
+      return await runner(args, { facilityId: ctx.facilityId, periodEnd: ctx.periodEnd });
     } catch (err) {
       // A specialist that could not answer is missing evidence, not an outage
       // to crash on. The orchestrator reasons about it and moves on.
       return JSON.stringify({ error: `${name} could not answer: ${err instanceof Error ? err.message : String(err)}` });
     }
   }
-  return callToolRoute(name, args, ctx);
+  return (deps.callRoute ?? callToolRoute)(name, args, ctx);
 }
 
 /** Service every tool call Foundry is waiting on. One bad call never fails the others. */
 async function serviceToolCalls(run: Run, ctx: ToolContext, deps: OrchestratorDeps): Promise<ToolOutput[]> {
   const calls = run.required_action?.submit_tool_outputs?.tool_calls ?? [];
-  const call = deps.callTool ?? callAnyTool;
+  const call = deps.callTool ?? ((name, args, ctx) => callAnyTool(name, args, ctx, deps));
   const outputs: ToolOutput[] = [];
   for (const toolCall of calls) {
     const name = toolCall.function?.name ?? "";
@@ -517,11 +529,16 @@ async function driveRun(casefileId: string, deps: OrchestratorDeps): Promise<Syn
   // failure. Said once, it stays said — and whatever the agent managed to
   // conclude before the cap is reported with it, never thrown away.
   if (stoppedAtCap(casefile.guardrail_notes)) {
+    // Tested for CONTENT, not for `!== null`. An absent column reads as
+    // undefined, and that must not be reported as an answer that was captured —
+    // claiming an answer exists when none does is the failure mode this whole
+    // branch is here to avoid.
+    const captured = typeof casefile.agent_output === "string" && casefile.agent_output !== "" ? casefile.agent_output : null;
     return result({
       stopped: "step_cap",
-      output: casefile.agent_output,
+      output: captured,
       error:
-        casefile.agent_output === null
+        captured === null
           ? `The investigation reached the step cap of ${maxSteps} and was stopped. No recommendation was produced.`
           : `The investigation reached the step cap of ${maxSteps}. Its answer was captured before the run was stopped.`,
     });
@@ -697,23 +714,18 @@ export function stoppedAtCap(guardrailNotes: unknown): boolean {
   );
 }
 
-/** PostgREST / Postgres for "that column does not exist". */
-const MISSING_COLUMN = new Set(["PGRST204", "42703"]);
-
 /**
  * Store the agent's raw, unparsed answer.
  *
- * It belongs in `agent_output`, NOT in `summary`. `summary` is the memory
- * surface: `match_lessons` returns it as `case_summary` and
- * `buildInvestigationPrompt` prints that under "LESSONS FROM PAST ANALYST
- * REVIEWS", so once a casefile had been reviewed, a later investigation's
- * prompt could receive a block of raw agent JSON presented as a lesson the
- * lender had learned (review finding I-3).
+ * It goes in `agent_output`, NOT in `summary`. `summary` is the memory surface:
+ * `match_lessons` returns it as `case_summary` and `buildInvestigationPrompt`
+ * prints that under "LESSONS FROM PAST ANALYST REVIEWS", so once a casefile had
+ * been reviewed, a later investigation's prompt could receive a block of raw
+ * agent JSON presented to it as a lesson the lender had learned (I-3).
  *
- * `agent_output` arrives with migration 0009, which is the owner's to apply. In
- * the meantime this falls back to `summary` and says so loudly, because the
- * alternative is a sync that fails outright. DELETE THE FALLBACK once 0009 is
- * applied — it is the only thing keeping the leak alive.
+ * There is no fallback. There was one, while migration 0009 was unapplied, and
+ * it wrote to `summary` — a dead path still aimed at the memory surface is how
+ * that leak comes back.
  */
 async function writeAgentOutput(
   client: Db,
@@ -722,14 +734,13 @@ async function writeAgentOutput(
   steps: number,
   now: () => number,
 ): Promise<void> {
-  const common = { steps_count: steps, last_step_at: new Date(now()).toISOString() };
-  const written = await client.from("casefiles").update({ ...common, agent_output: output }).eq("id", casefileId);
-  if (!written.error) return;
-  if (!MISSING_COLUMN.has(written.error.code ?? "")) throw new Error(`write agent output: ${written.error.message}`);
-  console.warn(
-    "casefiles.agent_output is missing; falling back to casefiles.summary. Apply supabase/migrations/0009_casefile_claim_and_output.sql.",
+  check(
+    await client
+      .from("casefiles")
+      .update({ agent_output: output, steps_count: steps, last_step_at: new Date(now()).toISOString() })
+      .eq("id", casefileId),
+    "write agent output",
   );
-  check(await client.from("casefiles").update({ ...common, summary: output }).eq("id", casefileId), "write agent output");
 }
 
 /**
