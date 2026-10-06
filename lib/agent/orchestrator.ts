@@ -353,10 +353,15 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
  * would read a confidential agreement into this casefile, which is the worst
  * bug available in this system. `casefile_id` is forced so every calculation
  * lands in `calc_log` against this investigation whatever the model sent.
+ *
+ * The calculator gets `facility_id` too: it verifies each financial figure
+ * against the financials chunk the model cited, and the facility decides whose
+ * financials those are. Named by the model, it could point the check at another
+ * borrower's documents to make its figures verify.
  */
 export function toolRequestBody(name: string, args: unknown, ctx: ToolContext): Record<string, unknown> {
   const base = isObj(args) ? { ...args } : {};
-  if (name === "dscr_calculator") return { ...base, casefile_id: ctx.casefileId };
+  if (name === "dscr_calculator") return { ...base, casefile_id: ctx.casefileId, facility_id: ctx.facilityId };
   if (name === "search_documents") return { ...base, facility_id: ctx.facilityId };
   if (name === "search_past_cases") return { ...base, facility_id: ctx.facilityId, run_id: ctx.runId };
   return base;

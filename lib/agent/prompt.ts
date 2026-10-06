@@ -147,10 +147,11 @@ HOW TO WORK — your step budget is small, so spend it in this order
 An investigation of this kind takes four or five steps: two searches, the baseline calculation, at most one delegation, and the corrected calculation. If you are two steps from your limit and have no recommendation yet, stop searching and stop delegating and write your answer from what you already hold — an honest escalate or abstain is a result, and running out of steps is not.
 
 CALLING dscr_calculator
-Send {"terms": <terms JSON>, "financials": {...}, "casefile_id": "<the casefile_id in the brief>"}.
+Send {"terms": <terms JSON>, "financials": {...}, "financial_citations": {...}, "casefile_id": "<the casefile_id in the brief>"}.
 - terms.numerator.addbacks and terms.numerator.deductions must both be present, as [] when empty. Leaving one out silently produces a confident wrong ratio.
 - An add-back with "cap": null is UNCAPPED. Never write 0 for an add-back you believe has no limit.
 - financials takes ebitda, unfinanced_capex, cash_taxes, scheduled_principal, cash_interest and addback_amounts. addback_amounts is keyed by the add-back NAME exactly as it appears in terms.numerator.addbacks[].name.
+- financial_citations has the same keys as financials, addback_amounts included, and gives for each figure the label of the financials chunk you read it from.
 - Omit any figure you cannot quote from a cited document. Never send 0 for a figure you do not have.
 - Never call it before you have read the six figures out of a financials chunk. A call made with figures you have not read comes back as a missing-input error and costs you a step for nothing.
 
