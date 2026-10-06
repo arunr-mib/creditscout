@@ -2,6 +2,7 @@ import { searchDocuments, type DocumentHit } from "../../retrieval.ts";
 import {
   thresholdProvenance,
   validateTerms,
+  type Excerpt,
   type ProposeResult,
   type SourceChunk,
   type SourceCitation,
@@ -128,7 +129,22 @@ source_citations "field" paths (exact):
 - "numerator.deductions" (when deductions is not empty)
 - "numerator.addbacks[0].cap", "numerator.addbacks[1].cap", ... one per add-back, including an uncapped one (quote the clause permitting it)
 - "effective_amendments[0].effective", ... one per amendment; the quote must state the effective date
-"citation" is an excerpt label exactly as shown in brackets (for example "CA §7.11"); you may append a sub-clause such as "(b)(i)".`;
+"citation" is an excerpt label exactly as shown in brackets (for example "CA §7.11"); append the sub-clause letter where there is one, such as "CA §7.11(a)".
+
+WHAT EACH QUOTE MUST CONTAIN (a program checks every item, and a miss means the analyst sees your terms refused)
+- threshold.min_dscr: the whole sentence stating the minimum, including how it is tested ("trailing four-quarter basis"), with the ratio written as the clause writes it ("1.25 to 1.00").
+- numerator.deductions: the whole sentence that defines the ratio, so it names Consolidated EBITDA and every item subtracted. List exactly the deductions that sentence subtracts, no more and no fewer. Cite this field even when deductions is [].
+- denominator.components: the whole sentence that defines Debt Service, naming every component. List exactly the components it names.
+- numerator.addbacks[i].cap: the sentence permitting that add-back, containing its name exactly as you wrote it in "name" and the dollar limit. For an add-back with no limit, quote the sentence that says so ("without limit") and set "cap" to null.
+- effective_amendments[i].effective: the sentence giving the amendment's effective date, in the amendment itself.`;
+
+const toExcerpt = (h: DocumentHit): Excerpt => ({
+  citation: h.citation,
+  doc_title: h.doc_title,
+  doc_type: h.doc_type,
+  section: h.section,
+  content: h.content,
+});
 
 function contextFrom(hits: DocumentHit[]): string {
   return hits.map((h) => `[${h.citation}] ${h.doc_title ?? ""}\n${h.content}`).join("\n\n---\n\n");
@@ -201,15 +217,18 @@ export async function proposeTerms(facilityId: string, deps: AgentDeps = {}): Pr
   const hits = await gatherContext(facilityId, deps.search ?? searchDocuments);
   // No text, no call: nothing to read, and no tokens spent finding that out.
   if (hits.length === 0) {
-    return { found: false, reason: "No agreement or amendment text is on file for this facility." };
+    return { found: false, reason: "No agreement or amendment text is on file for this facility.", excerpts: [] };
   }
+  // What the model sees is what the analyst is shown beside the proposal, so a
+  // clause the terms did not cite can be spotted. That is the only omission control.
+  const excerpts = hits.map(toExcerpt);
 
   const reply = await (deps.chat ?? azureChat)([
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: `EXCERPTS\n\n${contextFrom(hits)}` },
   ]);
   const proposal = parseReply(reply);
-  if (!proposal.found) return proposal;
+  if (!proposal.found) return { ...proposal, excerpts };
 
   // The model said it found a threshold. Believe it only if the number is in a
   // quote that is in a chunk we actually retrieved. Otherwise it was invented.
@@ -220,7 +239,8 @@ export async function proposeTerms(facilityId: string, deps: AgentDeps = {}): Pr
     return {
       found: false,
       reason: `The model proposed a minimum DSCR, but it could not be verified in the retrieved agreement text (${why}). Nothing was proposed.`,
+      excerpts,
     };
   }
-  return proposal;
+  return { ...proposal, excerpts };
 }

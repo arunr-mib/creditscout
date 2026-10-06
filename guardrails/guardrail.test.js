@@ -276,3 +276,74 @@ test("S-1: a cap whose quote continues in words still verifies", () => {
   );
   assert.equal(r.valid, true, JSON.stringify(r.violations));
 });
+
+// --- the denominator of a ratio is not a figure ------------------------------
+// "not less than 1.25 to 1.00" holds two numbers, and only one is the minimum.
+const RATIO_CLAUSE =
+  "The Borrower shall not permit the Debt Service Coverage Ratio, tested as of the last day of each fiscal quarter, to be less than 1.25 to 1.00.";
+const RATIO_CHUNKS = [{ citation: "CA §7.11", content: RATIO_CLAUSE }];
+const thresholdCheck = (value, quote, chunks = RATIO_CHUNKS) =>
+  verifyTermsProvenance(
+    { threshold: { min_dscr: value } },
+    [{ field: "threshold.min_dscr", citation: "CA §7.11", quote }],
+    chunks,
+  );
+
+test("extractFigures drops the denominator of a stated ratio, and only that", () => {
+  assert.deepEqual(extractFigures("to be less than 1.25 to 1.00."), [1.25]);
+  assert.deepEqual(extractFigures("a ratio of 1.25 to 1 or better"), [1.25]);
+  assert.deepEqual(extractFigures("covenant of 1.25:1"), [1.25]);
+  // a 1.00 that is not a denominator stays a figure; so does 1.05 and 12
+  assert.deepEqual(extractFigures("a DSCR of 1.00x"), [1]);
+  assert.deepEqual(extractFigures("1.25 to 1.05"), [1.25, 1.05]);
+  assert.deepEqual(extractFigures("1.25 to 12"), [1.25, 12]);
+});
+
+test("S-1: 1.25 verifies against '1.25 to 1.00'; 1.00 does not, even though 1.00 is in the quote", () => {
+  assert.equal(thresholdCheck(1.25, RATIO_CLAUSE).valid, true);
+  const r = thresholdCheck(1.0, RATIO_CLAUSE);
+  assert.equal(r.valid, false);
+  assert.equal(r.violations[0].field, "threshold.min_dscr");
+});
+
+test("S-1 fails closed: a ratio-free quote cannot support a threshold, whatever number it holds", () => {
+  const bare = "to 1.00";
+  const r = thresholdCheck(1.0, bare, [{ citation: "CA §7.11", content: RATIO_CLAUSE }]);
+  assert.equal(r.valid, false);
+  assert.match(r.violations[0].reason, /does not appear in its cited quote|not stated as a minimum ratio/);
+
+  // The number is present in the quote but not stated as a ratio.
+  const prose = "The Borrower shall maintain a coverage level of 1.25 at all times.";
+  const r2 = thresholdCheck(1.25, prose, [{ citation: "CA §7.11", content: prose }]);
+  assert.equal(r2.valid, false);
+  assert.match(r2.violations[0].reason, /not stated as a minimum ratio/);
+});
+
+test("S-1: the ratio forms 1.25x, 1.25 times, 1.25:1 and '1.25 to 1' all verify", () => {
+  for (const quote of ["not less than 1.25x", "not less than 1.25 times", "not less than 1.25:1", "not less than 1.25 to 1"]) {
+    assert.equal(thresholdCheck(1.25, quote, [{ citation: "CA §7.11", content: quote }]).valid, true, quote);
+  }
+});
+
+test("S-1: a quote that states a different minimum is not satisfied by a stray figure", () => {
+  const quote = "to be less than 1.35 to 1.00, previously 1.25x";
+  const r = thresholdCheck(1.3, quote, [{ citation: "CA §7.11", content: quote }]);
+  assert.equal(r.valid, false);
+});
+
+test("casefile path: 'requires 1.00x' is not traceable to a clause that says '1.25 to 1.00'", () => {
+  const cf = base({
+    explanation: "The covenant requires 1.00x and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  const { casefile, notes } = applyGuardrail(cf, CALCS, RATIO_CHUNKS);
+  assert.equal(casefile.recommendation, "abstain", JSON.stringify(notes));
+  assert.match(notes.map((n) => n.detail).join("|"), /unverified figure\(s\): 1/);
+
+  // while the true figure, quoted from the same clause, still passes
+  const ok = base({
+    explanation: "The covenant requires 1.25x and the recomputed DSCR is 1.31.",
+    claims: [{ text: "The covenant requires 1.25x", citation: "CA §7.11", quote: "to be less than 1.25 to 1.00" }],
+  });
+  assert.equal(applyGuardrail(ok, CALCS, RATIO_CHUNKS).casefile.recommendation, "resolve");
+});

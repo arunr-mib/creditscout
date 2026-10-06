@@ -97,6 +97,8 @@ export class TermsError extends Error {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UNIQUE_VIOLATION = "23505";
+/** Migration 0007: at most one approved row per facility. */
+export const ONE_APPROVED_INDEX = "covenant_terms_one_approved_per_facility";
 const MAX_APPROVER_LENGTH = 200;
 
 const isObj = (v: unknown): v is Obj => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -397,7 +399,9 @@ function requiredCitationFields(terms: Obj): string[] {
   const fields = ["threshold.min_dscr", "denominator.components"];
   const nu = terms.numerator;
   if (isObj(nu)) {
-    if (Array.isArray(nu.deductions) && nu.deductions.length > 0) fields.push("numerator.deductions");
+    // Always, even for an empty list: "no deductions" is a claim about the ratio
+    // definition, and an empty list with no citation is how deductions get dropped.
+    fields.push("numerator.deductions");
     if (Array.isArray(nu.addbacks)) nu.addbacks.forEach((_, i) => fields.push(`numerator.addbacks[${i}].cap`));
   }
   if (Array.isArray(terms.effective_amendments)) terms.effective_amendments.forEach((_, i) => fields.push(`effective_amendments[${i}].effective`));
@@ -406,8 +410,8 @@ function requiredCitationFields(terms: Obj): string[] {
 
 /**
  * THE S-1 CHECK. Runs `verifyTermsProvenance` (every numeric value appears in
- * the quote it cites, and that quote is in the cited chunk) and then closes what
- * it leaves open:
+ * the quote it cites, a minimum ratio is stated AS a ratio, and the quote is in
+ * the cited chunk) and then closes what it leaves open:
  *
  *   - a required non-numeric field with no citation at all (a deduction list, a
  *     denominator, an amendment date) would pass the guardrail, which only walks
@@ -415,6 +419,8 @@ function requiredCitationFields(terms: Obj): string[] {
  *   - a non-numeric citation whose quote is not in its chunk likewise
  *   - an amendment's effective date feeds `effective_from`, so it must be written
  *     in its own quote
+ *   - names and lists (add-backs, deductions, components, base, basis) must be
+ *     supported by the quote cited for them: see `checkNamedTerms`
  *
  * Returns every violation with the field, the value and the reason, so a human
  * can act on it. Pure; callers supply the chunks.
@@ -455,16 +461,7 @@ export function checkTermsProvenance(
     const chunk = content.get(c.citation.trim());
     if (chunk === undefined) flag(c.field, `no chunk supplied for ${c.citation}`);
     else if (!chunk.includes(foldText(c.quote))) flag(c.field, `quote not found in ${c.citation}`);
-    else if (c.field === "threshold.min_dscr") {
-      // "less than 1.25 to 1.00": both figures are IN the quote, so the
-      // guardrail's value-in-quote test would accept 1.00. The minimum is the
-      // figure before "to 1.00", and a threshold of 1.00 is a different covenant.
-      const value = getAtPath(terms, c.field);
-      const ratios = [...foldText(c.quote).matchAll(/(\d+(?:\.\d+)?)\s*(?:to|:)\s*1(?:\.0+)?(?!\d|\.\d)/gi)].map((m) => Number(m[1]));
-      if (ratios.length > 0 && !ratios.includes(value as number)) {
-        flag(c.field, `value ${String(value)} is not the minimum in its cited quote (the ratio reads ${ratios.join(", ")} to 1)`);
-      }
-    } else if (/\.effective$/.test(c.field)) {
+    else if (/\.effective$/.test(c.field)) {
       const date = getAtPath(terms, c.field);
       if (typeof date !== "string" || !quoteContainsDate(c.quote, date)) {
         flag(c.field, `date ${String(date)} does not appear in its cited quote`);
@@ -472,7 +469,109 @@ export function checkTermsProvenance(
     }
   }
 
+  // Everything the guardrail's number-walk cannot see: names and lists.
+  const entry = (field: string) => (flagged.has(field) ? undefined : byField.get(field));
+  checkNamedTerms(terms, entry, flag);
+
   return { valid: violations.length === 0, violations };
+}
+
+// ---------------------------------------------------- non-numeric support
+
+/** How each calculator component is written in a clause. The vocabulary is calc/dscr.js's. */
+const DEDUCTION_WORDS: Record<string, RegExp> = {
+  unfinanced_capex: /unfinanced\s+capital\s+expenditures?|unfinanced\s+capex/i,
+  cash_taxes: /cash\s+taxes|taxes\s+paid/i,
+};
+const DENOMINATOR_WORDS: Record<string, RegExp> = {
+  scheduled_principal: /scheduled\s+principal/i,
+  cash_interest: /cash\s+interest|interest\s+paid/i,
+};
+/** A clause saying an add-back has no limit. A quote with none of these cannot support `cap: null`. */
+const UNCAPPED = /\b(without\s+(?:any\s+)?(?:limit|limitation|cap)|no\s+(?:limit|cap|maximum)|not\s+(?:be\s+)?subject\s+to\s+(?:any\s+)?(?:limit|cap)|unlimited|uncapped|without\s+regard\s+to\s+(?:any\s+)?(?:limit|cap))/i;
+/** Words that put a limit on an amount; a quote containing one cannot be the source of "uncapped". */
+const CAPPING = /\$\s?\d|not\s+to\s+exceed|shall\s+not\s+exceed|no\s+more\s+than|up\s+to|at\s+most/i;
+
+const has = (quote: string, phrase: string) => phrase.trim() !== "" && foldText(quote).toLowerCase().includes(foldText(phrase).toLowerCase());
+
+/**
+ * The guardrail proves a NUMBER is in its quote. A named add-back, a deduction,
+ * a denominator component, the basis and the base are just as capable of being
+ * wrong, and a fabricated add-back name is the same class of lie as a fabricated
+ * cap. So each is tied to the quote cited for it:
+ *
+ *   add-back name    appears in the quote cited for its cap
+ *   cap: null        that quote says the add-back is uncapped, and states no limit
+ *   deductions       the set the ratio definition's quote names, exactly: one
+ *                    it names that the terms drop is as wrong as one invented
+ *   components       the same, against the Debt Service definition's quote
+ *   numerator.base   appears in the ratio definition's quote
+ *   basis            the threshold's quote states it ("trailing four-quarter")
+ *   amendment doc    is the document its effective-date citation points into
+ *
+ * `entry(field)` is undefined when that field has no usable citation (absent, or
+ * already flagged), in which case there is nothing to check against and the
+ * earlier violation already stands.
+ */
+function checkNamedTerms(
+  terms: Obj,
+  entry: (field: string) => Obj | undefined,
+  flag: (field: string, reason: string) => void,
+): void {
+  const quoteOf = (field: string): string | undefined => {
+    const q = entry(field)?.quote;
+    return typeof q === "string" ? q : undefined;
+  };
+
+  const nu = isObj(terms.numerator) ? terms.numerator : {};
+  const addbacks = Array.isArray(nu.addbacks) ? nu.addbacks : [];
+  addbacks.forEach((ab, i) => {
+    if (!isObj(ab)) return;
+    const q = quoteOf(`numerator.addbacks[${i}].cap`);
+    if (q === undefined) return;
+    if (typeof ab.name === "string" && !has(q, ab.name)) {
+      flag(`numerator.addbacks[${i}].name`, `add-back "${ab.name}" does not appear in the quote cited for it`);
+    }
+    if (ab.cap === null && !(UNCAPPED.test(q) && !CAPPING.test(q))) {
+      flag(`numerator.addbacks[${i}].cap`, "cap is null (uncapped), but its cited quote does not say the add-back is uncapped");
+    }
+  });
+
+  const exactSet = (field: string, listed: unknown, words: Record<string, RegExp>) => {
+    const q = quoteOf(field);
+    if (q === undefined || !Array.isArray(listed)) return;
+    const problems: string[] = [];
+    for (const [name, re] of Object.entries(words)) {
+      const named = re.test(q);
+      const included = listed.includes(name);
+      if (included && !named) problems.push(`terms include ${name} but the cited quote does not mention it`);
+      if (named && !included) problems.push(`the cited quote mentions ${name} but the terms leave it out`);
+    }
+    if (problems.length > 0) flag(field, problems.join("; "));
+  };
+  exactSet("numerator.deductions", nu.deductions, DEDUCTION_WORDS);
+  exactSet("denominator.components", isObj(terms.denominator) ? terms.denominator.components : undefined, DENOMINATOR_WORDS);
+
+  const ratioDefinition = quoteOf("numerator.deductions");
+  if (ratioDefinition !== undefined && typeof nu.base === "string" && !has(ratioDefinition, nu.base)) {
+    flag("numerator.base", `base "${nu.base}" does not appear in the ratio definition cited for the deductions`);
+  }
+
+  const thresholdQuote = quoteOf("threshold.min_dscr");
+  const tp = isObj(terms.test_period) ? terms.test_period : {};
+  if (thresholdQuote !== undefined && typeof tp.basis === "string") {
+    const trailing = /trailing\s+(?:four|4|twelve|12)[\s-]+(?:fiscal\s+)?(?:quarter|month)s?/i.test(thresholdQuote);
+    const supported = tp.basis === "TTM" ? trailing : has(thresholdQuote, tp.basis);
+    if (!supported) flag("test_period.basis", `basis "${tp.basis}" is not stated in the quote cited for the threshold`);
+  }
+
+  const amendments = Array.isArray(terms.effective_amendments) ? terms.effective_amendments : [];
+  amendments.forEach((am, i) => {
+    const e = entry(`effective_amendments[${i}].effective`);
+    if (!isObj(am) || !e || typeof e.citation !== "string") return;
+    const cited = resolveCitation(e.citation).doc_title;
+    if (cited !== am.doc) flag(`effective_amendments[${i}].doc`, `"${String(am.doc)}" is not the document its effective-date citation (${e.citation}) points into`);
+  });
 }
 
 /**
@@ -489,6 +588,113 @@ export function thresholdProvenance(
   const only = checkTermsProvenance({ threshold: { min_dscr: th.min_dscr } }, sourceCitations, chunks);
   const violations = only.violations.filter((v) => v.field === "threshold.min_dscr");
   return { valid: violations.length === 0, violations };
+}
+
+// ------------------------------------------------------------ warnings
+
+/**
+ * A heads-up for the human, never a refusal: the agent may be right and the
+ * deterministic reading below may be wrong. What these catch is OMISSION, which
+ * provenance cannot (it proves what is stated, not what was left out).
+ */
+export interface TermsWarning {
+  code: "amendment_not_cited" | "clause_amended" | "addback_not_in_terms";
+  message: string;
+  citation?: string;
+  field?: string;
+}
+
+const norm = (s: string) => foldText(s).toLowerCase();
+
+/** "Section 7.11(b) of the Credit Agreement is amended", "amends Section 7.11" -> ["7.11(b)", ...] */
+const AMENDED_SECTION = [
+  /Section\s+(\d+(?:\.\d+)*)((?:\([a-z0-9]+\))*)\s+of\s+the\s+(?:Credit\s+)?Agreement\s+(?:is|are|shall\s+be)\s+(?:hereby\s+)?(?:amended|restated|replaced|deleted|modified)/gi,
+  /\bamends?\s+(?:and\s+restates\s+)?Section\s+(\d+(?:\.\d+)*)((?:\([a-z0-9]+\))*)/gi,
+];
+/** "the Borrower may add back <name>, to the extent ..." */
+const ADD_BACK_PERMISSION = /\badd\s+back\s+([^,.;()]+?)(?=\s*(?:,|;|\.|\bto\s+the\s+extent\b|\bin\s+an\s+aggregate\b|$))/gi;
+
+const subOverlap = (a: string, b: string) => a === "" || b === "" || a.startsWith(b) || b.startsWith(a);
+
+export function termsWarnings(
+  terms: Obj,
+  sourceCitations: unknown,
+  chunks: readonly SourceChunk[],
+  amendmentTitles: readonly string[] = [],
+): TermsWarning[] {
+  const out: TermsWarning[] = [];
+  const cites = (Array.isArray(sourceCitations) ? sourceCitations : []).filter(
+    (c): c is Obj & { field: string; citation: string } => isObj(c) && typeof c.field === "string" && typeof c.citation === "string",
+  );
+
+  // 1. An amendment on file that no term cites. If it changes the covenant, the terms omit it.
+  const titles = new Set<string>([...amendmentTitles, ...chunks.filter((c) => c.doc_type === "amendment" && c.doc_title).map((c) => c.doc_title as string)]);
+  const referenced = new Set<string>();
+  for (const c of cites) {
+    const t = resolveCitation(c.citation).doc_title;
+    if (t) referenced.add(t);
+  }
+  for (const am of Array.isArray(terms.effective_amendments) ? terms.effective_amendments : []) {
+    if (isObj(am) && typeof am.doc === "string") referenced.add(am.doc);
+  }
+  for (const title of [...titles].sort()) {
+    if (!referenced.has(title)) {
+      out.push({
+        code: "amendment_not_cited",
+        message: `${title} is on file but no term cites it. If it changes the covenant, these terms leave that out; read it before approving.`,
+      });
+    }
+  }
+
+  // 2. A cited clause that a later amendment amends or restates.
+  const amended: { ref: string; section: string; subs: string; by: string }[] = [];
+  for (const chunk of chunks) {
+    if (chunk.doc_type !== "amendment") continue;
+    for (const re of AMENDED_SECTION) {
+      for (const m of chunk.content.matchAll(re)) {
+        amended.push({ ref: `§${m[1]}${m[2]}`, section: `§${m[1]}`, subs: m[2], by: chunk.citation });
+      }
+    }
+  }
+  const seen = new Set<string>();
+  for (const c of cites) {
+    const r = resolveCitation(c.citation);
+    if (r.doc_type !== "agreement" || !r.section) continue;
+    const subs = /^[^§]*§\s*\d+(?:\.\d+)*((?:\([a-z0-9]+\))*)/i.exec(c.citation)?.[1] ?? "";
+    for (const a of amended) {
+      if (a.section !== r.section || !subOverlap(a.subs, subs)) continue;
+      const key = `${c.field}|${a.by}|${a.ref}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        code: "clause_amended",
+        field: c.field,
+        citation: c.citation,
+        message: `${c.field} cites ${c.citation}, but ${a.by} amends ${a.ref}. Check the original clause still reads as quoted.`,
+      });
+    }
+  }
+
+  // 3. An add-back the documents permit that no term lists.
+  const listed = new Set(
+    (isObj(terms.numerator) && Array.isArray(terms.numerator.addbacks) ? terms.numerator.addbacks : [])
+      .map((ab) => (isObj(ab) && typeof ab.name === "string" ? norm(ab.name) : ""))
+      .filter(Boolean),
+  );
+  const flagged = new Set<string>();
+  for (const chunk of chunks) {
+    for (const m of chunk.content.matchAll(ADD_BACK_PERMISSION)) {
+      const name = norm(m[1]);
+      if (!name || listed.has(name) || flagged.has(name)) continue;
+      flagged.add(name);
+      out.push({
+        code: "addback_not_in_terms",
+        citation: chunk.citation,
+        message: `${chunk.citation} permits an add-back for "${m[1].trim()}", but no term lists it.`,
+      });
+    }
+  }
+  return out;
 }
 
 // ------------------------------------------------------------ database
@@ -515,6 +721,15 @@ export async function loadSourceChunks(client: Db, facilityId: string): Promise<
     section: r.metadata?.section ?? null,
     citation: citationFor(r.metadata?.doc_type ?? null, r.metadata?.doc_title ?? null, r.metadata?.section ?? null),
   }));
+}
+
+/** Titles of every amendment document on file, whether or not it produced chunks. */
+export async function loadAmendmentTitles(client: Db, facilityId: string): Promise<string[]> {
+  const rows = check(
+    await client.from("documents").select("title").eq("facility_id", facilityId).eq("doc_type", "amendment"),
+    "select documents",
+  ) as { title: string }[] | null;
+  return (rows ?? []).map((r) => r.title);
 }
 
 /**
@@ -557,19 +772,14 @@ async function loadVersions(client: Db, facilityId: string): Promise<VersionRow[
  * the day before `newEffectiveFrom` and the status becomes `superseded`. That is
  * the whole write. `terms` and `source_citations` are never in the patch, so a Q1
  * test stays reproducible against the terms in force in Q1.
- *
- * `exceptId` is the row being approved, which already carries status approved by
- * the time this runs (approve claims its version first, so a race on the unique
- * version key fails before anything is superseded).
  */
 export async function supersede(
   client: Db,
   facilityId: string,
   newEffectiveFrom: string,
-  opts: { exceptId?: string } = {},
 ): Promise<{ id: string; version: number }[]> {
   const effectiveTo = dayBefore(newEffectiveFrom);
-  const approved = (await loadVersions(client, facilityId)).filter((r) => r.status === "approved" && r.id !== opts.exceptId);
+  const approved = (await loadVersions(client, facilityId)).filter((r) => r.status === "approved");
   if (approved.length === 0) return [];
   for (const r of approved) {
     if (r.effective_from > effectiveTo) {
@@ -614,6 +824,38 @@ export async function termsInForce(client: Db, facilityId: string, periodEnd: st
   return rows.find((r) => r.effective_to === null || r.effective_to >= periodEnd) ?? null;
 }
 
+/**
+ * The claim lost, after the previous version was already superseded. Leave the
+ * facility in a state that is true:
+ *
+ *   - someone else's approval is now the current version: the previous version's
+ *     window must end the day before THEIR terms begin, not before ours
+ *   - nobody's is: the previous version governs again, as if we had not tried
+ *
+ * It only touches the version this call retired, and only its status and end
+ * date. Never its terms. Returns false if the repair itself failed.
+ */
+async function settleAfterFailedClaim(
+  client: Db,
+  facilityId: string,
+  retired: { id: string }[],
+  myId: string,
+): Promise<boolean> {
+  if (retired.length === 0) return true; // someone else retired it, with their own date
+  try {
+    const winner = (await loadVersions(client, facilityId)).find((r) => r.status === "approved" && r.id !== myId);
+    const patch = winner ? { effective_to: dayBefore(winner.effective_from) } : { status: "approved", effective_to: null };
+    check(
+      await client.from("covenant_terms").update(patch).eq("facility_id", facilityId).in("id", retired.map((r) => r.id)).eq("status", "superseded").select("id"),
+      "repair covenant_terms",
+    );
+    return true;
+  } catch (err) {
+    console.error("could not repair the superseded version after a lost approval", err);
+    return false;
+  }
+}
+
 // -------------------------------------------------------------- handlers
 
 export interface TermsDeps {
@@ -624,9 +866,18 @@ export interface TermsDeps {
   propose?: (facilityId: string) => Promise<ProposeResult>;
 }
 
+/** A clause the model was shown. The screen lists the ones the proposal did not cite: that is how omission gets noticed. */
+export interface Excerpt {
+  citation: string;
+  doc_title: string | null;
+  doc_type: string | null;
+  section: string | null;
+  content: string;
+}
+
 export type ProposeResult =
-  | { found: true; terms: Obj; source_citations: SourceCitation[] }
-  | { found: false; reason: string };
+  | { found: true; terms: Obj; source_citations: SourceCitation[]; excerpts?: Excerpt[] }
+  | { found: false; reason: string; excerpts?: Excerpt[] };
 
 async function defaultClient(): Promise<Db> {
   const { supabaseAdmin } = await import("./supabase/server.ts");
@@ -657,7 +908,9 @@ export async function runPropose(body: unknown, deps: TermsDeps = {}): Promise<T
       deps.propose ?? (async (id: string) => (await import("./agent/tools/definition-agent.ts")).proposeTerms(id));
     const proposal = await propose(facilityId);
     // "No DSCR covenant I can find" is a legitimate answer a human must resolve, not an error.
-    if (!proposal.found) return { status: 200, body: { found: false, reason: proposal.reason } };
+    if (!proposal.found) {
+      return { status: 200, body: { found: false, reason: proposal.reason, excerpts: proposal.excerpts ?? [] } };
+    }
 
     const shape = validateTerms(proposal.terms);
     if (!shape.valid) return fail(502, "The definition agent returned terms that fail validation.", { errors: shape.errors });
@@ -665,6 +918,7 @@ export async function runPropose(body: unknown, deps: TermsDeps = {}): Promise<T
     const client = deps.client ?? (await defaultClient());
     const chunks = await loadSourceChunks(client, facilityId);
     const provenance = checkTermsProvenance(proposal.terms, proposal.source_citations, chunks);
+    const warnings = termsWarnings(proposal.terms, proposal.source_citations, chunks, await loadAmendmentTitles(client, facilityId));
     const effectiveFrom = await resolveEffectiveFrom(client, facilityId, proposal.terms);
     const version = nextVersion((await loadVersions(client, facilityId)).map((r) => r.version));
 
@@ -694,6 +948,11 @@ export async function runPropose(body: unknown, deps: TermsDeps = {}): Promise<T
         terms: proposal.terms,
         source_citations: proposal.source_citations,
         provenance,
+        warnings,
+        // Everything the model was shown. The screen lists the clauses the terms
+        // did not cite, because a person noticing a permitted add-back that no
+        // term mentions is the only thing in the system that catches omission.
+        excerpts: proposal.excerpts ?? [],
       },
     };
   } catch (err) {
@@ -702,16 +961,25 @@ export async function runPropose(body: unknown, deps: TermsDeps = {}): Promise<T
 }
 
 /**
- * POST /api/covenant-terms/approve. THE CONTROL. Nothing is written until every
- * check has passed, and every check runs here regardless of what the client
- * already did:
+ * POST /api/covenant-terms/approve. The approval gate. Nothing is written until
+ * every check has passed, and every check runs here regardless of what the
+ * client already did:
  *
- *   1. an approver is named (a rubber stamp with no name on it is not four-eyes)
+ *   1. an approver is named
  *   2. edits are applied, each marked analyst-corrected
  *   3. the shape is valid
  *   4. provenance holds, against chunks loaded from the database, not the client
- *   5. the version is claimed (unique key; a race is a 409), then the previous
- *      version is superseded. It is never overwritten.
+ *   5. the previous version is superseded, THEN this one is approved. The
+ *      database allows at most one approved row per facility (migration 0007),
+ *      so of two racing approvals the second fails (409) at that step. It is
+ *      never overwritten.
+ *
+ * What the approver field is and is not: four-eyes here is RECORDED, not
+ * ENFORCED. `approved_by` is a name the caller typed. Nothing authenticates it,
+ * and nothing stops the person who proposed from approving. What the route does
+ * enforce is that a name is present and that the terms are supported by the text
+ * they cite. Real maker-checker needs authenticated identity and a recorded
+ * proposer, neither of which exists yet.
  */
 export async function runApprove(body: unknown, deps: TermsDeps = {}): Promise<ToolResult> {
   try {
@@ -754,37 +1022,46 @@ export async function runApprove(body: unknown, deps: TermsDeps = {}): Promise<T
     const version = nextVersion(others.map((r) => r.version));
     const approvedAt = (deps.now ?? (() => new Date().toISOString()))();
 
-    // Claim the version first. The unique key makes the second of two racing
-    // approvals fail here, before anything has been superseded.
-    const claimed = await client
-      .from("covenant_terms")
-      .update({
-        version,
-        effective_from: effectiveFrom,
-        terms,
-        source_citations: citations,
-        status: "approved",
-        approved_by: approvedBy,
-        approved_at: approvedAt,
-      })
-      .eq("id", found.id)
-      .eq("status", "proposed")
-      .select("id, version, effective_from, status")
-      .maybeSingle();
-    if (claimed.error) {
-      if (claimed.error.code === UNIQUE_VIOLATION) return fail(409, "Another approval for this facility landed first. Reload and review again.");
-      throw new TermsError(500, `approve covenant_terms: ${claimed.error.message}`);
-    }
-    if (!claimed.data) return fail(409, "These terms changed while you were approving them. Reload and review again.");
+    // Retire the previous version FIRST. The one-approved-row-per-facility index
+    // (migration 0007) would otherwise reject the new row, and it is also what
+    // turns two racing approvals into one winner and one 409.
+    const retired = await supersede(client, found.facility_id, effectiveFrom);
 
+    let claimed;
     try {
-      await supersede(client, found.facility_id, effectiveFrom, { exceptId: found.id });
+      claimed = await client
+        .from("covenant_terms")
+        .update({
+          version,
+          effective_from: effectiveFrom,
+          terms,
+          source_citations: citations,
+          status: "approved",
+          approved_by: approvedBy,
+          approved_at: approvedAt,
+        })
+        .eq("id", found.id)
+        .eq("status", "proposed")
+        .select("id, version, effective_from, status")
+        .maybeSingle();
     } catch (err) {
-      // The new version is approved and correct; the old one still carries no end date.
-      // termsInForce resolves the newer version for any period it covers, so nothing
-      // is mis-governed, but the record is incomplete and a person must finish it.
-      console.error("supersede failed after approval", found.id, err);
-      return fail(500, `Version ${version} is approved, but the previous version could not be marked superseded. Report this; do not approve again.`, { terms_id: found.id, version });
+      await settleAfterFailedClaim(client, found.facility_id, retired, found.id);
+      throw err;
+    }
+    if (claimed.error || !claimed.data) {
+      const repaired = await settleAfterFailedClaim(client, found.facility_id, retired, found.id);
+      const note = repaired ? "" : " The previous version's end date could not be repaired; report this.";
+      if (claimed.error && claimed.error.code !== UNIQUE_VIOLATION) {
+        throw new TermsError(500, `approve covenant_terms: ${claimed.error.message}.${note}`);
+      }
+      return fail(
+        409,
+        (claimed.error
+          ? claimed.error.message.includes(ONE_APPROVED_INDEX)
+            ? "Another approval for this facility landed first, and a facility may have only one approved version. Reload and review again."
+            : "Another approval for this facility landed first. Reload and review again."
+          : "These terms changed while you were approving them. Reload and review again.") + note,
+      );
     }
 
     const row = claimed.data as { id: string; version: number; effective_from: string; status: string };

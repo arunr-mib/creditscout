@@ -63,6 +63,9 @@ export function normaliseNumber(token) {
   return negative ? -value : value;
 }
 
+/** "1.25 to 1.00", "1.25 to 1", "1.25:1" -> the part after "to"/":" is captured away. */
+const RATIO_DENOMINATOR = /(\d+(?:\.\d+)?)(\s*(?:to|:)\s*)1(?:\.0+)?(?!\d|\.\d)/gi;
+
 /**
  * Pull every figure out of free text.
  *
@@ -78,6 +81,10 @@ export function extractFigures(text) {
     // section / article references: §7.11, Section 1.01, Art. 5, Amd 2 §3(a)
     .replace(/§\s*\d+(\.\d+)*(\([a-z0-9]+\))?/gi, " ")
     .replace(/\b(section|article|art\.?|clause|amendment|amd\.?|exhibit|schedule)\s+(no\.?\s*)?\d+(\.\d+)*/gi, " ")
+    // The "1.00" in "1.25 to 1.00" (or "1.25:1") is the ratio's denominator, not a
+    // figure of its own. Left in, a claim of "requires 1.00x" would verify against
+    // any clause that states a minimum ratio in that form.
+    .replace(RATIO_DENOMINATOR, "$1 ")
     // ISO and common dates
     .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
     .replace(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/g, " ")
@@ -108,6 +115,15 @@ function normaliseText(s) {
     .replace(/[‐-―]/g, "-")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** The figures a quote states AS ratios: "1.25x", "1.25 times", "1.25 to 1.00", "1.25:1". */
+function ratioFigures(text) {
+  const out = [];
+  const re = /(\d+(?:\.\d+)?)\s*(?:x\b|times\b|(?:to|:)\s*1(?:\.0+)?(?!\d|\.\d))/gi;
+  let m;
+  while ((m = re.exec(String(text))) !== null) out.push(Number(m[1]));
+  return out;
 }
 
 function sameNumber(a, b) {
@@ -309,6 +325,26 @@ export function verifyTermsProvenance(terms, sourceCitations, chunks) {
         value,
         reason: `value ${value} does not appear in its cited quote`,
       });
+      continue;
+    }
+
+    // A minimum ratio is not just "a number in the quote". "not less than 1.25
+    // to 1.00" contains 1.00 too, and a threshold of 1.00 is a different
+    // covenant, so the value has to be stated AS a ratio ("1.25x", "1.25 to 1",
+    // "1.25:1"). A quote with no ratio in it fails: absence of evidence is not
+    // permission, and this must fail closed.
+    if (/(^|\.)min_dscr$/.test(path)) {
+      const stated = ratioFigures(quote);
+      if (!stated.some((n) => sameNumber(n, value))) {
+        violations.push({
+          field: path,
+          value,
+          reason:
+            stated.length === 0
+              ? `value ${value} is not stated as a minimum ratio (e.g. "1.25 to 1.00" or "1.25x") in its cited quote`
+              : `value ${value} is not the minimum ratio its cited quote states (${stated.join(", ")})`,
+        });
+      }
     }
   }
 
