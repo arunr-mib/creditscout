@@ -59,6 +59,31 @@ export function traceStepKind(tool: unknown): TraceKind {
 
 export const isCalculatorStep = (tool: unknown): boolean => str(tool) === CALCULATOR_TOOL;
 
+/**
+ * A plain-language line saying what a step was FOR — "why it mattered" (audit
+ * 3.7), so the trace reads as an investigation and not a log of opaque calls.
+ *
+ * This is derived from the tool/specialist name ALONE and is purely for display:
+ * it adds no figure, changes no recommendation, and crucially requires no change
+ * to the agent's prompt or output contract. An unknown step gets no line rather
+ * than a guessed one — the same discipline the colouring already keeps (an
+ * unattributable step is never dressed up as something it is not).
+ */
+const STEP_ROLE: Record<string, string> = {
+  // specialists (a model reasoned)
+  document_agent: "Reads the borrower's filing and pulls the figures and clauses that bear on the test.",
+  definition_agent: "Interprets the covenant's own definition of the ratio — what the terms say counts in the numerator and denominator.",
+  research_agent: "Weighs precedent and context to frame a recommendation for the analyst to decide on.",
+  // tools (code computed)
+  [CALCULATOR_TOOL]: "Computes the ratio itself from the approved terms — the figure the recommendation rests on, never guessed.",
+  search_documents: "Retrieves the exact passage from a document so every claim can cite its source.",
+  search_past_cases: "Finds how similar exceptions were decided before — to inform this one, never to decide it.",
+};
+
+export function stepRole(tool: unknown): string | null {
+  return STEP_ROLE[str(tool)] ?? null;
+}
+
 // ---------------------------------------------------------------- the view
 
 /** One row the trace draws. The colour follows `kind`, which follows `tool`. */
@@ -73,6 +98,8 @@ export interface TraceStepView {
   ts: string;
   /** The calculator's summary is the demo's headline and is given weight. */
   calculator: boolean;
+  /** Plain-language "what this step was for", or null for an unattributable step. */
+  role: string | null;
 }
 
 /**
@@ -114,6 +141,7 @@ export function buildLiveTrace(trace: unknown): LiveTraceView {
       output: truncate(str(e.output_summary)),
       ts: str(e.ts),
       calculator: isCalculatorStep(e.tool),
+      role: stepRole(e.tool),
     });
   }
 

@@ -53,6 +53,7 @@ export function TraceStep({ step }: { step: TraceStepView }) {
         )}
         {time && <span className="ml-auto font-mono text-label text-text-muted">{time}</span>}
       </p>
+      {step.role && <p className="mt-1 text-label text-text-muted">{step.role}</p>}
       {step.input && (
         <p className="mt-1 text-body text-text-secondary">
           <span className="text-text-muted">in · </span>

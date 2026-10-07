@@ -7,6 +7,7 @@ import {
   toSyncState,
   traceStepKind,
   isCalculatorStep,
+  stepRole,
   LIVE_STATUS,
 } from "./traceModel.ts";
 import { SPECIALIST_NAMES } from "../lib/agent/prompt.ts";
@@ -35,6 +36,29 @@ test("an unknown tool is never coloured amber — amber is reserved for code out
   assert.equal(traceStepKind("some_future_tool"), "unknown");
   assert.equal(traceStepKind(""), "unknown");
   assert.equal(traceStepKind(undefined), "unknown");
+});
+
+test("every known specialist and tool has a plain-language role; nothing else does", () => {
+  for (const name of SPECIALIST_NAMES) {
+    assert.equal(typeof stepRole(name), "string", name);
+  }
+  for (const name of [CALCULATOR_TOOL, "search_documents", "search_past_cases"]) {
+    assert.equal(typeof stepRole(name), "string", name);
+  }
+  // An unattributable step gets no line rather than a guessed one.
+  assert.equal(stepRole("some_future_tool"), null);
+  assert.equal(stepRole(""), null);
+  assert.equal(stepRole(undefined), null);
+});
+
+test("buildLiveTrace carries the role through onto each step", () => {
+  const trace = [
+    { tool: CALCULATOR_TOOL, input_summary: "terms", output_summary: "1.08x calc_x", ts: "" },
+    { tool: "some_future_tool", input_summary: "a", output_summary: "b", ts: "" },
+  ];
+  const { steps } = buildLiveTrace(trace);
+  assert.equal(typeof steps[0].role, "string");
+  assert.equal(steps[1].role, null);
 });
 
 test("only the calculator earns weight", () => {
