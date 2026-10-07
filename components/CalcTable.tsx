@@ -80,13 +80,17 @@ function Row(props: {
         {row.label}
         {row.note && <span className={`ml-2 text-label ${row.note === "breach" ? "text-danger" : "text-text-muted"}`}>{row.note}</span>}
       </td>
-      {/* Amber is for what code produced. A figure read from a document is evidence, not code, so it is plain text. */}
-      <td className={`px-3 py-2 text-right font-mono text-num ${computed ? "text-code-bright" : "text-text"}`}>
+      {/* Amber is for what code produced. A document figure or an approved covenant
+          term is evidence, not code, so it stays plain text — never amber. */}
+      <td className={`px-3 py-2 text-right font-mono text-num tabular-nums ${computed ? "text-code-bright" : "text-text"}`}>
         {formatFigure(row.value, row.format)}
       </td>
       <td className="whitespace-nowrap px-3 py-2">
         {row.source.kind === "computed" ? (
           <CalcBadge calcId={shortCalcId(row.source.calcId)} />
+        ) : row.source.kind === "term" ? (
+          // A human-approved covenant term, not a code output: plain, never amber, never a "no citation" chip.
+          <span className="text-label text-text-muted">approved term</span>
         ) : (
           <span className="inline-flex items-center gap-2">
             <span className="text-label text-text-muted">quoted</span>

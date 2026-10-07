@@ -11,7 +11,9 @@ import {
   citationsOnScreen,
   claimsOf,
   clauseMap,
+  exceptionNeedsClosing,
   formatFigure,
+  humanReviewNotice,
   humanReviewPolicy,
   isRecommendation,
   noticeHeading,
@@ -123,10 +125,25 @@ test("a row is quoted or computed from where its figure sits in the log, not by 
   assert.equal(rows["deduction:unfinanced_capex"].source.kind, "quoted");
   assert.equal(rows["addback:restructuring charges:stated"].source.kind, "quoted");
   assert.equal(rows["addback:restructuring charges:stated"].source.citation, "Fin Q2 2026 §4");
-  // Figures code produced: computed, carrying the calc_id.
-  for (const k of ["addback:restructuring charges:applied", "numerator_total", "denominator_total", "dscr", "threshold", "margin"]) {
+  // Figures code produced: computed, carrying the calc_id. The threshold is NOT
+  // here — it is a covenant term, asserted separately below.
+  for (const k of ["addback:restructuring charges:applied", "numerator_total", "denominator_total", "dscr", "margin"]) {
     assert.deepEqual(rows[k].source, { kind: "computed", calcId: CALC }, k);
   }
+});
+
+test("the required minimum is a covenant term, never computed by code (no amber)", () => {
+  // No covenant citation in the log -> a plain approved term, not a code output.
+  const plain = byKey(calcRowsFor(agentRow())).threshold;
+  assert.equal(plain.value, 1.25);
+  assert.deepEqual(plain.source, { kind: "term" });
+  assert.notEqual(plain.source.kind, "computed", "the threshold must never render amber 'computed by code'");
+
+  // With the covenant citation in the log (terms.threshold.citation) -> quoted, teal.
+  const withCite = agentRow();
+  withCite.inputs.terms = { threshold: { min_dscr: 1.25, citation: "CA §7.11" } };
+  const quoted = byKey(calcRowsFor(withCite)).threshold;
+  assert.deepEqual(quoted.source, { kind: "quoted", citation: "CA §7.11", quote: "" });
 });
 
 test("an input with no citation in the log is `uncited`, never silently sourced", () => {
@@ -277,4 +294,36 @@ test("require_human_review is read as the policy holds it, and null when it cann
   assert.equal(humanReviewPolicy([{ key: "max_steps", value: 8 }]), null);
   assert.equal(humanReviewPolicy([{ key: "require_human_review", value: "true" }]), null);
   assert.equal(humanReviewPolicy(null), null);
+});
+
+test("the human-review notice is driven by the actual value, never mandatory by default", () => {
+  assert.equal(humanReviewNotice(true).mandatory, true);
+  assert.match(humanReviewNotice(true).text, /mandatory by policy/i);
+  // false must not claim mandatory.
+  assert.equal(humanReviewNotice(false).mandatory, false);
+  assert.doesNotMatch(humanReviewNotice(false).text, /mandatory by policy/i);
+  assert.match(humanReviewNotice(false).text, /does not require/i);
+  // null/unreadable must not claim mandatory, and must say it is not readable.
+  assert.equal(humanReviewNotice(null).mandatory, false);
+  assert.doesNotMatch(humanReviewNotice(null).text, /mandatory by policy/i);
+  assert.match(humanReviewNotice(null).text, /not readable/i);
+});
+
+// -------------------------------------------- exception-close drift (read-only)
+
+test("a decided casefile whose exception never closed is flagged for repair", () => {
+  // The A-4 drift a failed close leaves: decided, exception still pending_review.
+  assert.equal(exceptionNeedsClosing("approved", "pending_review"), true);
+  assert.equal(exceptionNeedsClosing("overridden", "pending_review"), true);
+  // The healthy case: the close succeeded.
+  assert.equal(exceptionNeedsClosing("approved", "closed"), false);
+  assert.equal(exceptionNeedsClosing("overridden", "closed"), false);
+  // A later breach reopened the exception to `new` (F7): a live exception, not
+  // drift — must NOT be offered the repair.
+  assert.equal(exceptionNeedsClosing("approved", "new"), false);
+  assert.equal(exceptionNeedsClosing("approved", "investigating"), false);
+  // Not a decided casefile: nothing to reconcile.
+  assert.equal(exceptionNeedsClosing("pending_review", "pending_review"), false);
+  assert.equal(exceptionNeedsClosing("awaiting_docs", "pending_review"), false);
+  assert.equal(exceptionNeedsClosing("approved", null), false);
 });

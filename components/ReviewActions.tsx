@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { reviewCasefile } from "@/app/casefiles/actions";
 import type { ReviewOutcome } from "@/lib/review-action";
-import type { OverrideDraft } from "./casefileModel";
+import { humanReviewNotice, type OverrideDraft } from "./casefileModel";
 import { LockedPolicyValue } from "./LockedPolicyValue";
 import { OverrideDialog } from "./OverrideDialog";
 
@@ -40,11 +40,14 @@ export function ReviewActions(props: { casefileId: string; suggestedTag: string 
   const dialogError = outcome && (outcome.kind === "refused" || outcome.kind === "failed" || outcome.kind === "not_found") ? outcome.message : null;
   const button = "rounded-md border px-4 py-2 text-body font-medium leading-5 disabled:cursor-not-allowed disabled:opacity-40";
 
+  // The wording follows the ACTUAL policy value, never a hard-coded "mandatory".
+  const notice = humanReviewNotice(humanReviewRequired);
+
   return (
     <footer className="sticky bottom-0 z-10 rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
       <div className="mb-3 space-y-1">
         <LockedPolicyValue name="require_human_review" value={humanReviewRequired} />
-        <p className="text-label text-text-muted">Human sign-off is mandatory by policy. The agent recommends; an analyst decides.</p>
+        <p className="text-label text-text-muted">{notice.text}</p>
       </div>
 
       {outcome && !dialog && <OutcomeNote outcome={outcome} />}

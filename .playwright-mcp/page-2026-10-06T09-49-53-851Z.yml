@@ -1,0 +1,235 @@
+- generic [active] [ref=f1e1]:
+  - banner [ref=f1e2]:
+    - generic [ref=f1e3]:
+      - generic [ref=f1e4]: CreditScout
+      - generic [ref=f1e5]: recommends — a human analyst always decides
+  - main [ref=f1e6]:
+    - generic [ref=f1e7]:
+      - generic [ref=f1e8]:
+        - heading "Covenant setup · Northgate Foods" [level=1] [ref=f1e9]
+        - paragraph [ref=f1e10]: The agent proposes each term with a clause behind it. Read each term beside that clause. Nothing governs a test until a person approves it.
+      - generic [ref=f1e11]:
+        - button "Propose again" [ref=f1e12] [cursor=pointer]
+        - paragraph [ref=f1e13]: Proposing again saves a new proposed version. It governs nothing, and this one stays on file.
+      - generic [ref=f1e14]:
+        - paragraph [ref=f1e15]: Stored proposal · version 2 · would take effect 2023-09-20
+        - paragraph [ref=f1e16]: model proposed Every value below was produced by the agent and governs nothing yet. Your approval is the act that makes it govern.
+      - region "Checks raised by the server" [ref=f1e17]:
+        - paragraph [ref=f1e18]: These notes were not stored with this proposal, so they were worked out when this page loaded, from the documents on file now.
+        - generic [ref=f1e19]:
+          - paragraph [ref=f1e20]: Notes from the server’s checks (0)
+          - paragraph [ref=f1e21]: "None raised. That is not a statement that nothing is missing: read the clauses that no term cites, below."
+      - generic [ref=f1e22]:
+        - generic [ref=f1e23]:
+          - region [ref=f1e24]:
+            - heading "Proposed terms" [level=2] [ref=f1e25]
+            - list [ref=f1e26]:
+              - listitem [ref=f1e27]:
+                - generic [ref=f1e28]:
+                  - generic [ref=f1e29]:
+                    - paragraph [ref=f1e30]: Minimum DSCR
+                    - generic [ref=f1e31]: "1.25"
+                  - generic [ref=f1e33]:
+                    - button "CA §7.11(a)" [pressed] [ref=f1e34] [cursor=pointer]:
+                      - text: CA §7.11(a)
+                      - generic [aria-hidden] [ref=f1e35]: ↗
+                    - generic [ref=f1e36]: model proposed
+                - paragraph [ref=f1e37]: ✓ supported by the clause it cites
+                - button "Edit" [ref=f1e38] [cursor=pointer]
+              - listitem [ref=f1e39]:
+                - generic [ref=f1e40]:
+                  - generic [ref=f1e41]:
+                    - paragraph [ref=f1e42]: Test basis
+                    - generic [ref=f1e43]: TTM
+                  - generic [ref=f1e45]:
+                    - button "CA §7.11(a)" [ref=f1e46] [cursor=pointer]:
+                      - text: CA §7.11(a)
+                      - generic [aria-hidden] [ref=f1e47]: ↗
+                    - generic [ref=f1e48]: model proposed
+                - paragraph [ref=f1e49]: ✓ supported by the clause it cites
+                - button "Edit" [ref=f1e50] [cursor=pointer]
+              - listitem [ref=f1e51]:
+                - generic [ref=f1e52]:
+                  - generic [ref=f1e53]:
+                    - paragraph [ref=f1e54]: Numerator base
+                    - generic [ref=f1e55]: Consolidated EBITDA
+                  - generic [ref=f1e57]:
+                    - button "CA §1.01" [ref=f1e58] [cursor=pointer]:
+                      - text: CA §1.01
+                      - generic [aria-hidden] [ref=f1e59]: ↗
+                    - generic [ref=f1e60]: model proposed
+                - paragraph [ref=f1e61]: ✓ supported by the clause it cites
+                - button "Edit" [ref=f1e62] [cursor=pointer]
+              - listitem [ref=f1e63]:
+                - generic [ref=f1e64]:
+                  - generic [ref=f1e65]:
+                    - paragraph [ref=f1e66]: Deductions from the numerator
+                    - generic [ref=f1e67]: unfinanced_capex, cash_taxes
+                  - generic [ref=f1e69]:
+                    - button "CA §1.01" [ref=f1e70] [cursor=pointer]:
+                      - text: CA §1.01
+                      - generic [aria-hidden] [ref=f1e71]: ↗
+                    - generic [ref=f1e72]: model proposed
+                - paragraph [ref=f1e73]: ✓ supported by the clause it cites
+                - button "Edit" [ref=f1e74] [cursor=pointer]
+              - listitem [ref=f1e75]:
+                - generic [ref=f1e77]:
+                  - paragraph [ref=f1e78]: Add-backs
+                  - paragraph [ref=f1e79]: "None proposed. Nothing verifies that none are permitted: read the clauses below."
+                - paragraph [ref=f1e80]: ✓ supported by the clause it cites
+              - listitem [ref=f1e81]:
+                - generic [ref=f1e82]:
+                  - generic [ref=f1e83]:
+                    - paragraph [ref=f1e84]: Debt service components
+                    - generic [ref=f1e85]: scheduled_principal, cash_interest
+                  - generic [ref=f1e87]:
+                    - button "CA §1.01" [ref=f1e88] [cursor=pointer]:
+                      - text: CA §1.01
+                      - generic [aria-hidden] [ref=f1e89]: ↗
+                    - generic [ref=f1e90]: model proposed
+                - paragraph [ref=f1e91]: ✓ supported by the clause it cites
+                - button "Edit" [ref=f1e92] [cursor=pointer]
+              - listitem [ref=f1e93]:
+                - generic [ref=f1e95]:
+                  - paragraph [ref=f1e96]: Amendments applied
+                  - paragraph [ref=f1e97]: None. An amendment on file that no term cites is flagged above.
+                - paragraph [ref=f1e98]: ✓ supported by the clause it cites
+          - region [ref=f1e99]:
+            - generic [ref=f1e100]:
+              - heading "Clauses retrieved but not cited" [level=2] [ref=f1e101]
+              - paragraph [ref=f1e102]: What the model was shown was not stored with this proposal, so this lists every agreement and amendment clause on file that no term cites. Nothing has checked them. Read them for an add-back, a cap or a carve-out that no term mentions.
+              - paragraph [ref=f1e103]: A clause a term cites can still hold a provision no term uses. Read the whole clause around each highlight, not only the highlight.
+            - generic [ref=f1e104]:
+              - heading "Definitions and the financial covenant article (4)" [level=3] [ref=f1e105]
+              - list [ref=f1e106]:
+                - listitem [ref=f1e107]:
+                  - button "CA ARTICLE I ↗ ARTICLE I — DEFINITIONS" [ref=f1e108] [cursor=pointer]:
+                    - generic [ref=f1e109]: CA ARTICLE I ↗
+                    - generic [ref=f1e110]: ARTICLE I — DEFINITIONS
+                - listitem [ref=f1e111]:
+                  - button "CA ARTICLE VII ↗ ARTICLE VII — FINANCIAL COVENANTS" [ref=f1e112] [cursor=pointer]:
+                    - generic [ref=f1e113]: CA ARTICLE VII ↗
+                    - generic [ref=f1e114]: ARTICLE VII — FINANCIAL COVENANTS
+                - listitem [ref=f1e115]:
+                  - button "CA §1.02 ↗ §1.02 Accounting Terms. Accounting terms not defined in this Agreement have the meanings given to them under generally accepted accounting principles consistently applied." [ref=f1e116] [cursor=pointer]:
+                    - generic [ref=f1e117]: CA §1.02 ↗
+                    - generic [ref=f1e118]: §1.02 Accounting Terms.
+                    - generic [ref=f1e119]: Accounting terms not defined in this Agreement have the meanings given to them under generally accepted accounting principles consistently applied.
+                - listitem [ref=f1e120]:
+                  - button "CA §7.10 ↗ §7.10 Limitation on Liens. The Borrower shall not create or permit any lien on its assets other than liens permitted by the Lender in writing." [ref=f1e121] [cursor=pointer]:
+                    - generic [ref=f1e122]: CA §7.10 ↗
+                    - generic [ref=f1e123]: §7.10 Limitation on Liens.
+                    - generic [ref=f1e124]: The Borrower shall not create or permit any lien on its assets other than liens permitted by the Lender in writing.
+            - generic [ref=f1e125]:
+              - heading "Other sections (9)" [level=3] [ref=f1e126]
+              - list [ref=f1e127]:
+                - listitem [ref=f1e128]:
+                  - button "CA ARTICLE IX ↗ ARTICLE IX — MISCELLANEOUS" [ref=f1e129] [cursor=pointer]:
+                    - generic [ref=f1e130]: CA ARTICLE IX ↗
+                    - generic [ref=f1e131]: ARTICLE IX — MISCELLANEOUS
+                - listitem [ref=f1e132]:
+                  - button "CA ARTICLE VI ↗ ARTICLE VI — AFFIRMATIVE COVENANTS" [ref=f1e133] [cursor=pointer]:
+                    - generic [ref=f1e134]: CA ARTICLE VI ↗
+                    - generic [ref=f1e135]: ARTICLE VI — AFFIRMATIVE COVENANTS
+                - listitem [ref=f1e136]:
+                  - button "CA ARTICLE VIII ↗ ARTICLE VIII — EVENTS OF DEFAULT" [ref=f1e137] [cursor=pointer]:
+                    - generic [ref=f1e138]: CA ARTICLE VIII ↗
+                    - generic [ref=f1e139]: ARTICLE VIII — EVENTS OF DEFAULT
+                - listitem [ref=f1e140]:
+                  - button "CA PREAMBLE ↗ SYNTHETIC — FOR DEMONSTRATION CREDIT AGREEMENT dated as of September 20, 2023 between NORTHGATE FOODS, INC., as Borrower, and FAIRHAVEN COMMERCIAL BANK, as Lender." [ref=f1e141] [cursor=pointer]:
+                    - generic [ref=f1e142]: CA PREAMBLE ↗
+                    - generic [ref=f1e143]: SYNTHETIC — FOR DEMONSTRATION
+                    - generic [ref=f1e144]: CREDIT AGREEMENT dated as of September 20, 2023 between NORTHGATE FOODS, INC., as Borrower, and FAIRHAVEN COMMERCIAL BANK, as Lender.
+                - listitem [ref=f1e145]:
+                  - button "CA §6.01 ↗ §6.01 Financial Statements and Compliance Certificates. The Borrower shall deliver to the Lender, promptly after the end of each fiscal quarter, financial statements for the trailing four quarters and a Compliance Certificate stating the Debt Service Cover…" [ref=f1e146] [cursor=pointer]:
+                    - generic [ref=f1e147]: CA §6.01 ↗
+                    - generic [ref=f1e148]: §6.01 Financial Statements and Compliance Certificates.
+                    - generic [ref=f1e149]: The Borrower shall deliver to the Lender, promptly after the end of each fiscal quarter, financial statements for the trailing four quarters and a Compliance Certificate stating the Debt Service Cover…
+                - listitem [ref=f1e150]:
+                  - 'button "CA §8.01 ↗ §8.01 Events of Default. Each of the following is an Event of Default: (a) the Borrower fails to pay any amount when due; (b) the Borrower fails to comply with Section 7.11; (c) any Compliance Certificate is materially incorr…" [ref=f1e151] [cursor=pointer]':
+                    - generic [ref=f1e152]: CA §8.01 ↗
+                    - generic [ref=f1e153]: §8.01 Events of Default.
+                    - generic [ref=f1e154]: "Each of the following is an Event of Default: (a) the Borrower fails to pay any amount when due; (b) the Borrower fails to comply with Section 7.11; (c) any Compliance Certificate is materially incorr…"
+                - listitem [ref=f1e155]:
+                  - button "CA §8.02 ↗ §8.02 Waivers and Amendments. No waiver of any covenant or Event of Default, and no amendment of this Agreement, is effective unless it is in writing and signed by the Lender. A request for a waiver is not a waiver." [ref=f1e156] [cursor=pointer]:
+                    - generic [ref=f1e157]: CA §8.02 ↗
+                    - generic [ref=f1e158]: §8.02 Waivers and Amendments.
+                    - generic [ref=f1e159]: No waiver of any covenant or Event of Default, and no amendment of this Agreement, is effective unless it is in writing and signed by the Lender. A request for a waiver is not a waiver.
+                - listitem [ref=f1e160]:
+                  - button "CA §9.01 ↗ §9.01 Notices. Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Northgate Foods, Inc., at cfo@northgatefoods.example. Notices to the Lender shall be sent to the attention of the…" [ref=f1e161] [cursor=pointer]:
+                    - generic [ref=f1e162]: CA §9.01 ↗
+                    - generic [ref=f1e163]: §9.01 Notices.
+                    - generic [ref=f1e164]: Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Northgate Foods, Inc., at cfo@northgatefoods.example. Notices to the Lender shall be sent to the attention of the…
+                - listitem [ref=f1e165]:
+                  - button "CA §9.02 ↗ §9.02 Governing Law. This Agreement is governed by the laws of the State of New York." [ref=f1e166] [cursor=pointer]:
+                    - generic [ref=f1e167]: CA §9.02 ↗
+                    - generic [ref=f1e168]: §9.02 Governing Law.
+                    - generic [ref=f1e169]: This Agreement is governed by the laws of the State of New York.
+        - complementary "Source clause" [ref=f1e171]:
+          - generic [ref=f1e172]:
+            - paragraph [ref=f1e173]: Credit Agreement §7.11
+            - paragraph [ref=f1e174]: CA §7.11 · effective 2023-09-20
+            - paragraph [ref=f1e175]: Cited for Minimum DSCR
+          - generic [ref=f1e176]:
+            - text: §7.11 Debt Service Coverage Ratio.
+            - mark [ref=f1e177]: (a) Minimum Ratio. The Borrower shall not permit the Debt Service Coverage Ratio, tested as of the last day of each fiscal quarter on a trailing four-quarter basis, to be less than 1.25 to 1.00.
+            - text: (b) Adjustments. No add-back or other adjustment shall be made to Consolidated EBITDA for purposes of this Section 7.11, except as expressly provided in this Agreement as amended in writing. (c) Verification. The Debt Service Coverage Ratio stated in a Compliance Certificate is subject to verification by the Lender against the financial statements delivered under Section 6.01.
+      - region "What is on file" [ref=f1e178]:
+        - generic [ref=f1e179]:
+          - heading "Documents on file" [level=2] [ref=f1e180]
+          - table [ref=f1e181]:
+            - rowgroup [ref=f1e182]:
+              - row [ref=f1e183]:
+                - columnheader "Title" [ref=f1e184]
+                - columnheader "Type" [ref=f1e185]
+                - columnheader "Effective" [ref=f1e186]
+            - rowgroup [ref=f1e187]:
+              - row [ref=f1e188]:
+                - cell "Credit Agreement" [ref=f1e189]
+                - cell "agreement" [ref=f1e190]
+                - cell "2023-09-20" [ref=f1e191]
+              - row [ref=f1e192]:
+                - cell "Financials — Q2 2026" [ref=f1e193]
+                - cell "financials (cannot be a source of terms)" [ref=f1e194]
+                - cell "2026-06-30" [ref=f1e195]
+              - row [ref=f1e196]:
+                - cell "Compliance Certificate — Q2 2026" [ref=f1e197]
+                - cell "compliance certificate (cannot be a source of terms)" [ref=f1e198]
+                - cell "2026-06-30" [ref=f1e199]
+              - row [ref=f1e200]:
+                - cell "Waiver Request Letter — unexecuted" [ref=f1e201]
+                - cell "waiver (cannot be a source of terms)" [ref=f1e202]
+                - cell "2026-08-12" [ref=f1e203]
+        - generic [ref=f1e204]:
+          - heading "Versions" [level=2] [ref=f1e205]
+          - table [ref=f1e206]:
+            - rowgroup [ref=f1e207]:
+              - row [ref=f1e208]:
+                - columnheader "Version" [ref=f1e209]
+                - columnheader "Status" [ref=f1e210]
+                - columnheader "Effective from" [ref=f1e211]
+                - columnheader "Approved by" [ref=f1e212]
+            - rowgroup [ref=f1e213]:
+              - row [ref=f1e214]:
+                - cell "v1" [ref=f1e215]
+                - cell "approved" [ref=f1e216]
+                - cell "2023-09-20" [ref=f1e217]
+                - 'cell "seed: synthetic demo approver" [ref=f1e218]'
+              - row [ref=f1e219]:
+                - cell "v2" [ref=f1e220]
+                - cell "proposed" [ref=f1e221]
+                - cell "2023-09-20" [ref=f1e222]
+                - cell "not approved" [ref=f1e223]
+          - paragraph [ref=f1e224]: Version 1 is the one in force. A new proposal changes nothing until it is approved.
+      - generic [ref=f1e226]:
+        - generic [ref=f1e227]:
+          - generic [ref=f1e228]: Approver (required)
+          - textbox "Approver (required)" [ref=f1e229]
+          - paragraph [ref=f1e230]: A typed name, recorded with the approval. Not a verified identity; nothing checks it is not the proposer.
+        - generic [ref=f1e231]:
+          - paragraph [ref=f1e232]: Approve is disabled because
+          - list [ref=f1e233]:
+            - listitem [ref=f1e234]:
+              - generic [aria-hidden] [ref=f1e235]: ✕
+              - text: Enter the approver's name.
+        - button "Approve terms" [disabled] [ref=f1e237]

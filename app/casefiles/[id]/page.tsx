@@ -39,6 +39,7 @@ interface CasefileRow {
 interface ExceptionRow {
   facility_id: string;
   test_period_end: string;
+  status: string;
 }
 
 /**
@@ -55,7 +56,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   if (!casefile) notFound();
 
   const exception = must(
-    await db.from("exceptions").select("id, facility_id, test_period_end").eq("id", casefile.exception_id).maybeSingle(),
+    await db.from("exceptions").select("id, facility_id, test_period_end, status").eq("id", casefile.exception_id).maybeSingle(),
     "select exceptions",
   ) as ExceptionRow | null;
   if (!exception) throw new Error(`Casefile ${id} names exception ${casefile.exception_id}, which does not exist`);
@@ -98,6 +99,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         suggestedTag: casefile.suggested_tag ?? null,
         humanReviewRequired: humanReviewPolicy(must(policy, "select policy") as { key: string; value: unknown }[] | null),
         review: (((must(reviews, "select reviews") ?? []) as ReviewRecord[])[0]) ?? null,
+        exceptionStatus: exception.status ?? null,
       }}
     />
   );

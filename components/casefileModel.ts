@@ -105,11 +105,14 @@ export interface CalcLogRow {
  *
  *   computed  code produced it; it carries the calc_id of the log row
  *   quoted    an input read from a document; it carries the citation and quote
+ *   term      a human-approved covenant term (the required minimum), not a code
+ *             output and not a document input. Plain, never amber.
  *   uncited   an input with no citation in the log. Drawn as "no citation".
  */
 export type FigureSource =
   | { kind: "computed"; calcId: string }
   | { kind: "quoted"; citation: string; quote: string }
+  | { kind: "term" }
   | { kind: "uncited" };
 
 export type FigureFormat = "ratio" | "signed-ratio" | "amount";
@@ -206,7 +209,22 @@ export function calcRowsFor(row: CalcLogRow): CalcRowView[] {
 
   push("denominator_total", "Denominator total", components.denominator_total, "amount", derived);
   push("dscr", "DSCR", o.dscr, "ratio", derived, o.pass === true ? "passes" : o.pass === false ? "breach" : undefined);
-  push("threshold", "Required minimum", o.threshold, "ratio", derived);
+
+  // The required minimum is a human-approved covenant TERM, not a code output:
+  // it must never render amber "computed by code". It is `quoted` when the log
+  // carries its covenant citation (`terms.threshold.citation`), otherwise a plain
+  // `term`. Never `derived`/computed.
+  if (isNum(o.threshold)) {
+    const cite = readCitation(at(row.inputs, "terms", "threshold", "citation"));
+    out.push({
+      key: "threshold",
+      label: "Required minimum",
+      value: o.threshold,
+      format: "ratio",
+      source: cite ? { kind: "quoted", citation: cite.citation, quote: cite.quote } : { kind: "term" },
+    });
+  }
+
   push("margin", "Margin", o.margin, "signed-ratio", derived);
 
   // The borrower's own figure, where the quarterly test logged it. A figure the
@@ -308,6 +326,26 @@ export function reviewMode(status: unknown): ReviewMode {
   return "not_ready";
 }
 
+/**
+ * An approved or overridden casefile whose exception is still `pending_review` is
+ * the A-4 drift a failed exception close leaves behind (`submitReview` answers
+ * 500 WITH a `review_id`: the decision is recorded, the close is not). The
+ * read-only view has to surface it and offer the repair, because the active
+ * action bar that carried that warning has unmounted.
+ *
+ * Deliberately the exact mirror state, not a bare `!== "closed"`: F7 reopens a
+ * CLOSED exception to `new` when a later quarter breaches, which is a live
+ * exception rather than drift, and `repairException` leaves `new` alone so a
+ * stale review can never false-resolve it. Only `pending_review` is repairable,
+ * so only `pending_review` is surfaced. `awaiting_docs` never reaches here (its
+ * casefile status is not approved/overridden) and its exception stays open by
+ * design.
+ */
+export function exceptionNeedsClosing(casefileStatus: unknown, exceptionStatus: unknown): boolean {
+  if (casefileStatus !== "approved" && casefileStatus !== "overridden") return false;
+  return exceptionStatus === "pending_review";
+}
+
 /** What the recorded decision says, in the words the analyst used. */
 export function decidedHeadline(status: string): string {
   if (status === "approved") return "Approved by an analyst";
@@ -380,4 +418,27 @@ export function citationsOnScreen(claims: readonly { citation: string }[], secti
 export function humanReviewPolicy(rows: readonly { key: string; value: unknown }[] | null | undefined): boolean | null {
   const row = (rows ?? []).find((r) => r.key === "require_human_review");
   return typeof row?.value === "boolean" ? row.value : null;
+}
+
+export interface HumanReviewNotice {
+  /** True only when the policy value is positively `true`: the only case that may claim mandatory. */
+  mandatory: boolean;
+  text: string;
+}
+
+/**
+ * The sentence shown beside the actions, driven by the ACTUAL policy value — never
+ * a hard-coded "mandatory". `true` is the locked-mandatory boundary; `false` says
+ * so plainly and does not pretend otherwise; `null` (the row is missing or not a
+ * boolean) says the policy is not readable and is NOT treated as mandatory. In
+ * every case the agent still never resolves itself — an analyst decides here.
+ */
+export function humanReviewNotice(value: boolean | null): HumanReviewNotice {
+  if (value === true) {
+    return { mandatory: true, text: "Human sign-off is mandatory by policy. The agent recommends; an analyst decides." };
+  }
+  if (value === false) {
+    return { mandatory: false, text: "Policy does not require human sign-off, but the agent never resolves itself; an analyst decides here." };
+  }
+  return { mandatory: false, text: "The human-review policy is not readable, so it is not treated as mandatory. The agent never resolves itself; an analyst decides here." };
 }

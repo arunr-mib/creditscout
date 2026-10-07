@@ -1,5 +1,6 @@
-import { type CalcSection, type ClaimView, type Notice, decidedHeadline, reviewMode } from "./casefileModel";
+import { type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, reviewMode } from "./casefileModel";
 import { CasefileEvidence } from "./CasefileEvidence";
+import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
 import { RecommendationBadge } from "./RecommendationBadge";
 import { ReviewActions } from "./ReviewActions";
@@ -31,6 +32,8 @@ export interface CasefileViewModel {
   suggestedTag: string | null;
   humanReviewRequired: boolean | null;
   review: ReviewRecord | null;
+  /** The owning exception's status, so a decided casefile can detect a failed close (A-4 drift). */
+  exceptionStatus: string | null;
 }
 
 /**
@@ -94,7 +97,14 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} />
       )}
-      {mode === "read_only" && <Decided status={view.status} review={view.review} />}
+      {mode === "read_only" && (
+        <Decided
+          casefileId={view.casefileId}
+          status={view.status}
+          review={view.review}
+          exceptionStatus={view.exceptionStatus}
+        />
+      )}
     </article>
   );
 }
@@ -112,7 +122,18 @@ function NotReady({ status }: { status: string }) {
 }
 
 /** The recorded decision, with no action bar: a review is read-only once made. */
-function Decided({ status, review }: { status: string; review: ReviewRecord | null }) {
+function Decided({
+  casefileId,
+  status,
+  review,
+  exceptionStatus,
+}: {
+  casefileId: string;
+  status: string;
+  review: ReviewRecord | null;
+  exceptionStatus: string | null;
+}) {
+  const needsClosing = exceptionNeedsClosing(status, exceptionStatus);
   return (
     <section aria-labelledby="decided-heading" className="rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
       <h2 id="decided-heading" className="text-card text-human">{decidedHeadline(status)}</h2>
@@ -132,6 +153,20 @@ function Decided({ status, review }: { status: string; review: ReviewRecord | nu
       ) : (
         <p className="mt-2 text-body text-text-secondary">No review record was found for this casefile. Its status is {status}.</p>
       )}
+
+      {/* The decision landed but the exception close did not (A-4 drift). Surfaced
+          here, non-dismissibly, because the active action bar that carried the
+          warning has unmounted — and made repairable from this read-only screen. */}
+      {needsClosing && (
+        <div role="alert" className="mt-4 rounded-md border border-danger border-l-4 bg-danger-bg p-3">
+          <p className="text-body text-danger">
+            The decision is recorded, but this casefile&rsquo;s exception was not closed. It is still open, so it would
+            keep showing as an unresolved exception.
+          </p>
+          <FinishClosing casefileId={casefileId} />
+        </div>
+      )}
+
       <p className="mt-3 text-label text-text-muted">A review is read-only once made.</p>
     </section>
   );
