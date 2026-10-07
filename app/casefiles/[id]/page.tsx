@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { CasefileView, type ReviewRecord } from "@/components/CasefileView";
+import { LiveTrace } from "@/components/LiveTrace";
+import { buildLiveTrace } from "@/components/traceModel";
 import {
   calcSectionsOf,
   citationsOnScreen,
@@ -60,6 +62,25 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
     "select exceptions",
   ) as ExceptionRow | null;
   if (!exception) throw new Error(`Casefile ${id} names exception ${casefile.exception_id}, which does not exist`);
+
+  // While the investigation runs, this same URL shows the live, polling trace
+  // (F9d) rather than a recommendation there is not one of yet. A terminal
+  // status falls through to the concluded view below; `failed` renders its
+  // failed state there too. One URL per casefile.
+  if (casefile.status === "investigating") {
+    const facility = must(
+      await db.from("facilities").select("borrower_name").eq("id", exception.facility_id).maybeSingle(),
+      "select facilities",
+    ) as { borrower_name: string } | null;
+    return (
+      <LiveTrace
+        casefileId={id}
+        borrower={facility?.borrower_name ?? "Unknown borrower"}
+        period={quarterLabel(exception.test_period_end)}
+        trace={buildLiveTrace(casefile.trace)}
+      />
+    );
+  }
 
   const calcIds = Array.isArray(casefile.calc_ids) ? casefile.calc_ids : [];
   const [facility, calcs, policy, reviews, chunks] = await Promise.all([

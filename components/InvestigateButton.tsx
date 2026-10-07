@@ -31,7 +31,8 @@ export function InvestigateButton(props: { exceptionId: string; status: string; 
         setError(result.error);
         return;
       }
-      // TODO(F9d): route to live trace view
+      // The casefile page shows the live, polling trace while the investigation
+      // runs (F9d), then the recommendation once it concludes. One URL.
       router.push(`/casefiles/${result.casefileId}`);
     });
   }
