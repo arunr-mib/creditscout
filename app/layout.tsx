@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { NavRail } from "@/components/NavRail";
+import { loadNavData } from "@/lib/nav-data";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -10,29 +12,15 @@ export const metadata: Metadata = {
   description: "Covenant exception investigation — decision support for credit analysts",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { counts, search } = await loadNavData();
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
-      <body className="min-h-screen">
-        <header className="border-b border-border">
-          <div className="mx-auto flex max-w-content flex-wrap items-baseline gap-3 px-6 py-4">
-            <a href="/" className="text-card text-text">
-              CreditScout
-            </a>
-            <span className="text-label text-text-muted">
-              recommends — a human analyst always decides
-            </span>
-            <nav className="ml-auto flex items-baseline gap-4 text-label">
-              <a href="/" className="text-text-secondary hover:text-text">
-                Portfolio
-              </a>
-              <a href="/governance" className="text-text-secondary hover:text-text">
-                Governance
-              </a>
-            </nav>
-          </div>
-        </header>
-        <main className="mx-auto max-w-content px-6 py-8">{children}</main>
+      <body className="min-h-screen md:flex">
+        <NavRail counts={counts} search={search} />
+        <main className="min-w-0 flex-1 px-6 py-8 md:px-10">
+          <div className="mx-auto max-w-content">{children}</div>
+        </main>
       </body>
     </html>
   );
