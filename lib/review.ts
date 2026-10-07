@@ -10,11 +10,22 @@ import { caseSummaryText, storeLesson, toNumber, type Lesson, type MemoryDeps } 
  *
  *   1. A review that cannot be learned from is not recorded. The lesson is built
  *      and embedded BEFORE anything is written, so an embedding outage is a 500
- *      with the casefile still `pending_review` and no `reviews` row. An approve
- *      or override that looked successful but taught nothing is the failure the
- *      memory effect cannot recover from.
+ *      with the casefile still `pending_review` and no `reviews` row. (This
+ *      holds for the embed step only; see the next paragraph.)
  *   2. Review is read-only once made. A casefile leaves `pending_review` through
  *      a guarded update, so two analysts racing cannot both win.
+ *
+ * WHAT IS AND IS NOT ATOMIC. supabase-js has no transaction, so this is a
+ * sequence of writes, not one. Nothing is written until the lesson is embedded:
+ * an embedding failure leaves no trace. After that the casefile status is
+ * claimed, THEN the `reviews` row is inserted, THEN the exception is closed.
+ * There is a crash window between those writes: if the insert fails and the
+ * restore also fails, or the process dies between the claim and the insert, the
+ * casefile is left decided with no review row (and no lesson), and a retry gets
+ * the already-decided 409. A failure of the final exception close is repaired by
+ * a retry (see `repairException`); the other windows are not. The real fix is a
+ * single Postgres function doing claim + insert + close in one transaction. That
+ * needs a migration, so it is deferred to F9e (owner-applied).
  *
  * Auth model matches `runApprove`: the analyst is recorded by the UI, not
  * authenticated here.
@@ -131,6 +142,22 @@ export async function submitReview(input: ReviewInput, deps: ReviewDeps = {}): P
   ) as CasefileRow | null;
   if (!casefile) return fail(404, "No casefile with that id.");
   if (casefile.status !== "pending_review") {
+    // A retry after a failed exception close lands here: the casefile is decided
+    // but its exception was never closed. Repair that, once, and say so.
+    if (casefile.status === "approved" || casefile.status === "overridden") {
+      if (await repairException(client, casefile)) {
+        return {
+          status: 200,
+          body: {
+            casefile_id: casefile.id,
+            casefile_status: casefile.status,
+            exception_status: EXCEPTION_CLOSED,
+            repaired: true,
+            note: `This casefile was already ${casefile.status}; its exception, left open by a failed earlier close, is now closed. No new review was recorded.`,
+          },
+        };
+      }
+    }
     const decided = ["approved", "overridden", "awaiting_docs"].includes(casefile.status);
     return fail(
       409,
@@ -170,9 +197,11 @@ export async function submitReview(input: ReviewInput, deps: ReviewDeps = {}): P
     return fail(409, `This casefile is already ${now?.status ?? "reviewed"}; a review is read-only once made.`, { casefile_status: now?.status ?? null });
   }
 
-  // ---- 5. the review row. If it cannot be written the casefile goes back, so a
-  // decided casefile never has no review behind it. `reviews` is append-only, so
-  // nothing after this point is ever rolled back.
+  // ---- 5. the review row. If it cannot be written we try to put the casefile
+  // back, best effort. NOT atomic: if the restore fails too, or the process dies
+  // between step 4 and here, the casefile stays decided with no review row. A
+  // transaction (RPC) is the real fix, deferred to F9e. `reviews` is
+  // append-only, so nothing after this point is ever rolled back.
   let reviewId: string;
   try {
     const row = check(
@@ -228,6 +257,23 @@ export async function submitReview(input: ReviewInput, deps: ReviewDeps = {}): P
     status: 200,
     body: { review_id: reviewId, casefile_id: casefile.id, decision, casefile_status: newStatus, exception_status: exceptionStatus },
   };
+}
+
+/**
+ * An approved or overridden casefile whose exception is not closed is A-4 drift,
+ * left by a failed close in an earlier request. Closes it. Returns true only if it
+ * changed something; a closed (or missing) exception is not ours to touch, and the
+ * caller falls through to the ordinary read-only 409. Never used for
+ * `awaiting_docs`: that exception correctly stays open.
+ */
+async function repairException(client: Db, casefile: CasefileRow): Promise<boolean> {
+  const exception = check(
+    await client.from("exceptions").select("id, status").eq("id", casefile.exception_id).maybeSingle(),
+    "read exceptions",
+  ) as { id: string; status: string } | null;
+  if (!exception || exception.status === EXCEPTION_CLOSED) return false;
+  check(await client.from("exceptions").update({ status: EXCEPTION_CLOSED }).eq("id", exception.id), "close exception");
+  return true;
 }
 
 /** Builds the one-line summary from the exception's calculator figures and the facility. Never from model prose. */
