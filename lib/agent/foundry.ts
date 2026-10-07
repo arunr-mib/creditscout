@@ -75,14 +75,53 @@ const TOKEN_SKEW_MS = 5 * 60_000;
 export class FoundryAuthError extends Error {}
 
 /**
- * A bearer token from the Azure CLI, cached until shortly before it expires.
+ * A bearer token for Foundry, from a service principal when one is configured
+ * (deployment), otherwise the Azure CLI (local dev). Cached until shortly before
+ * it expires.
  *
- * The CLI is the credential the owner already has, and it keeps every secret
- * out of `.env`. At deploy (stage 10) this becomes a managed identity; the
- * seam is this one function.
+ * On Vercel there is no `az` CLI, so the CLI path fails and investigations can't
+ * start. When `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` and `AZURE_TENANT_ID` are
+ * set, we take a client-credentials token instead — the deploy seam this
+ * function was always meant to grow. Locally those are unset and the CLI
+ * credential the owner already has keeps working, with no secrets in `.env`.
  */
+async function servicePrincipalToken(now: () => number): Promise<CachedToken | null> {
+  const clientId = process.env.AZURE_CLIENT_ID;
+  const clientSecret = process.env.AZURE_CLIENT_SECRET;
+  const tenantId = process.env.AZURE_TENANT_ID;
+  if (!clientId || !clientSecret || !tenantId) return null; // no SP configured → use the CLI
+
+  const url = `https://login.microsoftonline.com/${encodeURIComponent(tenantId)}/oauth2/v2.0/token`;
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: clientId,
+    client_secret: clientSecret,
+    scope: `${TOKEN_RESOURCE}/.default`,
+  });
+  let res: Response;
+  try {
+    res = await fetch(url, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body });
+  } catch (err) {
+    throw new FoundryAuthError(`the service-principal token request could not be sent: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (!res.ok) {
+    // AAD's error body names the cause (bad secret, wrong tenant, missing role); never log the secret itself.
+    throw new FoundryAuthError(`the service-principal token request failed (${res.status}): ${(await res.text().catch(() => "")).slice(0, 300)}`);
+  }
+  const parsed = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
+  if (!parsed.access_token) throw new FoundryAuthError("the service-principal token response carried no access_token");
+  return { token: parsed.access_token, expiresAt: now() + (Number(parsed.expires_in) || 3600) * 1000 };
+}
+
 export async function accessToken(now: () => number = Date.now): Promise<string> {
   if (cached && cached.expiresAt - TOKEN_SKEW_MS > now()) return cached.token;
+
+  const sp = await servicePrincipalToken(now);
+  if (sp) {
+    cached = sp;
+    return sp.token;
+  }
+
   let stdout: string;
   try {
     ({ stdout } = await exec("az", ["account", "get-access-token", "--resource", TOKEN_RESOURCE, "-o", "json"], {
