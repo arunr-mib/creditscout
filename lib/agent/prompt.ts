@@ -20,8 +20,11 @@ import type { PastCaseHit } from "../retrieval.ts";
  * Pure: strings in, strings out. No network, no database, no clock.
  */
 
-export const SPECIALIST_NAMES = ["document_agent", "definition_agent", "research_agent"] as const;
-export type SpecialistName = (typeof SPECIALIST_NAMES)[number];
+// The names live in their own client-safe module so the browser trace view can
+// reuse them without importing this (prompt-string-heavy) module. Imported for
+// local use and re-exported so existing server-side consumers are unchanged.
+import { SPECIALIST_NAMES, type SpecialistName } from "./specialist-names.ts";
+export { SPECIALIST_NAMES, type SpecialistName };
 
 export const ORCHESTRATOR_NAME = "creditscout_orchestrator";
 

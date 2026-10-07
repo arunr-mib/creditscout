@@ -21,7 +21,7 @@ import {
   truncate,
   type TraceEntry,
 } from "../lib/agent/trace.ts";
-import { SPECIALIST_NAMES } from "../lib/agent/prompt.ts";
+import { SPECIALIST_NAMES } from "../lib/agent/specialist-names.ts";
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
