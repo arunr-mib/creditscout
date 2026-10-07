@@ -3,6 +3,8 @@
  * dimension, so it is asserted on every response: a silent mismatch would
  * surface much later as an unexplainable retrieval failure.
  */
+import { azureOpenAiAuthHeaders } from "./azure-openai-auth.ts";
+
 export const EMBEDDING_DIMENSIONS = 1536;
 
 /** Texts per request. Well under the API's input-array limit, and a facility's whole corpus is ~50 chunks. */
@@ -11,21 +13,18 @@ const API_VERSION = "2024-10-21";
 
 function config() {
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-  const key = process.env.AZURE_OPENAI_API_KEY;
   const deployment = process.env.AZURE_EMBEDDING_DEPLOYMENT;
-  if (!endpoint || !key || !deployment) {
-    throw new Error(
-      "AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY and AZURE_EMBEDDING_DEPLOYMENT must be set",
-    );
+  if (!endpoint || !deployment) {
+    throw new Error("AZURE_OPENAI_ENDPOINT and AZURE_EMBEDDING_DEPLOYMENT must be set");
   }
   const url = `${endpoint.replace(/\/+$/, "")}/openai/deployments/${encodeURIComponent(deployment)}/embeddings?api-version=${API_VERSION}`;
-  return { url, key };
+  return { url };
 }
 
-async function embedBatch(texts: string[], url: string, key: string): Promise<number[][]> {
+async function embedBatch(texts: string[], url: string): Promise<number[][]> {
   const res = await fetch(url, {
     method: "POST",
-    headers: { "api-key": key, "content-type": "application/json" },
+    headers: { ...(await azureOpenAiAuthHeaders()), "content-type": "application/json" },
     body: JSON.stringify({ input: texts }),
   });
   if (!res.ok) {
@@ -51,10 +50,10 @@ async function embedBatch(texts: string[], url: string, key: string): Promise<nu
 /** One 1536-dimension vector per input text, in input order. Throws; never returns a partial result. */
 export async function embed(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return [];
-  const { url, key } = config();
+  const { url } = config();
   const out: number[][] = [];
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    out.push(...(await embedBatch(texts.slice(i, i + BATCH_SIZE), url, key)));
+    out.push(...(await embedBatch(texts.slice(i, i + BATCH_SIZE), url)));
   }
   return out;
 }

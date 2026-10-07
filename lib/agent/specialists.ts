@@ -1,4 +1,5 @@
 import { searchDocuments, type DocumentHit } from "../retrieval.ts";
+import { azureOpenAiAuthHeaders } from "../azure-openai-auth.ts";
 import { proposeTerms } from "./tools/definition-agent.ts";
 import { SPECIALIST_INSTRUCTIONS, type SpecialistName } from "./prompt.ts";
 
@@ -67,15 +68,14 @@ function excerptsFrom(hits: DocumentHit[]): string {
 
 async function azureChat(system: string, user: string): Promise<string> {
   const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-  const key = process.env.AZURE_OPENAI_API_KEY;
   const deployment = process.env.FOUNDRY_SPECIALIST_MODEL;
-  if (!endpoint || !key || !deployment) {
-    throw new Error("AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_API_KEY and FOUNDRY_SPECIALIST_MODEL must be set");
+  if (!endpoint || !deployment) {
+    throw new Error("AZURE_OPENAI_ENDPOINT and FOUNDRY_SPECIALIST_MODEL must be set");
   }
   const url = `${endpoint.replace(/\/+$/, "")}/openai/deployments/${encodeURIComponent(deployment)}/chat/completions?api-version=${API_VERSION}`;
   const res = await fetch(url, {
     method: "POST",
-    headers: { "api-key": key, "content-type": "application/json" },
+    headers: { ...(await azureOpenAiAuthHeaders()), "content-type": "application/json" },
     body: JSON.stringify({
       messages: [
         { role: "system", content: system },
