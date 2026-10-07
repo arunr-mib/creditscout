@@ -232,6 +232,100 @@ const check = <T>(res: { data?: T | null; error: { message: string } | null }, w
 
 // ------------------------------------------------------------------- the flow
 
+// --------------------------------------------------------------- the quarter
+
+export interface FacilityLite {
+  id: string;
+  borrower_name?: string | null;
+}
+
+/** One facility's place in a quarterly run: tested, skipped (no terms), or errored — never dropped. */
+export type QuarterEntry =
+  | { facility_id: string; borrower_name: string | null; status: "tested"; result: TestResult }
+  | { facility_id: string; borrower_name: string | null; status: "skipped"; reason: string }
+  | { facility_id: string; borrower_name: string | null; status: "errored"; error: string };
+
+export interface QuarterResult {
+  test_period_end: string;
+  run_id: string;
+  entries: QuarterEntry[];
+}
+
+export interface RunQuarterDeps extends RunDeps {
+  /** Every facility in the portfolio. Defaults to the `facilities` table. */
+  listFacilities?: (client: Db) => Promise<FacilityLite[]>;
+  /** The per-facility test. Defaults to `runTest`; injected in tests so the loop needs no database. */
+  runOne?: (facilityId: string, periodEnd: string, runId: string | undefined, deps: RunDeps) => Promise<TestResult>;
+}
+
+async function listFacilitiesDefault(client: Db): Promise<FacilityLite[]> {
+  const { data, error } = await client.from("facilities").select("id, borrower_name").order("borrower_name", { ascending: true });
+  if (error) throw new Error(`list facilities: ${error.message}`);
+  return (data ?? []) as FacilityLite[];
+}
+
+const messageOf = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+
+/**
+ * Ambiguity A-1, resolved: the landing screen runs the whole quarter, and the
+ * per-facility `/api/tests/run` stays for re-runs. This loops every facility and
+ * runs `runTest` for each, but it is accountable for all three outcomes rather
+ * than only the happy one:
+ *
+ *   - a facility with no approved terms in force is SKIPPED, with the reason,
+ *     never silently absent from the result
+ *   - a facility whose test throws is RECORDED as errored, so one broken
+ *     borrower cannot take the whole quarter down with it or vanish from view
+ *   - the rest are tested
+ *
+ * No model is involved, exactly as in `runTest`. Pure where it can be: the
+ * database, the facility list and the per-facility test are all injectable.
+ */
+export async function runQuarter(testPeriodEnd: string, runId?: string, deps: RunQuarterDeps = {}): Promise<QuarterResult> {
+  if (!isIsoDate(testPeriodEnd)) throw new RunTestError(400, "test_period_end must be a YYYY-MM-DD date");
+  if (!isQuarterEnd(testPeriodEnd)) {
+    throw new RunTestError(400, "test_period_end must be a quarter end (03-31, 06-30, 09-30 or 12-31)");
+  }
+  const client = deps.client ?? (await defaultClient());
+  const listFacilities = deps.listFacilities ?? listFacilitiesDefault;
+  const loadTerms = deps.loadTerms ?? termsInForce;
+  const runOne = deps.runOne ?? ((f, p, r, d) => runTest(f, p, r, d));
+  // The per-facility deps, minus the quarter-only ones, so an injected calc id or figure reader still reaches runTest.
+  const runDeps: RunDeps = {
+    client,
+    newId: deps.newId,
+    loadTerms: deps.loadTerms,
+    readFigures: deps.readFigures,
+    readReported: deps.readReported,
+  };
+
+  const facilities = await listFacilities(client);
+  const entries: QuarterEntry[] = [];
+  for (const f of facilities) {
+    const borrower_name = f.borrower_name ?? null;
+    let terms: TermsRow | null;
+    try {
+      terms = await loadTerms(client, f.id, testPeriodEnd);
+    } catch (err) {
+      entries.push({ facility_id: f.id, borrower_name, status: "errored", error: messageOf(err) });
+      continue;
+    }
+    // Only approved (or superseded, for a past period) terms govern a test; a
+    // proposed row or nothing at all means the facility is not ready to run.
+    if (!terms || (terms.status !== "approved" && terms.status !== "superseded")) {
+      entries.push({ facility_id: f.id, borrower_name, status: "skipped", reason: NO_APPROVED_TERMS });
+      continue;
+    }
+    try {
+      const result = await runOne(f.id, testPeriodEnd, runId, runDeps);
+      entries.push({ facility_id: f.id, borrower_name, status: "tested", result });
+    } catch (err) {
+      entries.push({ facility_id: f.id, borrower_name, status: "errored", error: messageOf(err) });
+    }
+  }
+  return { test_period_end: testPeriodEnd, run_id: runId ?? DEFAULT_RUN_ID, entries };
+}
+
 export async function runTest(
   facilityId: string,
   periodEnd: string,

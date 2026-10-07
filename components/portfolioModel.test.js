@@ -1,0 +1,124 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  APPROVE_TERMS_FIRST,
+  boardingState,
+  computeKpis,
+  isReopened,
+  runDisabledReason,
+  varianceBadge,
+  verdictOf,
+} from "./portfolioModel.ts";
+
+// ------------------------------------------------------------- the verdict
+
+const row = (over = {}) => ({ computed_dscr: 1.4, passed: true, variance_flagged: false, calc_error: null, ...over });
+
+test("verdictOf: our number clears the threshold and agrees -> compliant", () => {
+  assert.equal(verdictOf(row()), "compliant");
+});
+
+test("verdictOf: our number fails -> breach, whatever the borrower said", () => {
+  assert.equal(verdictOf(row({ computed_dscr: 1.08, passed: false })), "breach");
+  // the borrower's figure never enters the classifier
+  assert.equal(verdictOf(row({ computed_dscr: 1.08, passed: false, variance_flagged: true })), "breach");
+});
+
+test("verdictOf: our number passes but the variance is flagged -> variance, not an alarm", () => {
+  assert.equal(verdictOf(row({ variance_flagged: true })), "variance");
+});
+
+test("verdictOf: a calc_error, a null DSCR or a null passed is not_computed (never a verdict on 0)", () => {
+  assert.equal(verdictOf(row({ calc_error: "missing input: financials.cash_taxes", computed_dscr: null, passed: null })), "not_computed");
+  assert.equal(verdictOf(row({ computed_dscr: null, passed: null })), "not_computed");
+  assert.equal(verdictOf(row({ passed: null })), "not_computed");
+});
+
+// --------------------------------------------------------- variance badge
+
+test("varianceBadge: positive delta means the borrower overstated, and keeps its + sign", () => {
+  // borrower reports 1.31, we computed 1.08 -> +0.23
+  assert.deepEqual(varianceBadge({ computed: 1.08, reported: 1.31, flagged: true }), { text: "Δ +0.23", flagged: true });
+});
+
+test("varianceBadge: a negative delta keeps its sign too", () => {
+  assert.deepEqual(varianceBadge({ computed: 1.31, reported: 1.08, flagged: true }), { text: "Δ -0.23", flagged: true });
+});
+
+test("varianceBadge: exact agreement is Δ 0.00, never -0.00, and not flagged", () => {
+  assert.deepEqual(varianceBadge({ computed: 1.12, reported: 1.12, flagged: false }), { text: "Δ 0.00", flagged: false });
+});
+
+test("varianceBadge: absent when there is no borrower figure, or no number of ours", () => {
+  assert.equal(varianceBadge({ computed: 1.12, reported: null, flagged: false }), null);
+  assert.equal(varianceBadge({ computed: null, reported: 1.12, flagged: false }), null);
+});
+
+// ------------------------------------------------------------- boarding
+
+const AMD2 = { title: "Amendment No. 2", doc_type: "amendment", effective_date: "2026-05-01" };
+
+test("boardingState: an amendment on file that the approved terms do not carry -> not_boarded (the F1/F5 twist)", () => {
+  const approvedWithout = { terms: { effective_amendments: [] } };
+  assert.equal(boardingState(AMD2, approvedWithout), "not_boarded");
+  // and with no approved terms at all it still cannot have been boarded
+  assert.equal(boardingState(AMD2, null), "not_boarded");
+});
+
+test("boardingState: the flag clears once the amendment is boarded, matched by title or by effective date", () => {
+  const byTitle = { terms: { effective_amendments: [{ doc: "Amendment No. 2", effective: "2099-01-01", citation: "Amd 2 §1" }] } };
+  const byDate = { terms: { effective_amendments: [{ doc: "Some other name", effective: "2026-05-01", citation: "Amd 2 §1" }] } };
+  assert.equal(boardingState(AMD2, byTitle), "boarded");
+  assert.equal(boardingState(AMD2, byDate), "boarded");
+});
+
+test("boardingState: non-amendment documents never carry the flag", () => {
+  assert.equal(boardingState({ title: "Credit Agreement", doc_type: "agreement", effective_date: "2024-01-01" }, { terms: { effective_amendments: [] } }), "not_applicable");
+  assert.equal(boardingState({ title: "Financials Q2", doc_type: "financials", effective_date: null }, null), "not_applicable");
+});
+
+// ----------------------------------------------------------------- KPIs
+
+test("computeKpis: open exceptions, pending review, average steps and facilities tested from seeded rows", () => {
+  const k = computeKpis({
+    exceptions: [{ status: "new" }, { status: "investigating" }, { status: "closed" }, { status: "needs_filing" }],
+    casefiles: [
+      { status: "pending_review", steps_count: 6 },
+      { status: "approved", steps_count: 4 },
+      { status: "investigating", steps_count: 2 }, // not yet reviewed: excluded from the average
+    ],
+    tests: [{ facility_id: "a" }, { facility_id: "a" }, { facility_id: "b" }],
+  });
+  assert.equal(k.openExceptions, 3); // the closed one is not open
+  assert.equal(k.pendingReview, 1);
+  assert.equal(k.avgSteps, 5); // (6 + 4) / 2
+  assert.equal(k.facilitiesTested, 2); // distinct facilities
+});
+
+test("computeKpis: avgSteps is null when no case has been reviewed yet (the tile names the next action)", () => {
+  const k = computeKpis({ exceptions: [], casefiles: [{ status: "investigating", steps_count: 3 }], tests: [] });
+  assert.equal(k.avgSteps, null);
+  assert.equal(k.facilitiesTested, 0);
+});
+
+// ------------------------------------------------------------ reopened
+
+test("isReopened: a new exception with a linked casefile was reopened; a fresh one has no casefile yet", () => {
+  assert.equal(isReopened({ status: "new" }, true), true);
+  assert.equal(isReopened({ status: "new" }, false), false);
+  // once it is being worked, it is not "reopened" in the queue sense
+  assert.equal(isReopened({ status: "investigating" }, true), false);
+  assert.equal(isReopened({ status: "closed" }, true), false);
+});
+
+// --------------------------------------------------------- run disabled
+
+test("runDisabledReason: a facility with no approved terms is disabled WITH the inline reason", () => {
+  assert.equal(runDisabledReason({ hasApprovedTerms: false }), APPROVE_TERMS_FIRST);
+  assert.match(APPROVE_TERMS_FIRST, /approve covenant terms first/i);
+});
+
+test("runDisabledReason: a facility with approved terms is not disabled", () => {
+  assert.equal(runDisabledReason({ hasApprovedTerms: true }), null);
+});
