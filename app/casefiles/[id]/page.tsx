@@ -19,6 +19,10 @@ import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
 export const dynamic = "force-dynamic";
+// The pollInvestigation / reviewCasefile / reinvestigate Server Actions hosted
+// here await a sync drive of up to ~25s; raise the cap above Vercel's 10s
+// default (60s is the Hobby ceiling). Reads still return fast.
+export const maxDuration = 60;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

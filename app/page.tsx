@@ -8,6 +8,10 @@ import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
 export const dynamic = "force-dynamic";
+// The investigateException Server Action (startInvestigation) hosted on this
+// route can exceed Vercel's 10s default; 60s is the Hobby ceiling. Normal page
+// renders still return fast — this only raises the cap.
+export const maxDuration = 60;
 
 const must = (res: { data: unknown; error: { message: string } | null }, what: string): unknown => {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);

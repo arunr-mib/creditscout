@@ -4,6 +4,9 @@ import { ExceptionNotFound } from "@/lib/memory";
 import { InvestigationError, startInvestigation } from "@/lib/agent/orchestrator";
 
 export const runtime = "nodejs";
+// startInvestigation embeds the lesson query and creates the Foundry run before
+// returning, which can exceed Vercel's 10s default. 60s is the Hobby ceiling.
+export const maxDuration = 60;
 
 /**
  * Start investigating an exception.

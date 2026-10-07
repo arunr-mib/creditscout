@@ -3,6 +3,10 @@ import { requireToolKey } from "@/lib/agent/auth";
 import { InvestigationError, syncRun } from "@/lib/agent/orchestrator";
 
 export const runtime = "nodejs";
+// One sync drives the Foundry run for up to DEFAULT_DEADLINE_MS (25s) and a
+// malformed-output retry can push it further. Vercel defaults a function to 10s,
+// which would kill the drive mid-step; 60s is the Hobby-plan ceiling and fits.
+export const maxDuration = 60;
 
 /**
  * Drive one investigation forward: mirror the run's completed steps into the
