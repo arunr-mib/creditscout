@@ -1,30 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { CovenantSetup, type DocumentRow, type HistoryRow, type Proposal } from "@/components/CovenantSetup";
 import { amendmentDocs, type Citation, type Terms, type Warning } from "@/components/termsReview";
+import { anonReader } from "@/lib/supabase/anon";
 import { checkTermsProvenance, loadAmendmentTitles, loadSourceChunks, termsWarnings, type TermsRow } from "@/lib/terms";
 
 export const dynamic = "force-dynamic";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Reads only, with the anon key under the RLS read policy. Every write on this
- * screen goes through an API route; there is no write path here to get wrong.
- * The browser-side client reads NEXT_PUBLIC_* names and this runs on the server,
- * so it accepts the server-side names too.
- */
-function anon() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY must be set");
-  return createClient(url, key, { auth: { persistSession: false } });
-}
-
 export default async function CovenantSetupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const db = anon();
+  const db = anonReader();
 
   const facility = await db.from("facilities").select("id, borrower_name").eq("id", id).maybeSingle();
   if (facility.error) throw new Error(`select facilities: ${facility.error.message}`);

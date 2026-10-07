@@ -21,7 +21,7 @@ import { appendNotes, STEP_CAP_CHECK, stoppedAtCap, type Note } from "./notes.ts
 import { DEFAULT_BASE_URL } from "./openapi.ts";
 import { buildInvestigationPrompt, SPECIALIST_NAMES, type SpecialistName } from "./prompt.ts";
 import { SPECIALIST_RUNNERS, type SpecialistRunner } from "./specialists.ts";
-import { localEntries, mapRunStepsToTrace, memoryUnavailableEntry, mergeTrace, type TraceEntry } from "./trace.ts";
+import { localEntries, mapRunStepsToTrace, memoryLoadedEntry, memoryUnavailableEntry, mergeTrace, type TraceEntry } from "./trace.ts";
 
 export { STEP_CAP_CHECK, stoppedAtCap };
 
@@ -304,6 +304,22 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
       );
     } catch (markErr) {
       console.error("the memory-unavailable marker could not be written; the run starts anyway", markErr);
+    }
+  }
+
+  // The positive counterpart, ONLY when there is something to record. Cold with
+  // nothing on file is normal and leaves no entry (no "0"); a failed search has
+  // its marker above. The casefile screen's "seen similar" badge reads this, so
+  // it shows what actually informed the run rather than a later recomputation.
+  // Like the marker, a write that fails costs the badge, never the investigation.
+  if (lessons.length > 0) {
+    try {
+      check(
+        await client.from("casefiles").update({ trace: [memoryLoadedEntry(lessons.length, new Date(now()))] }).eq("id", casefile.id),
+        "record memory loaded",
+      );
+    } catch (markErr) {
+      console.error("the memory-loaded entry could not be written; the run starts anyway", markErr);
     }
   }
 

@@ -69,7 +69,9 @@ export default {
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: { sm: "4px", md: "8px", lg: "12px" },
-      maxWidth: { content: "1280px" },
+      // content: design.md §4. panel: the clause drawer, §5.4. dialog: half the
+      // content width, §12.12 (`max-w-content/2` is not a class).
+      maxWidth: { content: "1280px", panel: "480px", dialog: "640px" },
       transitionDuration: { fast: "120ms", panel: "200ms", step: "240ms" },
       transitionTimingFunction: { panel: "cubic-bezier(0.16,1,0.3,1)" },
     },

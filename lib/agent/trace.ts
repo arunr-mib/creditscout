@@ -22,6 +22,8 @@ export interface TraceEntry {
   output_summary: string;
   /** ISO 8601. When the step finished, falling back to when it started. */
   ts: string;
+  /** Only on a `memory_loaded` entry: how many lessons the investigation was handed. Read it with `lessonsLoaded`. */
+  count?: number;
 }
 
 /** A trace is a live view, not a transcript. Past this, nobody reads it. */
@@ -42,6 +44,17 @@ export const CALCULATOR_TOOL = "dscr_calculator";
 export const MEMORY_UNAVAILABLE_STEP = "memory_unavailable";
 
 /**
+ * The positive counterpart: the lesson search succeeded and handed the
+ * investigation N > 0 lessons. Written ONLY when N > 0. A search that finds
+ * nothing is a normal cold start (`reviews` starts empty), not a degradation and
+ * not an event, so it leaves no entry at all; "0" is never recorded. That gives
+ * three honest states in `casefiles.trace`: `memory_loaded` (warm, N lessons),
+ * `memory_unavailable` (the search failed), neither (cold, nothing on file).
+ * The casefile screen's "seen similar" badge reads this through `lessonsLoaded`.
+ */
+export const MEMORY_LOADED_STEP = "memory_loaded";
+
+/**
  * Trace entries written by us rather than mapped from a Foundry run step.
  *
  * `mapRunStepsToTrace` is a pure function of the run's steps, so mirroring
@@ -49,7 +62,7 @@ export const MEMORY_UNAVAILABLE_STEP = "memory_unavailable";
  * degradation recorded before the run started would be erased by the first
  * sync.
  */
-export const LOCAL_TRACE_TOOLS: readonly string[] = [MEMORY_UNAVAILABLE_STEP];
+export const LOCAL_TRACE_TOOLS: readonly string[] = [MEMORY_UNAVAILABLE_STEP, MEMORY_LOADED_STEP];
 
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
@@ -273,6 +286,37 @@ export function memoryUnavailableEntry(reason: string, at: Date): TraceEntry {
     output_summary: truncate(`memory search failed: ${reason} \u2014 this investigation ran with no past lessons`),
     ts: at.toISOString(),
   };
+}
+
+/**
+ * The entry that says N lessons informed this investigation. The count is a
+ * field, not prose, so nothing downstream has to parse a sentence for it.
+ * Throws on anything but a positive integer: "0 lessons" is not an entry.
+ */
+export function memoryLoadedEntry(count: number, at: Date): TraceEntry {
+  if (!Number.isInteger(count) || count < 1) throw new Error("memoryLoadedEntry: a memory_loaded entry records at least one lesson");
+  return {
+    n: 1,
+    tool: MEMORY_LOADED_STEP,
+    input_summary: "top 3 lessons for this facility",
+    output_summary: `memory loaded: ${count} lesson${count === 1 ? "" : "s"}`,
+    ts: at.toISOString(),
+    count,
+  };
+}
+
+/**
+ * How many lessons informed this investigation, from the trace the start of the
+ * run wrote: the count on the `memory_loaded` entry, or 0 when there is none
+ * (cold, or memory was unavailable). Junk, a missing count or a non-positive
+ * one read as 0, so a malformed entry can never put a number on screen.
+ */
+export function lessonsLoaded(trace: unknown): number {
+  const list = Array.isArray(trace) ? trace : [];
+  for (const e of list) {
+    if (isObj(e) && e.tool === MEMORY_LOADED_STEP && typeof e.count === "number" && Number.isInteger(e.count) && e.count > 0) return e.count;
+  }
+  return 0;
 }
 
 /** The locally recorded entries already stored on a casefile, in order. */

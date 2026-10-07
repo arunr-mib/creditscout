@@ -25,8 +25,10 @@ export function ClausePanel(props: {
   reason?: string;
   /** A citation the term gave that resolves to no clause on file. */
   unresolved?: string;
+  /** What cites the clause, for the two alerts below: "term" on the covenant screen, "claim" on a casefile. */
+  subject?: string;
 }) {
-  const { clause, quote, quotes = [], reason, unresolved } = props;
+  const { clause, quote, quotes = [], reason, unresolved, subject = "term" } = props;
 
   if (unresolved) {
     return (
@@ -34,7 +36,7 @@ export function ClausePanel(props: {
         <div role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>
           <span className="font-mono">{unresolved}</span> does not resolve to any clause on file for this facility, so
-          there is nothing to check this term against.
+          there is nothing to check this {subject} against.
         </div>
       </Shell>
     );
@@ -83,8 +85,8 @@ export function ClausePanel(props: {
       {quote && !span && (
         <div role="alert" className="mb-3 rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>
-          The quote this term cites is not in this clause. Nothing below is highlighted for it, because nothing here
-          supports the term.
+          The quote this {subject} cites is not in this clause. Nothing below is highlighted for it, because nothing here
+          supports the {subject}.
         </div>
       )}
 

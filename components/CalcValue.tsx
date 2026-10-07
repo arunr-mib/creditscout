@@ -41,10 +41,21 @@ export function CalcValue(props: CalcValueProps) {
       <span className="font-mono text-num text-code-bright">
         {props.value.toFixed(2)}
       </span>
-      <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
-        <span aria-hidden="true">⟡ </span>
-        computed by code · {props.calcId}
-      </span>
+      <CalcBadge calcId={props.calcId} />
+    </span>
+  );
+}
+
+/**
+ * The provenance badge on its own, for a table that keeps the value and its
+ * source in separate columns (CalcTable). It is the same badge CalcValue draws,
+ * so a computed figure reads identically wherever it appears.
+ */
+export function CalcBadge({ calcId }: { calcId: string }) {
+  return (
+    <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+      <span aria-hidden="true">⟡ </span>
+      computed by code · {calcId}
     </span>
   );
 }
