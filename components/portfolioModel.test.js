@@ -136,3 +136,17 @@ test("I-2: the queue picks the newest non-superseded casefile, whatever order ro
   assert.equal(m.get("e1").id, "new");
   assert.equal(m.has("e2"), false);
 });
+
+test("the live casefile wins over a NEWER failed one (a dead re-run must not shadow it)", () => {
+  // The one-live-per-exception index allows many failed rows alongside the live
+  // one; a failed re-run that could not start is newer but must not be returned.
+  const rows = [
+    { id: "live", exception_id: "e1", status: "pending_review", created_at: "2026-10-06T10:00:00Z" },
+    { id: "dead1", exception_id: "e1", status: "failed", created_at: "2026-10-07T09:00:00Z" },
+    { id: "dead2", exception_id: "e1", status: "failed", created_at: "2026-10-07T10:00:00Z" },
+    { id: "only-failed", exception_id: "e2", status: "failed", created_at: "2026-10-07T10:00:00Z" },
+  ];
+  const m = currentCasefiles(rows);
+  assert.equal(m.get("e1").id, "live", "the pending_review casefile, not the newer failed one");
+  assert.equal(m.has("e2"), false, "an exception with only failed casefiles reads as investigate");
+});

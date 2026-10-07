@@ -171,17 +171,20 @@ export function runDisabledReason(input: { hasApprovedTerms: boolean }): string 
 }
 
 /**
- * One casefile per exception for the queue: the NEWEST that is not superseded.
- * A superseded casefile is history; letting it win would feed stale state to
- * `hasCasefile` / `isReopened`. An exception whose casefiles are all superseded
- * gets none.
+ * One casefile per exception for the queue: the live one — newest that is
+ * neither superseded nor failed. `superseded` is history and `failed` is a dead
+ * attempt (a re-run that could not start, say); letting either win would feed
+ * stale state to `hasCasefile` / `isReopened` and hide the real recommendation.
+ * The one-live-per-exception index guarantees at most one such casefile, so an
+ * exception whose only casefiles are failed/superseded correctly gets none —
+ * which reads as "investigate" rather than a broken run.
  */
 export function currentCasefiles<T extends { exception_id: string; status: string; created_at?: string | null }>(
   rows: readonly T[],
 ): Map<string, T> {
   const out = new Map<string, T>();
   for (const r of rows) {
-    if (r.status === "superseded") continue;
+    if (r.status === "superseded" || r.status === "failed") continue;
     const held = out.get(r.exception_id);
     if (!held || (r.created_at ?? "") > (held.created_at ?? "")) out.set(r.exception_id, r);
   }
