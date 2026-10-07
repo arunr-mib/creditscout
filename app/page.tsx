@@ -41,6 +41,7 @@ interface ExceptionRow {
   computed_dscr: number | null;
   reported_dscr: number | null;
   required_dscr: number | null;
+  test_id: string;
 }
 interface CasefileRow {
   id: string;
@@ -76,7 +77,7 @@ export default async function Home() {
   const [facilitiesRes, testsRes, exceptionsRes, documentsRes, casefilesRes, termsRes] = await Promise.all([
     db.from("facilities").select("id, borrower_name, industry").order("borrower_name", { ascending: true }),
     db.from("tests").select("id, facility_id, test_period_end, computed_dscr, reported_dscr, threshold, passed, variance_flagged, calc_id, calc_error").eq("run_id", "demo"),
-    db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr"),
+    db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
     db.from("documents").select("id, facility_id, doc_type, title, effective_date").order("effective_date", { ascending: true }),
     db.from("casefiles").select("id, exception_id, status, steps_count").eq("run_id", "demo"),
     db.from("covenant_terms").select("facility_id, terms, status").eq("status", "approved"),
@@ -89,7 +90,14 @@ export default async function Home() {
     reported_dscr: num(t.reported_dscr),
     threshold: Number(t.threshold),
   }));
-  const exceptions = (must(exceptionsRes, "select exceptions") ?? []) as ExceptionRow[];
+  // Exceptions have no run_id of their own — it lives on their test. Scope the
+  // queue to the demo run by keeping only exceptions whose test is a demo test,
+  // or a verification run's exception (e.g. verify-8c) would surface here as a
+  // duplicate breach row for the same borrower and period.
+  const demoTestIds = new Set(tests.map((t) => t.id));
+  const exceptions = ((must(exceptionsRes, "select exceptions") ?? []) as ExceptionRow[]).filter((e) =>
+    demoTestIds.has(e.test_id),
+  );
   const documents = (must(documentsRes, "select documents") ?? []) as (DocumentView & { facility_id: string })[];
   const casefiles = (must(casefilesRes, "select casefiles") ?? []) as CasefileRow[];
   const approvedTerms = (must(termsRes, "select covenant_terms") ?? []) as TermsRow[];
