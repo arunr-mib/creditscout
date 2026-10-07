@@ -96,6 +96,19 @@ export function OverrideDialog(props: {
           </select>
         </div>
 
+        {/* A preview of what becomes the retrievable lesson, so the analyst sees
+            the precedent they are authoring before saving it (audit 3.7). */}
+        {draft.reason.trim() !== "" && (
+          <div className="rounded-md border border-border border-l-2 border-l-model bg-surface p-3">
+            <p className="text-label text-text-muted">This becomes a lesson, retrieved on similar cases:</p>
+            <p className="mt-1 text-body text-text">
+              &ldquo;{draft.reason.trim()}&rdquo;
+              {draft.confirmedTag && <span className="text-text-muted"> · {draft.confirmedTag}</span>}
+              {draft.correctedOutcome && <span className="text-text-muted"> · reached {OUTCOME_LABEL[draft.correctedOutcome as keyof typeof OUTCOME_LABEL] ?? draft.correctedOutcome}</span>}
+            </p>
+          </div>
+        )}
+
         {error && (
           <p role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
             <span aria-hidden="true">✕ </span>{error}

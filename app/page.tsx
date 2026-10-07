@@ -62,6 +62,7 @@ interface TermsRow {
   facility_id: string;
   terms: unknown;
   status: string;
+  version: number;
 }
 
 /** Last day of the quarter before `today` (UTC): the most recent complete test period. */
@@ -92,7 +93,7 @@ export default async function Home() {
     db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
     db.from("documents").select("id, facility_id, doc_type, title, effective_date").order("effective_date", { ascending: true }),
     db.from("casefiles").select("id, exception_id, status, recommendation, steps_count, created_at").eq("run_id", "demo"),
-    db.from("covenant_terms").select("facility_id, terms, status").eq("status", "approved"),
+    db.from("covenant_terms").select("facility_id, terms, status, version").eq("status", "approved"),
   ]);
 
   const facilities = (must(facilitiesRes, "select facilities") ?? []) as FacilityRow[];
@@ -164,10 +165,10 @@ export default async function Home() {
 
         <StatBand
           stats={[
-            { label: "Open exceptions", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
-            { label: "Awaiting your review", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
-            { label: "Avg steps / case", value: kpis.avgSteps, empty: "—", tone: "muted" },
-            { label: `Facilities tested`, value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
+            { label: "Open exceptions", help: "Breaches not yet closed", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
+            { label: "Awaiting your review", help: "The agent finished; you decide", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
+            { label: "Avg steps / case", help: "Investigation steps", value: kpis.avgSteps, empty: "—", tone: "muted" },
+            { label: `Facilities tested`, help: `This quarter`, value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
           ]}
         />
       </header>
@@ -197,7 +198,7 @@ export default async function Home() {
             >
               {review.map(({ e, cf, borrower }) => (
                 <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="human"
-                  ours={num(e.computed_dscr)} required={num(e.required_dscr)}>
+                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
                   <RecommendationBadge recommendation={cf?.recommendation} />
                   <Link
                     href={`/casefiles/${cf!.id}`}
@@ -216,7 +217,7 @@ export default async function Home() {
             >
               {investigate.map(({ e, cf, borrower }) => (
                 <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="danger"
-                  ours={num(e.computed_dscr)} required={num(e.required_dscr)}>
+                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
                   <InvestigateButton exceptionId={e.id} status={e.status} hasCasefile={cf != null} />
                 </QueueRow>
               ))}
@@ -225,7 +226,7 @@ export default async function Home() {
             <QueueGroup title="In progress" hint="The agent is working." count={running.length}>
               {running.map(({ e, cf, borrower }) => (
                 <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="model"
-                  ours={num(e.computed_dscr)} required={num(e.required_dscr)}>
+                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
                   <span className="inline-flex items-center gap-2 text-label text-model-bright">
                     <span className="inline-block h-2 w-2 rounded-sm bg-model motion-safe:animate-pulse" aria-hidden="true" />
                     Investigating
@@ -240,7 +241,7 @@ export default async function Home() {
             <QueueGroup title="Awaiting documents" hint="A review asked for more before deciding." count={docs.length}>
               {docs.map(({ e, cf, borrower }) => (
                 <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="muted"
-                  ours={num(e.computed_dscr)} required={num(e.required_dscr)}>
+                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
                   <Link href={`/casefiles/${cf!.id}`} className="text-label text-text-secondary underline-offset-2 hover:underline">
                     Open casefile
                   </Link>
@@ -275,6 +276,7 @@ export default async function Home() {
                     <h3 className="text-card text-text">
                       {f.borrower_name}
                       {f.industry && <span className="ml-2 text-label font-normal text-text-muted">{f.industry}</span>}
+                      {terms && <span className="ml-2 font-mono text-label font-normal text-text-muted">Terms v{terms.version}</span>}
                     </h3>
                     <RunTestButton
                       label={test ? `Re-run ${quarterLabel(targetPeriod)}` : `Run ${quarterLabel(targetPeriod)}`}
@@ -341,7 +343,7 @@ export default async function Home() {
 function StatBand({
   stats,
 }: {
-  stats: { label: string; value: number | null; empty: string; tone: "danger" | "human" | "muted" }[];
+  stats: { label: string; help?: string; value: number | null; empty: string; tone: "danger" | "human" | "muted" }[];
 }) {
   const tone = { danger: "text-danger", human: "text-human", muted: "text-text" } as const;
   return (
@@ -356,6 +358,7 @@ function StatBand({
             ) : (
               <p className="mt-1 text-body text-text-muted">{s.empty}</p>
             )}
+            {s.help && <p className="mt-1 text-badge text-text-muted">{s.help}</p>}
           </div>
         );
       })}
@@ -399,6 +402,7 @@ function QueueRow({
   borrower,
   period,
   ours,
+  theirs,
   required,
   edge,
   children,
@@ -406,6 +410,7 @@ function QueueRow({
   borrower: string;
   period: string;
   ours: number | null;
+  theirs: number | null;
   required: number | null;
   edge: keyof typeof EDGE;
   children: React.ReactNode;
@@ -421,8 +426,14 @@ function QueueRow({
       </div>
       <dl className="flex items-center gap-6 font-mono text-num">
         <div>
+          {/* Ours: code-computed, amber provenance. Theirs: the borrower's own
+              figure, never amber. Showing both answers "does their report agree?" */}
           <dt className="text-label text-text-muted">Ours</dt>
           <dd className="text-code-bright">{dscr(ours)}</dd>
+        </div>
+        <div>
+          <dt className="text-label text-text-muted">Theirs</dt>
+          <dd className="text-text-secondary">{theirs == null ? "not reported" : dscr(theirs)}</dd>
         </div>
         <div>
           <dt className="text-label text-text-muted">Required</dt>

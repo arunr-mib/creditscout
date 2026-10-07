@@ -39,6 +39,9 @@ export interface CasefileViewModel {
   missingEvidence: string[];
   notes: Notice[];
   suggestedTag: string | null;
+  /** The approved covenant terms version the test was computed on. */
+  termsVersion: number | null;
+  termsStatus: string | null;
   humanReviewRequired: boolean | null;
   review: ReviewRecord | null;
   /** The owning exception's status, so a decided casefile can detect a failed close (A-4 drift). */
@@ -110,6 +113,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             <Figure label="Required" value={fmt(headline.required)} />
             <Figure label="Margin" value={fmtSigned(headline.margin)} tone={headline.margin != null && headline.margin < 0 ? "danger" : undefined} />
             <Figure label="Calculation" value={`calc_${headline.calcId.slice(0, 8)}`} muted />
+            {view.termsVersion != null && (
+              <Figure label="Governing terms" value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`} muted />
+            )}
             {view.humanReviewRequired && (
               <div className="ml-auto inline-flex items-center gap-2 self-center text-label text-text-muted">
                 <span aria-hidden="true">🔒</span> Human approval required · Locked

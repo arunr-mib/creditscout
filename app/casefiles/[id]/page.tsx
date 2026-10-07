@@ -14,6 +14,7 @@ import {
 } from "@/components/casefileModel";
 import type { Clause } from "@/components/termsReview";
 import { loadFacilityChunks } from "@/lib/agent/evidence";
+import { termsInForce } from "@/lib/terms";
 import { currentCasefileId } from "@/lib/casefile-current";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
@@ -88,7 +89,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   }
 
   const calcIds = Array.isArray(casefile.calc_ids) ? casefile.calc_ids : [];
-  const [facility, calcs, policy, reviews, chunks] = await Promise.all([
+  const [facility, calcs, policy, reviews, chunks, governingTerms] = await Promise.all([
     db.from("facilities").select("borrower_name").eq("id", exception.facility_id).maybeSingle(),
     calcIds.length > 0
       ? db.from("calc_log").select("calc_id, inputs, outputs, created_at").in("calc_id", calcIds).order("created_at", { ascending: true })
@@ -96,6 +97,9 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
     db.from("policy").select("key, value").eq("key", "require_human_review"),
     db.from("reviews").select("decision, reason, corrected_outcome, pattern_tag, created_at").eq("casefile_id", id).order("created_at", { ascending: false }).limit(1),
     loadFacilityChunks(db, exception.facility_id),
+    // The approved terms version in force for the test period — the one the test
+    // was computed on. Resilient: a lookup failure just omits it from the header.
+    termsInForce(db, exception.facility_id, exception.test_period_end).catch(() => null),
   ]);
 
   const claims = claimsOf(casefile.claims);
@@ -127,6 +131,8 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         missingEvidence: Array.isArray(casefile.missing_evidence) ? casefile.missing_evidence.filter((m: unknown): m is string => typeof m === "string") : [],
         notes: noticesOf(casefile.guardrail_notes),
         suggestedTag: casefile.suggested_tag ?? null,
+        termsVersion: governingTerms?.version ?? null,
+        termsStatus: governingTerms?.status ?? null,
         humanReviewRequired: humanReviewPolicy(must(policy, "select policy") as { key: string; value: unknown }[] | null),
         review: (((must(reviews, "select reviews") ?? []) as ReviewRecord[])[0]) ?? null,
         exceptionStatus: exception.status ?? null,
