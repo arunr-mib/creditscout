@@ -8,6 +8,7 @@ import {
   traceStepKind,
   isCalculatorStep,
   stepRole,
+  investigationArc,
   LIVE_STATUS,
 } from "./traceModel.ts";
 import { SPECIALIST_NAMES } from "../lib/agent/prompt.ts";
@@ -143,4 +144,44 @@ test("toSyncState reads the route body into a client-safe shape and defaults to 
   assert.equal(s.steps, 4);
   const empty = toSyncState("cf-1", {});
   assert.equal(empty.casefileStatus, LIVE_STATUS);
+});
+
+// -------------------------------------------- orchestration framing (arc + decisions)
+
+// A realistic Harbor-shaped run: two searches, a failing baseline, a specialist
+// delegation, then a recomputation.
+const HARBOR_TRACE = [
+  { tool: "search_documents", input_summary: "DSCR covenant definition", output_summary: "1 chunk: CA §7.11", ts: "" },
+  { tool: "search_documents", input_summary: "financial figures", output_summary: "3 chunks", ts: "" },
+  { tool: "dscr_calculator", input_summary: "threshold 1.25 · add-backs: none", output_summary: "DSCR 1.12 vs 1.25 — fail (calc_id a)", ts: "" },
+  { tool: "definition_agent", input_summary: "{}", output_summary: "returned corrected terms with an add-back", ts: "" },
+  { tool: "dscr_calculator", input_summary: "add-backs: restructuring charges", output_summary: "DSCR 1.30 vs 1.25 — pass (calc_id b)", ts: "" },
+];
+
+test("investigationArc summarises the run as a plan", () => {
+  const { steps } = buildLiveTrace(HARBOR_TRACE);
+  const arc = investigationArc(steps);
+  assert.deepEqual({ searches: arc.searches, calculations: arc.calculations, delegations: arc.delegations }, { searches: 2, calculations: 2, delegations: 1 });
+  assert.equal(arc.summary, "2 evidence searches · 2 calculations · 1 specialist delegation");
+});
+
+test("investigationArc has no summary before any step", () => {
+  assert.equal(investigationArc([]).summary, null);
+});
+
+test("decisions mark the two turning points, and nothing else", () => {
+  const { steps } = buildLiveTrace(HARBOR_TRACE);
+  assert.equal(steps[0].decision, null); // first search
+  assert.equal(steps[2].decision, null); // baseline calc itself
+  assert.match(steps[3].decision, /delegated to reinterpret/); // specialist after failing baseline
+  assert.match(steps[4].decision, /Recomputed on the corrected terms/); // recompute after specialist
+});
+
+test("a delegation after a PASSING calculation is not framed as a rescue", () => {
+  const trace = [
+    { tool: "dscr_calculator", input_summary: "x", output_summary: "DSCR 1.40 vs 1.25 — pass (calc_id a)", ts: "" },
+    { tool: "research_agent", input_summary: "{}", output_summary: "context", ts: "" },
+  ];
+  const { steps } = buildLiveTrace(trace);
+  assert.equal(steps[1].decision, null);
 });

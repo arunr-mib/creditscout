@@ -5,6 +5,7 @@ import { CalcTable } from "./CalcTable";
 import { ClaimList } from "./ClaimList";
 import type { CalcSection, ClaimView } from "./casefileModel";
 import { ClausePanel } from "./ClausePanel";
+import { TraceArc } from "./TraceArc";
 import { TraceStep } from "./TraceStep";
 import type { LiveTraceView } from "./traceModel";
 import type { Clause } from "./termsReview";
@@ -127,11 +128,14 @@ export function CasefileEvidence(props: {
               {trace.steps.length === 0 ? (
                 <p className="text-body text-text-muted">No trace was recorded for this investigation.</p>
               ) : (
-                <ol className="space-y-4">
-                  {trace.steps.map((step) => (
-                    <TraceStep key={step.n} step={step} />
-                  ))}
-                </ol>
+                <div className="space-y-4">
+                  <TraceArc steps={trace.steps} />
+                  <ol className="space-y-4">
+                    {trace.steps.map((step) => (
+                      <TraceStep key={step.n} step={step} />
+                    ))}
+                  </ol>
+                </div>
               )}
             </div>
           )}

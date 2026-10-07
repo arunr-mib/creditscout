@@ -40,6 +40,14 @@ export function TraceStep({ step }: { step: TraceStepView }) {
   const time = clock(step.ts);
   return (
     <li className={`border-l-2 ${RULE[step.kind]} pl-3`}>
+      {/* The orchestrator's turn that led here, read from the sequence. Teal: it
+          is the reasoning layer deciding, not a tool computing. */}
+      {step.decision && (
+        <p className="mb-2 flex items-start gap-2 text-label text-model-bright">
+          <span aria-hidden="true">↳</span>
+          {step.decision}
+        </p>
+      )}
       <p className="flex flex-wrap items-baseline gap-3">
         <span className="font-mono text-label text-text-muted" aria-hidden="true">
           {step.n}
@@ -49,7 +57,10 @@ export function TraceStep({ step }: { step: TraceStepView }) {
           <span className="rounded-sm bg-code-bg px-1 py-px text-badge uppercase tracking-wider text-code">code</span>
         )}
         {step.kind === "model" && (
-          <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">agent</span>
+          <>
+            <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">specialist</span>
+            <span className="text-label text-text-muted">delegated by the orchestrator</span>
+          </>
         )}
         {time && <span className="ml-auto font-mono text-label text-text-muted">{time}</span>}
       </p>

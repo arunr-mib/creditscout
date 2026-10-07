@@ -100,6 +100,12 @@ export interface TraceStepView {
   calculator: boolean;
   /** Plain-language "what this step was for", or null for an unattributable step. */
   role: string | null;
+  /**
+   * The orchestrator's decision AT this step, derived from the sequence (not from
+   * any model reasoning, which Foundry does not expose): why the investigation
+   * turned here. Null on a step that is not a turning point.
+   */
+  decision: string | null;
 }
 
 /**
@@ -142,8 +148,14 @@ export function buildLiveTrace(trace: unknown): LiveTraceView {
       ts: str(e.ts),
       calculator: isCalculatorStep(e.tool),
       role: stepRole(e.tool),
+      decision: null,
     });
   }
+
+  // Second pass: the orchestrator's turning points, read from adjacency.
+  steps.forEach((s, i) => {
+    s.decision = decisionFor(s, steps[i - 1]);
+  });
 
   return {
     // Reuse F9b's reader so the live badge and the concluded badge count lessons
@@ -153,6 +165,55 @@ export function buildLiveTrace(trace: unknown): LiveTraceView {
     memoryNote: unavailable ? truncate(str(unavailable.output_summary)) : null,
     steps,
   };
+}
+
+// ------------------------------------------------------ orchestration framing
+
+/** A calculator step whose summary says the ratio did not meet the threshold. */
+function calcFailed(step: TraceStepView): boolean {
+  return step.calculator && /\bfail\b/i.test(step.output);
+}
+
+/**
+ * The orchestrator's decision at a step, read from the SEQUENCE alone — the spike
+ * confirmed Foundry exposes no step-by-step reasoning, so this never invents a
+ * motive. It only names a turning point the structure makes unambiguous: a
+ * delegation right after a failing baseline, and a recalculation right after a
+ * specialist returned corrected terms.
+ */
+function decisionFor(step: TraceStepView, prev: TraceStepView | undefined): string | null {
+  if (!prev) return null;
+  if (step.kind === "model" && calcFailed(prev)) {
+    return "The baseline did not pass — the orchestrator delegated to reinterpret the covenant rather than conclude.";
+  }
+  if (step.calculator && prev.kind === "model") {
+    return "Recomputed on the corrected terms the specialist returned.";
+  }
+  return null;
+}
+
+export interface ArcView {
+  searches: number;
+  calculations: number;
+  delegations: number;
+  /** A one-line plan summary, or null when there are no steps yet. */
+  summary: string | null;
+}
+
+/**
+ * The investigation as a plan, in one line — so the trace reads as an
+ * orchestration the agent carried out, not a log. Derived from the steps already
+ * built; purely a count, never a claim about intent.
+ */
+export function investigationArc(steps: readonly TraceStepView[]): ArcView {
+  const searches = steps.filter((s) => s.tool === "search_documents" || s.tool === "search_past_cases").length;
+  const calculations = steps.filter((s) => s.calculator).length;
+  const delegations = steps.filter((s) => s.kind === "model").length;
+  const parts: string[] = [];
+  if (searches > 0) parts.push(`${searches} evidence ${searches === 1 ? "search" : "searches"}`);
+  if (calculations > 0) parts.push(`${calculations} ${calculations === 1 ? "calculation" : "calculations"}`);
+  if (delegations > 0) parts.push(`${delegations} specialist ${delegations === 1 ? "delegation" : "delegations"}`);
+  return { searches, calculations, delegations, summary: parts.length > 0 ? parts.join(" · ") : null };
 }
 
 // ----------------------------------------------------------- the poll reducer

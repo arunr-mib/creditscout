@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { pollInvestigation } from "@/app/casefiles/actions";
 import { pollDecision, type LiveTraceView } from "./traceModel";
 import { SeenSimilarBadge } from "./SeenSimilarBadge";
+import { TraceArc } from "./TraceArc";
 import { TraceStep } from "./TraceStep";
 
 /**
@@ -128,7 +129,8 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
         </div>
       </header>
 
-      <section aria-label="Investigation trace" aria-live="polite" className="rounded-md border border-border-strong bg-surface p-4">
+      <section aria-label="Investigation trace" aria-live="polite" className="space-y-4 rounded-md border border-border-strong bg-surface p-4">
+        <TraceArc steps={steps} />
         {steps.length === 0 ? (
           <p role="status" className="text-body text-text-secondary">
             {phase === "starting" ? "Investigation starting…" : "The agent is working. The first step will appear here as it completes."}
