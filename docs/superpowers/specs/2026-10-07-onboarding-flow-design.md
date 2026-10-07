@@ -65,7 +65,7 @@ Extend `data/generate.mjs` (or add a sibling fixture) to emit a 4th borrower und
 - **Unit (`node:test`)**: `createLoan` validation (missing/blank fields rejected; valid input shapes the insert). A small pure helper that decides the current onboarding step from a loan's documents + terms rows (no documents → step 2; agreement but no proposed terms → step 3; proposed → step 4; approved → done).
 - **Manual/live**: run the whole flow on the deploy with the 4th synthetic borrower — create → upload agreement → propose (watch the agent read it) → approve → see it in the Portfolio.
 
-## 8. Open questions
+## 8. Decisions (resolved with the owner)
 
-- Should step 4 render the covenant-setup screen *inside* the stepper chrome, or navigate to the existing page and treat approval as the flow's end? (Leaning: navigate to the existing page to maximise reuse; the stepper shows step 4 as "in progress".)
-- Do we also relabel "facility" → "loan" app-wide now, or only in the onboarding flow this spec adds? (Leaning: align the few visible usages now for consistency.)
+- **Step 4 review & approve: embedded in the wizard chrome (B).** Render the existing `CovenantSetup` component inside the onboarding stepper (the onboarding route loads the same data the covenant-setup page loads and passes it to the component; the approve server action is reused unchanged). The stepper stays visible so the flow reads as one guided sequence. (This supersedes the earlier "navigate away" lean — the approval UI is already a reusable component, so embedding costs little and demos far better.)
+- **Relabel "facility" → "loan" app-wide.** Align all visible copy (e.g. "Facilities tested" → "Loans tested", the Portfolio/casefile wording). The DB table `facilities` and all code identifiers are unchanged — copy only.
