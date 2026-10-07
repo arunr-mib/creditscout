@@ -52,10 +52,13 @@ export function CalcValue(props: CalcValueProps) {
  * so a computed figure reads identically wherever it appears.
  */
 export function CalcBadge({ calcId }: { calcId: string }) {
+  // Show a SHORT, readable reference (calc_xxxxxxxx), consistent with the
+  // casefile banner. The full id is the audit anchor, so it stays available on
+  // hover rather than cluttering the figure with a 36-character UUID.
   return (
-    <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+    <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code" title={`calculation ${calcId}`}>
       <span aria-hidden="true">⟡ </span>
-      computed by code · {calcId}
+      computed by code · calc_{calcId.slice(0, 8)}
     </span>
   );
 }
