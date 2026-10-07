@@ -98,7 +98,7 @@ The investigation path must genuinely vary by case (see §4.3); this is what dis
 
 ## 4. Workflows
 
-Implemented as Next.js route handlers plus Foundry agent definitions. Agent definitions live in `n8n/` no longer; see `docs/engineering/implementation-specs.md` for the file-by-file blueprint.
+Implemented as Next.js route handlers plus Foundry agent definitions. See `docs/engineering/implementation-specs.md` for the file-by-file blueprint.
 
 ### 4.1 Ingest
 
