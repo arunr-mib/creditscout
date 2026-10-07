@@ -75,17 +75,17 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
     return () => clearInterval(t);
   }, []);
 
-  // Keep the on-screen trace current WHILE a drive() slice is still in flight.
-  // One `pollInvestigation` call drives the run for up to ~25s and only then
-  // hands back, but `syncRun` mirrors each step into `casefiles.trace` as it
-  // happens — so a steady refresh shows the steps arriving live, instead of the
-  // screen sitting on "starting" until the whole slice returns. This component
-  // is mounted only while the casefile is `investigating` (the page hands off to
-  // the concluded view otherwise), so refreshing while mounted is always right.
-  useEffect(() => {
-    const t = setInterval(() => router.refresh(), 2000);
-    return () => clearInterval(t);
-  }, [router]);
+  // KNOWN LIMITATION (not yet fixed): while an investigation runs, the steps
+  // `syncRun` mirrors into `casefiles.trace` do NOT appear live. A full page
+  // load renders every step correctly (teal/amber and all), but a soft
+  // `router.refresh()` from this mounted component does not re-deliver the new
+  // `trace` prop — the view only advances when the drive loop's long
+  // `pollInvestigation` slice returns (~25s) or the page is reloaded. The right
+  // fix is to render the trace from what `pollInvestigation` RETURNS (component
+  // state) rather than from a refreshed server prop, plus shorter sync slices;
+  // that removes the dependency on soft-refresh entirely. Tracked for a
+  // follow-up — it is a smoothness issue, not a correctness one: nothing shown
+  // is ever wrong, and the concluded recommendation always renders.
 
   const { steps } = trace;
 
