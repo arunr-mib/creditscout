@@ -52,19 +52,37 @@ Set every variable from `.env.example`. The values are in your local `.env`
   origin. Set it after the first deploy gives you the URL, then redeploy (or set
   it to your known production domain up front).
 
-## 4. The self-call + protection interaction (read before enabling protection)
-During an investigation the server fetches its own `/api/tools/*` routes at
-`PUBLIC_BASE_URL` with the tool key. Those routes are tool-key gated, so a public
-URL is safe for them. **Recommended for the demo: deploy PUBLIC (no Vercel
-Deployment Protection).** The controls are: tool routes + ingest + approve are
-key-gated; the read-only UI (portfolio, casefile, governance) is intended to be
-public; all data is synthetic.
+## 4. Access control — the one real decision (read this)
+The pre-deploy batch gated the two most dangerous raw routes (`/api/ingest`,
+`/api/covenant-terms/approve`). But on a **public** URL the analyst surface is
+still fully open: the Server Actions (upload, approve, review, investigate) and a
+few still-ungated routes (`/api/review`, `/api/tests/run`,
+`/api/tests/run-quarter`, `/api/covenant-terms/propose`) can be driven by anyone
+who reaches the URL. Concretely, a stranger could **approve/override casefiles,
+run tests, and spend Azure tokens by hammering Investigate.** Per-route gating
+can't fix this — the UI *is* the analyst surface. Two viable options:
 
-If you *do* want Vercel Deployment Protection (password/SSO) on the whole app,
-the server's self-calls to `/api/tools/*` will be blocked by the protection gate
-unless you also enable **Protection Bypass for Automation** and send its token on
-those calls — tell the controller and it will add the bypass header to the
-self-call. Don't enable protection without that, or investigations will 401.
+- **Option A (recommended) — Vercel Deployment Protection (password/SSO) on the
+  whole app.** One gate covers every route, Server Action and the token-spend
+  surface. MVP-appropriate (the spec puts analyst auth out of scope). **Cost:**
+  the server's self-calls to `/api/tools/*` would be blocked by the gate, so you
+  must also turn on **Protection Bypass for Automation** (Vercel generates a
+  secret); set it as `VERCEL_AUTOMATION_BYPASS_SECRET`, and the controller adds
+  that bypass header to the two self-call sites (a ~10-line change, ready on
+  request). Without the bypass, investigations 401.
+
+- **Option B — deploy PUBLIC, no protection.** Simplest, no code change. Accept
+  that anyone with the URL can mutate the synthetic demo and spend tokens. Only
+  sane if the URL is kept private and short-lived. All data is synthetic and
+  re-seedable, but **token spend is real money.**
+
+The read-only reads (portfolio, casefile, governance) use the publishable key
+under anon RLS (SELECT-only) — safe to be public either way.
+
+## 4b. Vercel body-size cap (uploads)
+Vercel caps a serverless function request body at **4.5 MB**. The app allows 10
+MB uploads, so a large package will fail at the platform before the app sees it.
+Fine for the demo's synthetic PDFs (small); note it if you upload big files.
 
 ## 5. Deploy
 1. Trigger the deploy. First build ~2–4 min.
