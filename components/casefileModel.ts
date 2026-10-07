@@ -281,6 +281,49 @@ export function headlineFor(sections: readonly CalcSection[]): CasefileHeadline 
   };
 }
 
+export interface AmendmentStatus {
+  title: string;
+  effectiveDate: string | null;
+  /** Effective on or before the test period end, so it should bear on this test. */
+  effectiveForPeriod: boolean;
+  /** Reflected in the governing (approved) terms' `effective_amendments`. */
+  boarded: boolean;
+}
+
+/**
+ * The amendment-status strip for the casefile (credit-review ask: show whether
+ * an amendment is on file, effective for the period, and reflected in the
+ * governing terms). An amendment effective for the period but NOT in the
+ * approved terms' `effective_amendments` is the boarding lag the whole
+ * investigation hinges on — surfaced here so the analyst sees it before reading
+ * a narrative that may lean on it.
+ *
+ * Pure: the page supplies the facility's amendment documents and the governing
+ * terms' `effective_amendments`. Titles are matched case/space-insensitively
+ * because the documents row and the terms citation can format the same title
+ * slightly differently.
+ */
+export function amendmentStatuses(
+  documents: readonly { doc_type: string | null; title: string; effective_date: string | null }[],
+  effectiveAmendments: unknown,
+  testPeriodEnd: string | null,
+): AmendmentStatus[] {
+  const norm = (s: string): string => s.trim().toLowerCase();
+  const boarded = new Set<string>(
+    (Array.isArray(effectiveAmendments) ? effectiveAmendments : [])
+      .map((a) => (isObj(a) && typeof a.doc === "string" ? norm(a.doc) : ""))
+      .filter(Boolean),
+  );
+  return documents
+    .filter((d) => d.doc_type === "amendment")
+    .map((d) => ({
+      title: d.title,
+      effectiveDate: d.effective_date ?? null,
+      effectiveForPeriod: d.effective_date != null && testPeriodEnd != null && d.effective_date <= testPeriodEnd,
+      boarded: boarded.has(norm(d.title)),
+    }));
+}
+
 const AMOUNT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 
 export function formatFigure(value: number, format: FigureFormat): string {

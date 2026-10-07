@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
@@ -45,6 +45,11 @@ export interface CasefileViewModel {
   /** The approved covenant terms version the test was computed on. */
   termsVersion: number | null;
   termsStatus: string | null;
+  /** The covenant test period end (quarter end) and its basis (e.g. TTM). */
+  testPeriodEnd: string | null;
+  testBasis: string | null;
+  /** Amendments on file and whether the governing terms reflect them (boarding lag). */
+  amendments: AmendmentStatus[];
   humanReviewRequired: boolean | null;
   review: ReviewRecord | null;
   /** The owning exception's status, so a decided casefile can detect a failed close (A-4 drift). */
@@ -111,6 +116,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             can see at a glance — not a paragraph away (audit 3.3). */}
         {showRec && headline && (
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 border-t border-border px-5 py-3">
+            {view.testPeriodEnd && (
+              <Figure label="Test period" value={`ending ${view.testPeriodEnd}`} tag={view.testBasis ?? undefined} muted />
+            )}
             <Figure label="Governing DSCR" value={fmt(headline.dscr)} tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
               tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined} />
             <Figure label="Required" value={fmt(headline.required)} />
@@ -128,20 +136,25 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         )}
       </header>
 
+      {view.amendments.length > 0 && <AmendmentPanel amendments={view.amendments} termsVersion={view.termsVersion} />}
+
       {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
       {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
 
       {mode !== "not_ready" && view.explanation && (
         <section aria-labelledby="explanation-heading" className="space-y-2">
-          <h2 id="explanation-heading" className="text-card text-text">Agent&rsquo;s reasoning</h2>
+          <div className="flex flex-wrap items-baseline gap-3">
+            <h2 id="explanation-heading" className="text-card text-text">Agent&rsquo;s reasoning</h2>
+            <span className="rounded-sm border border-border-strong px-2 py-px text-label text-text-muted">
+              provisional · secondary to the governing result
+            </span>
+          </div>
           <p className="max-w-content text-body text-text-secondary">{view.explanation}</p>
-          {view.notes.length > 0 && (
-            <p className="max-w-content text-label text-text-muted">
-              This is the agent&rsquo;s account. Where it and the governing calculation disagree, the enforced
-              recommendation above and the guardrail notices below are what govern — the code decides the number, not the
-              narrative.
-            </p>
-          )}
+          <p className="max-w-content text-label text-text-muted">
+            This is the agent&rsquo;s account, not the decision. Where it and the governing calculation above disagree —
+            for example if it applies an amendment the approved terms do not yet reflect — the governing result and the
+            guardrail notices below are what govern. The code decides the number, not the narrative.
+          </p>
         </section>
       )}
 
@@ -220,6 +233,49 @@ function Figure({
         {tag && <span className="ml-2 text-label text-text-muted">{tag}</span>}
       </dd>
     </div>
+  );
+}
+
+/**
+ * Amendment status (credit-review ask): whether each amendment on file is
+ * reflected in the governing terms. An amendment effective for the period but
+ * not boarded is the boarding lag — shown prominently, because the agent's
+ * narrative may lean on it while the governing calculation above does not.
+ */
+function AmendmentPanel({ amendments, termsVersion }: { amendments: AmendmentStatus[]; termsVersion: number | null }) {
+  const lag = amendments.some((a) => a.effectiveForPeriod && !a.boarded);
+  return (
+    <section
+      aria-labelledby="amendments-heading"
+      className={`rounded-md border bg-surface p-4 ${lag ? "border-human border-l-2 border-l-human" : "border-border"}`}
+    >
+      <h2 id="amendments-heading" className="text-card text-text">Amendment status</h2>
+      <ul className="mt-2 space-y-2">
+        {amendments.map((a) => {
+          const status = a.boarded
+            ? { label: termsVersion != null ? `Reflected in terms v${termsVersion}` : "Reflected in the governing terms", tone: "text-success" }
+            : a.effectiveForPeriod
+              ? { label: "On file — not reflected in the governing terms", tone: "text-human" }
+              : { label: "On file — effective after this period", tone: "text-text-muted" };
+          return (
+            <li key={a.title} className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="text-body text-text">
+                {a.title}
+                {a.effectiveDate && <span className="text-label text-text-muted"> · effective {a.effectiveDate}</span>}
+              </span>
+              <span className={`text-label ${status.tone}`}>{status.label}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {lag && (
+        <p className="mt-3 max-w-content text-label text-text-secondary">
+          An amendment effective for this period is not reflected in the governing terms
+          {termsVersion != null ? ` (v${termsVersion})` : ""}. The calculation above uses the approved terms as they
+          stand; any analysis that applies this amendment is provisional until an analyst boards it.
+        </p>
+      )}
+    </section>
   );
 }
 

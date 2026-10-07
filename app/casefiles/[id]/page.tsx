@@ -3,6 +3,7 @@ import { CasefileView, type ReviewRecord } from "@/components/CasefileView";
 import { LiveTrace } from "@/components/LiveTrace";
 import { buildLiveTrace } from "@/components/traceModel";
 import {
+  amendmentStatuses,
   calcSectionsOf,
   citationsOnScreen,
   claimsOf,
@@ -89,7 +90,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   }
 
   const calcIds = Array.isArray(casefile.calc_ids) ? casefile.calc_ids : [];
-  const [facility, calcs, policy, reviews, chunks, governingTerms] = await Promise.all([
+  const [facility, calcs, policy, reviews, chunks, governingTerms, documents] = await Promise.all([
     db.from("facilities").select("borrower_name").eq("id", exception.facility_id).maybeSingle(),
     calcIds.length > 0
       ? db.from("calc_log").select("calc_id, inputs, outputs, created_at").in("calc_id", calcIds).order("created_at", { ascending: true })
@@ -100,6 +101,10 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
     // The approved terms version in force for the test period — the one the test
     // was computed on. Resilient: a lookup failure just omits it from the header.
     termsInForce(db, exception.facility_id, exception.test_period_end).catch(() => null),
+    // The facility's documents, for the amendment-status strip: an amendment on
+    // file but not reflected in the governing terms is the boarding lag the
+    // analyst must see before trusting a narrative that leans on it.
+    db.from("documents").select("doc_type, title, effective_date").eq("facility_id", exception.facility_id),
   ]);
 
   const claims = claimsOf(casefile.claims);
@@ -112,6 +117,17 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   );
 
   const supersededBy = casefile.status === "superseded" ? await currentCasefileId(db, casefile.exception_id) : null;
+
+  // The test period's basis (TTM) and the amendment-status strip, from the
+  // governing terms and the facility's documents. Both are read-only context.
+  const termsObj = (governingTerms?.terms ?? null) as Record<string, unknown> | null;
+  const testPeriod = termsObj && typeof termsObj.test_period === "object" && termsObj.test_period !== null ? (termsObj.test_period as Record<string, unknown>) : null;
+  const testBasis = testPeriod && typeof testPeriod.basis === "string" ? testPeriod.basis : null;
+  const amendments = amendmentStatuses(
+    (must(documents, "select documents") ?? []) as { doc_type: string | null; title: string; effective_date: string | null }[],
+    termsObj?.effective_amendments,
+    exception.test_period_end,
+  );
 
   return (
     <CasefileView
@@ -134,6 +150,9 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         suggestedTag: casefile.suggested_tag ?? null,
         termsVersion: governingTerms?.version ?? null,
         termsStatus: governingTerms?.status ?? null,
+        testPeriodEnd: exception.test_period_end ?? null,
+        testBasis,
+        amendments,
         humanReviewRequired: humanReviewPolicy(must(policy, "select policy") as { key: string; value: unknown }[] | null),
         review: (((must(reviews, "select reviews") ?? []) as ReviewRecord[])[0]) ?? null,
         exceptionStatus: exception.status ?? null,

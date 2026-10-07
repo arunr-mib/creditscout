@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   CORRECTED_OUTCOMES,
   RECOMMENDATION_BADGE,
+  amendmentStatuses,
   calcRowsFor,
   calcSectionsOf,
   chipCitation,
@@ -350,4 +351,30 @@ test("headlineFor pulls the governing calc's DSCR, required, and margin", () => 
 
 test("headlineFor is null when there is no calculation to summarise", () => {
   assert.equal(headlineFor([]), null);
+});
+
+// ------------------------------------------------------- amendmentStatuses
+
+test("amendmentStatuses flags an amendment on file but not boarded into the terms", () => {
+  const docs = [
+    { doc_type: "agreement", title: "Credit Agreement", effective_date: "2025-01-01" },
+    { doc_type: "amendment", title: "Amendment No. 2", effective_date: "2026-03-01" },
+    { doc_type: "financials", title: "Financials — Q2 2026", effective_date: null },
+  ];
+  // Governing terms cite no amendment: the boarding lag.
+  const r = amendmentStatuses(docs, [], "2026-06-30");
+  assert.equal(r.length, 1);
+  assert.deepEqual(r[0], { title: "Amendment No. 2", effectiveDate: "2026-03-01", effectiveForPeriod: true, boarded: false });
+});
+
+test("amendmentStatuses marks a boarded amendment (title match is case/space-insensitive)", () => {
+  const docs = [{ doc_type: "amendment", title: "Amendment No. 2", effective_date: "2026-03-01" }];
+  const r = amendmentStatuses(docs, [{ doc: "amendment no. 2 ", effective: "2026-03-01", citation: "Amd 2 §3" }], "2026-06-30");
+  assert.equal(r[0].boarded, true);
+});
+
+test("amendmentStatuses: an amendment effective after the period does not bear on this test", () => {
+  const docs = [{ doc_type: "amendment", title: "Amendment No. 3", effective_date: "2026-09-01" }];
+  const r = amendmentStatuses(docs, [], "2026-06-30");
+  assert.equal(r[0].effectiveForPeriod, false);
 });
