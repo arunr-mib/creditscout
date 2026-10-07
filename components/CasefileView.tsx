@@ -1,4 +1,5 @@
 import { RECOMMENDATION_BADGE, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, reviewMode } from "./casefileModel";
+import type { LiveTraceView } from "./traceModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
@@ -36,6 +37,8 @@ export interface CasefileViewModel {
   claims: ClaimView[];
   sections: CalcSection[];
   clauses: Record<string, Clause | null>;
+  /** The recorded investigation trace, for the evidence pane's Trace tab. */
+  trace: LiveTraceView;
   missingEvidence: string[];
   notes: Notice[];
   suggestedTag: string | null;
@@ -142,7 +145,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         </section>
       )}
 
-      {mode !== "not_ready" && <CasefileEvidence sections={view.sections} claims={view.claims} clauses={view.clauses} />}
+      {mode !== "not_ready" && <CasefileEvidence sections={view.sections} claims={view.claims} clauses={view.clauses} trace={view.trace} />}
 
       {view.missingEvidence.length > 0 && (
         <section aria-labelledby="missing-heading" className="space-y-2">

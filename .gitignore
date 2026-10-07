@@ -33,3 +33,4 @@ data/facilities/**/*.pdf
 
 # Playwright MCP session artifacts
 .playwright-mcp/
+phaseB-casefile.png

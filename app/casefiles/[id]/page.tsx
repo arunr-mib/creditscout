@@ -128,6 +128,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         claims,
         sections,
         clauses,
+        trace: buildLiveTrace(casefile.trace),
         missingEvidence: Array.isArray(casefile.missing_evidence) ? casefile.missing_evidence.filter((m: unknown): m is string => typeof m === "string") : [],
         notes: noticesOf(casefile.guardrail_notes),
         suggestedTag: casefile.suggested_tag ?? null,
