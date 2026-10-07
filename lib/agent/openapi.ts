@@ -12,6 +12,20 @@ import { DOC_TYPES, DEFAULT_K, MAX_K } from "../retrieval.ts";
 export const DEFAULT_BASE_URL = "http://localhost:3000";
 export const SECURITY_SCHEME = "ToolKey";
 
+/**
+ * The base URL for the agent's self-calls, normalised.
+ *
+ * `PUBLIC_BASE_URL` is set by hand in the deploy environment, and the common
+ * mistake is to paste the bare host (`creditscout.vercel.app`) with no scheme —
+ * which makes `fetch(base + path)` throw "Invalid URL" and every tool call fail.
+ * So a scheme-less value gets `https://` prepended. Trailing slashes are
+ * trimmed. An unset value falls back to localhost for local work.
+ */
+export function resolveBaseUrl(env: Record<string, string | undefined> = process.env): string {
+  const raw = (env.PUBLIC_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
 /** The header name as it appears on the wire (the auth check reads it case-insensitively). */
 export const HEADER_NAME = "X-CreditScout-Tool-Key";
 
@@ -170,7 +184,7 @@ const json = (schema: object) => ({ "application/json": { schema } });
 
 /** The document, with `servers[0].url` taken from `PUBLIC_BASE_URL` (or localhost for local work). */
 export function buildOpenApi(env: Record<string, string | undefined> = process.env) {
-  const base = (env.PUBLIC_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const base = resolveBaseUrl(env);
   return {
     openapi: "3.0.3",
     info: {

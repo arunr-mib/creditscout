@@ -18,7 +18,7 @@ import {
 } from "./foundry.ts";
 import { enforceCasefile } from "./enforce.ts";
 import { appendNotes, STEP_CAP_CHECK, stoppedAtCap, type Note } from "./notes.ts";
-import { DEFAULT_BASE_URL } from "./openapi.ts";
+import { resolveBaseUrl } from "./openapi.ts";
 import { buildInvestigationPrompt, SPECIALIST_NAMES, type SpecialistName } from "./prompt.ts";
 import { SPECIALIST_RUNNERS, type SpecialistRunner } from "./specialists.ts";
 import { localEntries, mapRunStepsToTrace, memoryLoadedEntry, memoryUnavailableEntry, mergeTrace, type TraceEntry } from "./trace.ts";
@@ -460,7 +460,7 @@ export function toolRequestBody(name: string, args: unknown, ctx: ToolContext): 
 async function callToolRoute(name: string, args: unknown, ctx: ToolContext): Promise<string> {
   const path = TOOL_ROUTES[name];
   if (!path) return JSON.stringify({ error: `${name} is not a tool this agent has.` });
-  const base = (process.env.PUBLIC_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const base = resolveBaseUrl();
   try {
     const res = await fetch(`${base}${path}`, {
       method: "POST",

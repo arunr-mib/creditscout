@@ -1,5 +1,5 @@
 import { TOOL_KEY_HEADER, protectionBypassHeaders } from "./auth.ts";
-import { DEFAULT_BASE_URL } from "./openapi.ts";
+import { resolveBaseUrl } from "./openapi.ts";
 import { LIVE_STATUS, toSyncState, type SyncState } from "../../components/traceModel.ts";
 
 /**
@@ -29,7 +29,7 @@ export interface SyncDeps {
 export async function syncInvestigation(casefileId: string, deps: SyncDeps = {}): Promise<SyncState> {
   const fetchImpl = deps.fetchImpl ?? fetch;
   const toolKey = deps.toolKey ?? process.env.CREDITSCOUT_TOOL_KEY ?? "";
-  const base = (deps.baseUrl ?? process.env.PUBLIC_BASE_URL ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const base = resolveBaseUrl({ PUBLIC_BASE_URL: deps.baseUrl ?? process.env.PUBLIC_BASE_URL });
 
   let res: Response;
   try {
