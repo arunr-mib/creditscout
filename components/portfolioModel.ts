@@ -169,3 +169,21 @@ export const APPROVE_TERMS_FIRST = "Approve covenant terms first";
 export function runDisabledReason(input: { hasApprovedTerms: boolean }): string | null {
   return input.hasApprovedTerms ? null : APPROVE_TERMS_FIRST;
 }
+
+/**
+ * One casefile per exception for the queue: the NEWEST that is not superseded.
+ * A superseded casefile is history; letting it win would feed stale state to
+ * `hasCasefile` / `isReopened`. An exception whose casefiles are all superseded
+ * gets none.
+ */
+export function currentCasefiles<T extends { exception_id: string; status: string; created_at?: string | null }>(
+  rows: readonly T[],
+): Map<string, T> {
+  const out = new Map<string, T>();
+  for (const r of rows) {
+    if (r.status === "superseded") continue;
+    const held = out.get(r.exception_id);
+    if (!held || (r.created_at ?? "") > (held.created_at ?? "")) out.set(r.exception_id, r);
+  }
+  return out;
+}

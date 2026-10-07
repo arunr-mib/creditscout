@@ -251,7 +251,14 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
 
   const bundle = await buildExceptionProfile(exceptionId, { client });
 
-  const existing = await latestCasefile(client, exceptionId);
+  // The casefile holding the live slot wins over a newer failed attempt: after a
+  // re-run that failed to start, the restored prior casefile is still the one a
+  // retry must supersede. With no holder, the newest casefile decides, as before.
+  const holder = check(
+    await client.from("casefiles").select(CASEFILE_COLUMNS).eq("exception_id", exceptionId).order("created_at", { ascending: false }),
+    "read casefiles",
+  ) as CasefileRow[] | null;
+  const existing = (holder ?? []).find((c) => !FREE_SLOT_STATUSES.includes(c.status)) ?? (holder ?? [])[0] ?? null;
   const supersedeExisting =
     deps.supersede === true && existing !== null && SUPERSEDABLE_STATUSES.includes(existing.status);
   if (existing && !FREE_SLOT_STATUSES.includes(existing.status) && !supersedeExisting) {
@@ -275,6 +282,23 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   // 409 never leaves an exception with no live casefile. Only the status moves:
   // the row, its exception link, trace and agent_output stay as the audit
   // record. The status guard means a casefile that changed under us is left alone.
+  // If the new investigation then fails to START, the prior casefile gets its
+  // original status back: otherwise a closed exception is left with a
+  // superseded casefile and a failed one, and no way to retry.
+  const restorePrior = async (): Promise<void> => {
+    if (!supersedeExisting || !existing) return;
+    await client
+      .from("casefiles")
+      .update({ status: existing.status })
+      .eq("id", existing.id)
+      .eq("status", "superseded")
+      .then(
+        (r: { error: { message: string } | null }) => {
+          if (r.error) console.error("could not restore the superseded casefile", r.error.message);
+        },
+        (e: unknown) => console.error("could not restore the superseded casefile", e),
+      );
+  };
   if (supersedeExisting && existing) {
     check(
       await client.from("casefiles").update({ status: "superseded" }).eq("id", existing.id).eq("status", existing.status),
@@ -300,6 +324,7 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
       const theirs = await latestCasefile(client, exceptionId);
       if (theirs) return { casefileId: theirs.id, status: theirs.status, reused: true };
     }
+    await restorePrior();
     throw new Error(`write casefiles: ${claimed.error.message}`);
   }
   const casefile = claimed.data as { id: string };
@@ -373,6 +398,7 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
     const note: Note = { layer: "run", check: "foundry_run", action: "failed", detail: `The investigation could not be started: ${message}` };
     await appendNotes(client, casefile.id, [note]).catch((noteErr) => console.error("could not record why the run did not start", noteErr));
     await client.from("casefiles").update({ status: "failed" }).eq("id", casefile.id);
+    await restorePrior();
     return { casefileId: casefile.id, status: "failed", reused: false };
   }
 

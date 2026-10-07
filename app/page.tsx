@@ -3,7 +3,7 @@ import { InvestigateButton } from "@/components/InvestigateButton";
 import { RunTestButton } from "@/components/RunTestButton";
 import { TestResultCard } from "@/components/TestResultCard";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
-import { computeKpis, isReopened, runDisabledReason } from "@/components/portfolioModel";
+import { computeKpis, currentCasefiles, isReopened, runDisabledReason } from "@/components/portfolioModel";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
@@ -48,6 +48,7 @@ interface CasefileRow {
   exception_id: string;
   status: string;
   steps_count: number | null;
+  created_at: string | null;
 }
 interface TermsRow {
   facility_id: string;
@@ -79,7 +80,7 @@ export default async function Home() {
     db.from("tests").select("id, facility_id, test_period_end, computed_dscr, reported_dscr, threshold, passed, variance_flagged, calc_id, calc_error").eq("run_id", "demo"),
     db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
     db.from("documents").select("id, facility_id, doc_type, title, effective_date").order("effective_date", { ascending: true }),
-    db.from("casefiles").select("id, exception_id, status, steps_count").eq("run_id", "demo"),
+    db.from("casefiles").select("id, exception_id, status, steps_count, created_at").eq("run_id", "demo"),
     db.from("covenant_terms").select("facility_id, terms, status").eq("status", "approved"),
   ]);
 
@@ -110,8 +111,7 @@ export default async function Home() {
   const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
 
   // A casefile per exception (if any), so a new exception with one reads as reopened.
-  const casefileByException = new Map<string, CasefileRow>();
-  for (const c of casefiles) if (!casefileByException.has(c.exception_id)) casefileByException.set(c.exception_id, c);
+  const casefileByException = currentCasefiles(casefiles);
 
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 

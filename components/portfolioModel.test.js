@@ -122,3 +122,17 @@ test("runDisabledReason: a facility with no approved terms is disabled WITH the 
 test("runDisabledReason: a facility with approved terms is not disabled", () => {
   assert.equal(runDisabledReason({ hasApprovedTerms: true }), null);
 });
+
+import { currentCasefiles } from "./portfolioModel.ts";
+
+test("I-2: the queue picks the newest non-superseded casefile, whatever order rows arrive in", () => {
+  const rows = [
+    { id: "old", exception_id: "e1", status: "superseded", created_at: "2026-10-05T10:00:00Z" },
+    { id: "new", exception_id: "e1", status: "pending_review", created_at: "2026-10-05T09:00:00Z" },
+    { id: "older", exception_id: "e1", status: "approved", created_at: "2026-10-01T09:00:00Z" },
+    { id: "only-sup", exception_id: "e2", status: "superseded", created_at: "2026-10-05T10:00:00Z" },
+  ];
+  const m = currentCasefiles(rows);
+  assert.equal(m.get("e1").id, "new");
+  assert.equal(m.has("e2"), false);
+});
