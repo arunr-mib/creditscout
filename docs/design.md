@@ -459,10 +459,20 @@ Rows of calculation components. Numeric column right-aligned, `font-mono`, `tabu
 | Column | Token |
 |---|---|
 | Component name | `text-text-secondary` |
-| Value | `text-code-bright` mono |
+| Value · computed by code | `text-code-bright` mono |
+| Value · quoted from a document | `text-text` mono — **never amber** |
 | Source | `CitationChip` (quoted figure) or `calc_id` badge (computed) |
 
-**Rule:** every row shows whether the figure was **quoted** or **computed**. That distinction is the guardrail's entire basis and the analyst should see it too.
+**Rule:** every row shows whether the figure was **quoted** or **computed**, and
+**the Value colour carries that distinction**: amber only when code produced the
+number; a quoted document figure is evidence the agent retrieved, not a code
+output, so it is plain `text-text` (§1, §12.1, §9 — amber is never used for
+anything that isn't code output). That distinction is the guardrail's entire
+basis and the analyst should see it too.
+
+*(Corrected 2026-10-06: the original line specified `text-code-bright` for the
+whole Value column, which contradicted §1/§12.1 for the quoted-input rows a calc
+table necessarily contains. Resolved toward the hard semantic rule.)*
 
 ### 12.15 `TraceStep`
 
