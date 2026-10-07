@@ -260,20 +260,29 @@ export async function submitReview(input: ReviewInput, deps: ReviewDeps = {}): P
 }
 
 /**
- * An approved or overridden casefile whose exception is not closed is A-4 drift,
- * left by a failed close in an earlier request. Closes it. Returns true only if it
- * changed something; a closed (or missing) exception is not ours to touch, and the
+ * An approved or overridden casefile whose exception is still `pending_review` is
+ * A-4 drift, left by a failed close in an earlier request. Closes it.
+ *
+ * ONLY from `pending_review`, and the write is conditional on it too. F7
+ * deliberately reopens a `closed` exception to `new` when a later quarter
+ * breaches; a stale review request (second tab, double click) must never close
+ * that live breach again, which would be a false resolve. So `new`,
+ * `investigating`, `needs_filing` and `closed` are all left alone, and the
  * caller falls through to the ordinary read-only 409. Never used for
- * `awaiting_docs`: that exception correctly stays open.
+ * `awaiting_docs`: that exception correctly stays open. Returns true only if it
+ * changed a row.
  */
 async function repairException(client: Db, casefile: CasefileRow): Promise<boolean> {
   const exception = check(
     await client.from("exceptions").select("id, status").eq("id", casefile.exception_id).maybeSingle(),
     "read exceptions",
   ) as { id: string; status: string } | null;
-  if (!exception || exception.status === EXCEPTION_CLOSED) return false;
-  check(await client.from("exceptions").update({ status: EXCEPTION_CLOSED }).eq("id", exception.id), "close exception");
-  return true;
+  if (!exception || exception.status !== "pending_review") return false;
+  const changed = check(
+    await client.from("exceptions").update({ status: EXCEPTION_CLOSED }).eq("id", exception.id).eq("status", "pending_review").select("id"),
+    "close exception",
+  ) as { id: string }[] | null;
+  return (changed?.length ?? 0) > 0;
 }
 
 /** Builds the one-line summary from the exception's calculator figures and the facility. Never from model prose. */
