@@ -184,6 +184,11 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       {SUPERSEDABLE_STATUSES.includes(view.status) && (
         <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
       )}
+      {/* A failed investigation has no action bar and never held the live slot,
+          so without this the only way to retry was from another casefile. */}
+      {view.status === "failed" && (
+        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={false} failed />
+      )}
     </article>
   );
 }
