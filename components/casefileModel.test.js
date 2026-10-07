@@ -13,6 +13,7 @@ import {
   clauseMap,
   exceptionNeedsClosing,
   formatFigure,
+  headlineFor,
   humanReviewNotice,
   humanReviewPolicy,
   isRecommendation,
@@ -326,4 +327,27 @@ test("a decided casefile whose exception never closed is flagged for repair", ()
   assert.equal(exceptionNeedsClosing("pending_review", "pending_review"), false);
   assert.equal(exceptionNeedsClosing("awaiting_docs", "pending_review"), false);
   assert.equal(exceptionNeedsClosing("approved", null), false);
+});
+
+// ----------------------------------------------------------- headlineFor
+test("headlineFor pulls the governing calc's DSCR, required, and margin", () => {
+  const sections = [
+    { calcId: "aaaa1111-0000-0000-0000-000000000000", title: "Calculation 1 of 2", governing: false,
+      rows: [{ key: "dscr", label: "Calculated DSCR", value: 1.12, format: "ratio", source: { kind: "computed", calcId: "x" }, note: "breach" }] },
+    { calcId: "bbbb2222-0000-0000-0000-000000000000", title: "Calculation 2 of 2", governing: true, rows: [
+      { key: "dscr", label: "Calculated DSCR", value: 1.28, format: "ratio", source: { kind: "computed", calcId: "y" }, note: "passes" },
+      { key: "threshold", label: "Required minimum", value: 1.25, format: "ratio", source: { kind: "term" } },
+      { key: "margin", label: "Margin", value: 0.03, format: "signed-ratio", source: { kind: "computed", calcId: "y" } },
+    ] },
+  ];
+  const h = headlineFor(sections);
+  assert.equal(h.dscr, 1.28, "the governing (last) calc's DSCR, not the baseline");
+  assert.equal(h.passes, true);
+  assert.equal(h.required, 1.25);
+  assert.equal(h.margin, 0.03);
+  assert.ok(h.calcId.startsWith("bbbb"));
+});
+
+test("headlineFor is null when there is no calculation to summarise", () => {
+  assert.equal(headlineFor([]), null);
 });

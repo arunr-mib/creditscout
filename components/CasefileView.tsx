@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, isRecommendation, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, reviewMode } from "./casefileModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
@@ -60,6 +60,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
 
   const showRec = mode !== "not_ready";
   const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
+  const headline = headlineFor(view.sections);
   const accent =
     rec === "resolve" ? "border-l-success"
       : rec === "escalate" ? "border-l-danger"
@@ -99,6 +100,23 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           )}
           {showRec && !rec && <RecommendationBadge recommendation={view.recommendation} />}
         </div>
+
+        {/* The governing figures, so the decision rests on numbers the analyst
+            can see at a glance — not a paragraph away (audit 3.3). */}
+        {showRec && headline && (
+          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 border-t border-border px-5 py-3">
+            <Figure label="Governing DSCR" value={fmt(headline.dscr)} tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
+              tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined} />
+            <Figure label="Required" value={fmt(headline.required)} />
+            <Figure label="Margin" value={fmtSigned(headline.margin)} tone={headline.margin != null && headline.margin < 0 ? "danger" : undefined} />
+            <Figure label="Calculation" value={`calc_${headline.calcId.slice(0, 8)}`} muted />
+            {view.humanReviewRequired && (
+              <div className="ml-auto inline-flex items-center gap-2 self-center text-label text-text-muted">
+                <span aria-hidden="true">🔒</span> Human approval required · Locked
+              </div>
+            )}
+          </dl>
+        )}
       </header>
 
       {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
@@ -106,8 +124,15 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
 
       {mode !== "not_ready" && view.explanation && (
         <section aria-labelledby="explanation-heading" className="space-y-2">
-          <h2 id="explanation-heading" className="text-card text-text">Explanation</h2>
+          <h2 id="explanation-heading" className="text-card text-text">Agent&rsquo;s reasoning</h2>
           <p className="max-w-content text-body text-text-secondary">{view.explanation}</p>
+          {view.notes.length > 0 && (
+            <p className="max-w-content text-label text-text-muted">
+              This is the agent&rsquo;s account. Where it and the governing calculation disagree, the enforced
+              recommendation above and the guardrail notices below are what govern — the code decides the number, not the
+              narrative.
+            </p>
+          )}
         </section>
       )}
 
@@ -137,7 +162,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       </div>
 
       {mode === "active" && (
-        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} />
+        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} />
       )}
       {mode === "read_only" && (
         <Decided
@@ -151,6 +176,36 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
       )}
     </article>
+  );
+}
+
+const fmt = (v: number | null): string => (v == null ? "—" : v.toFixed(2));
+const fmtSigned = (v: number | null): string => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(2)}`);
+
+/** One figure in the decision banner's governing-figures strip. */
+function Figure({
+  label,
+  value,
+  tone,
+  tag,
+  muted,
+}: {
+  label: string;
+  value: string;
+  tone?: "danger" | "success";
+  tag?: string;
+  muted?: boolean;
+}) {
+  const toneClass =
+    tone === "danger" ? "text-danger" : tone === "success" ? "text-success" : muted ? "text-text-muted" : "text-text";
+  return (
+    <div>
+      <dt className="text-label text-text-muted">{label}</dt>
+      <dd className={`font-mono text-num tabular-nums ${toneClass}`}>
+        {value}
+        {tag && <span className="ml-2 text-label text-text-muted">{tag}</span>}
+      </dd>
+    </div>
   );
 }
 

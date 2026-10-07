@@ -208,7 +208,7 @@ export function calcRowsFor(row: CalcLogRow): CalcRowView[] {
   for (const [name, v] of Object.entries(parts)) push(`denominator:${name}`, `Debt service · ${humanise(name)}`, v, "amount", input(name));
 
   push("denominator_total", "Denominator total", components.denominator_total, "amount", derived);
-  push("dscr", "DSCR", o.dscr, "ratio", derived, o.pass === true ? "passes" : o.pass === false ? "breach" : undefined);
+  push("dscr", "Calculated DSCR", o.dscr, "ratio", derived, o.pass === true ? "passes" : o.pass === false ? "breach" : undefined);
 
   // The required minimum is a human-approved covenant TERM, not a code output:
   // it must never render amber "computed by code". It is `quoted` when the log
@@ -251,6 +251,34 @@ export function calcSectionsOf(rows: readonly CalcLogRow[]): CalcSection[] {
     governing: i === rows.length - 1,
     rows: calcRowsFor(row),
   }));
+}
+
+export interface CasefileHeadline {
+  calcId: string;
+  dscr: number | null;
+  passes: boolean | null;
+  required: number | null;
+  margin: number | null;
+}
+
+/**
+ * The governing calculation's key figures, for the casefile decision banner:
+ * the DSCR the recommendation rests on, the covenant requirement, and the
+ * margin — so the analyst sees the numbers that matter without reading the whole
+ * table (audit 3.3). Null when there is no calculation to summarise.
+ */
+export function headlineFor(sections: readonly CalcSection[]): CasefileHeadline | null {
+  const gov = sections.find((s) => s.governing) ?? sections[sections.length - 1];
+  if (!gov) return null;
+  const byKey = (k: string): CalcRowView | undefined => gov.rows.find((r) => r.key === k);
+  const dscrRow = byKey("dscr");
+  return {
+    calcId: gov.calcId,
+    dscr: dscrRow ? dscrRow.value : null,
+    passes: dscrRow?.note === "passes" ? true : dscrRow?.note === "breach" ? false : null,
+    required: byKey("threshold")?.value ?? null,
+    margin: byKey("margin")?.value ?? null,
+  };
 }
 
 const AMOUNT = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });

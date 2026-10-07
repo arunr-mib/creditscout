@@ -29,7 +29,11 @@ export function GuardrailNotice({ notice }: { notice: Notice }) {
         </strong>
         {notice.detail ? <> — {notice.detail}</> : null}
       </p>
-      {notice.check && <p className="mt-1 font-mono text-badge text-code">{notice.check}</p>}
+      {notice.check && (
+        <p className="mt-1 text-badge text-text-muted">
+          Rule <span className="font-mono text-code">{notice.check}</span>
+        </p>
+      )}
     </div>
   );
 }

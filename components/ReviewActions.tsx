@@ -18,8 +18,17 @@ import { OverrideDialog } from "./OverrideDialog";
  * there first, or a retry) is not an error: the page re-reads and shows the
  * recorded decision read-only.
  */
-export function ReviewActions(props: { casefileId: string; suggestedTag: string | null; humanReviewRequired: boolean | null }) {
-  const { casefileId, suggestedTag, humanReviewRequired } = props;
+/** The outcome word that goes in the Approve label, so it says what is being accepted (audit P1). */
+const APPROVE_WORD: Record<string, string> = { resolve: "resolve", escalate: "escalate", request: "request docs", abstain: "abstention" };
+
+export function ReviewActions(props: {
+  casefileId: string;
+  suggestedTag: string | null;
+  humanReviewRequired: boolean | null;
+  recommendation?: string | null;
+}) {
+  const { casefileId, suggestedTag, humanReviewRequired, recommendation } = props;
+  const approveLabel = recommendation && APPROVE_WORD[recommendation] ? `Approve ${APPROVE_WORD[recommendation]}` : "Approve";
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState(false);
   const [outcome, setOutcome] = useState<ReviewOutcome | null>(null);
@@ -54,7 +63,7 @@ export function ReviewActions(props: { casefileId: string; suggestedTag: string 
 
       <div className="flex flex-wrap gap-3">
         <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-model bg-model text-bg`}>
-          {pending ? "Sending…" : "Approve"}
+          {pending ? "Sending…" : approveLabel}
         </button>
         <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong text-text`}>
           Override

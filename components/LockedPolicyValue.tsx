@@ -6,8 +6,8 @@
 export function LockedPolicyValue({ name, value }: { name: string; value: boolean | null }) {
   return (
     <span className="inline-flex cursor-not-allowed items-baseline gap-2 text-text-muted">
-      <span className="text-label">{name}</span>
-      <span className="font-mono text-num">{value === null ? "not readable" : String(value)}</span>
+      {name && <span className="text-label">{name}</span>}
+      <span className="text-num">{value === null ? "not readable" : value ? "Required" : "Not required"}</span>
       <span aria-label="locked, cannot be changed" className="text-label">
         <span aria-hidden="true">🔒 </span>locked
       </span>

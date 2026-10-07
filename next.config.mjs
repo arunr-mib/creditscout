@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 export default {
   serverExternalPackages: [],
+  // The canonical entry is the portfolio at `/`. A /app link (e.g. from an
+  // external reference) should land there rather than a framework 404.
+  async redirects() {
+    return [{ source: "/app", destination: "/", permanent: true }];
+  },
   // The upload goes through a Server Action (default body limit 1 MB); the
   // ingest code enforces its own 10 MB cap. Note Vercel itself caps a function
   // request body at 4.5 MB on the platform.

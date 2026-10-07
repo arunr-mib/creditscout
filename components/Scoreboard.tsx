@@ -26,9 +26,15 @@ export function Scoreboard({ runs }: { runs: EvalRunLike[] }) {
       <h2 className="text-section text-text">Eval scoreboard</h2>
 
       {state === "awaiting" ? (
-        <div className="rounded-lg border border-border bg-surface p-6">
-          <p className="text-body text-text-secondary">No eval run yet.</p>
-          <p className="mt-1 text-label text-text-muted">{RUN_EVAL_HARNESS}</p>
+        <div className="space-y-2 rounded-lg border border-border bg-surface p-6">
+          <p className="text-body text-text-secondary">Not measured yet.</p>
+          <p className="max-w-prose text-label text-text-muted">
+            The harness runs every labelled case twice — once with memory cleared (cold) and once with prior analyst
+            lessons loaded (warm) — and scores false resolves, calculation accuracy, outcome accuracy, correct
+            abstain/request, citation hit rate, groundedness, and the memory effect (average steps, cold vs warm). No
+            number is shown as a measured zero until a run exists.
+          </p>
+          <p className="text-label text-text-muted">{RUN_EVAL_HARNESS}</p>
         </div>
       ) : (
         <ScoreboardTable cold={cold ? scoreboardRows(cold.metrics) : null} warm={warm ? scoreboardRows(warm.metrics) : null} />

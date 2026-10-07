@@ -30,9 +30,12 @@ export function GovernancePanel({ rows }: { rows: PolicyTableRow[] }) {
           </thead>
           <tbody>
             {policy.map((row) => (
-              <tr key={row.key} className="h-10 border-b border-border last:border-b-0 hover:bg-surface-raised">
-                <td className="px-4 align-middle text-label text-text">{humanKey(row.key)}</td>
-                <td className="px-4 py-2 text-right align-middle">
+              <tr key={row.key} className="border-b border-border last:border-b-0 hover:bg-surface-raised">
+                <td className="px-4 py-3 align-top">
+                  <div className="text-label text-text">{humanKey(row.key)}</div>
+                  {help(row.key) && <div className="mt-1 max-w-prose text-badge text-text-muted">{help(row.key)}</div>}
+                </td>
+                <td className="px-4 py-3 text-right align-top">
                   <PolicyValue row={row} />
                 </td>
               </tr>
@@ -57,7 +60,7 @@ function PolicyValue({ row }: { row: PolicyRow }) {
     return (
       <ul className="flex flex-col items-end gap-1">
         {items.map((item, i) => (
-          <li key={i} className="font-mono text-num text-text-secondary">
+          <li key={i} className="text-body text-text-secondary">
             {String(item)}
           </li>
         ))}
@@ -65,6 +68,18 @@ function PolicyValue({ row }: { row: PolicyRow }) {
     );
   }
   return <span className="font-mono text-num tabular-nums text-text">{String(row.value)}</span>;
+}
+
+/** A plain-language line of what each policy means and its unit (audit 3.8). */
+function help(key: string): string | null {
+  const map: Record<string, string> = {
+    variance_tolerance: "DSCR multiple. A reported figure differing from the computed one by more than this is logged as a variance.",
+    escalate_if_breach_margin_over: "DSCR multiple. A breach deeper than this auto-escalates.",
+    prohibited_actions: "CreditScout can never take these — it recommends only.",
+    max_steps: "The agent stops after this many investigation steps.",
+    require_human_review: "Every recommendation is non-binding until an analyst records a decision.",
+  };
+  return map[key] ?? null;
 }
 
 /** The seeded keys, read out in plain words; an unknown key falls back to itself. */
