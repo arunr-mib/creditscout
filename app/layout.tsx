@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import { NavRail } from "@/components/NavRail";
 import { loadNavData } from "@/lib/nav-data";
+import { LANDING_PATH, LOGIN_PATH } from "@/lib/auth/gate";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -13,6 +15,19 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The landing and login pages render full-bleed, without the app nav. The
+  // pathname arrives from middleware as `x-pathname`.
+  const pathname = (await headers()).get("x-pathname") ?? "";
+  const bare = pathname === LANDING_PATH || pathname === LOGIN_PATH;
+
+  if (bare) {
+    return (
+      <html lang="en" className={`${inter.variable} ${mono.variable}`}>
+        <body className="min-h-screen">{children}</body>
+      </html>
+    );
+  }
+
   const { counts, search } = await loadNavData();
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>

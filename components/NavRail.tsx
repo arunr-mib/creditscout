@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./CommandPalette";
+import { signOut } from "@/app/login/actions";
 import type { SearchItem } from "./searchModel";
 
 /**
@@ -63,6 +64,15 @@ export function NavRail({ counts, search }: { counts: NavCounts; search: SearchI
           );
         })}
       </ul>
+
+      <form action={signOut} className="px-1 md:mt-auto md:pt-4">
+        <button
+          type="submit"
+          className="w-full rounded-md px-3 py-2 text-left text-body text-text-muted transition-colors duration-fast hover:bg-surface hover:text-text"
+        >
+          Sign out
+        </button>
+      </form>
     </nav>
   );
 }
