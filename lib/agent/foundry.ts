@@ -396,6 +396,11 @@ export function readAgentsFile(cwd: string = process.cwd()): AgentsFile {
 }
 
 export function orchestratorAgentId(cwd: string = process.cwd()): string {
+  // A deploy can set the id directly, so it never depends on the generated file
+  // being in the serverless bundle. Local dev and tests fall through to the file.
+  const fromEnv = process.env.FOUNDRY_ORCHESTRATOR_AGENT_ID?.trim();
+  if (fromEnv) return fromEnv;
+
   const id = readAgentsFile(cwd).agents[ORCHESTRATOR_NAME];
   if (typeof id !== "string" || id === "") {
     throw new Error(`${AGENTS_FILE} carries no id for ${ORCHESTRATOR_NAME}. ${CREATE_AGENTS_HINT}`);
