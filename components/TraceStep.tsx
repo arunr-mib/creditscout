@@ -59,7 +59,7 @@ export function TraceStep({ step }: { step: TraceStepView }) {
         {step.kind === "model" && (
           <>
             <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">specialist</span>
-            <span className="text-label text-text-muted">delegated by the orchestrator</span>
+            <span className="text-label text-text-muted">delegated by the Credit-scout Agent</span>
           </>
         )}
         {time && <span className="ml-auto font-mono text-label text-text-muted">{time}</span>}

@@ -11,7 +11,7 @@ export function TraceArc({ steps }: { steps: TraceStepView[] }) {
   if (!arc.summary) return null;
   return (
     <div className="rounded-md border border-border bg-surface px-3 py-2">
-      <p className="text-label text-text-muted">The orchestrator&rsquo;s plan, so far</p>
+      <p className="text-label text-text-muted">The Credit-scout Agent&rsquo;s plan, so far</p>
       <p className="mt-1 text-body text-text-secondary">{arc.summary}</p>
     </div>
   );
