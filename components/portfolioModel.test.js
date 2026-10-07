@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   APPROVE_TERMS_FIRST,
+  PORTFOLIO_STATUS,
   boardingState,
   computeKpis,
   isReopened,
+  portfolioRows,
   runDisabledReason,
   varianceBadge,
   verdictOf,
@@ -149,4 +151,57 @@ test("the live casefile wins over a NEWER failed one (a dead re-run must not sha
   const m = currentCasefiles(rows);
   assert.equal(m.get("e1").id, "live", "the pending_review casefile, not the newer failed one");
   assert.equal(m.has("e2"), false, "an exception with only failed casefiles reads as investigate");
+});
+
+// ----------------------------------------------------------- portfolioRows
+
+const FACILITIES = [
+  { id: "f-harbor", borrower_name: "Harbor Logistics", industry: "Freight" },
+  { id: "f-north", borrower_name: "Northgate Foods", industry: "Food" },
+  { id: "f-coastal", borrower_name: "Coastal Marine", industry: "Marine" },
+  { id: "f-new", borrower_name: "Aurora Textiles", industry: "Textiles" },
+];
+const TERMS = [
+  { facility_id: "f-harbor", version: 1 },
+  { facility_id: "f-north", version: 1 },
+  { facility_id: "f-coastal", version: 1 },
+]; // f-new has no approved terms
+
+test("portfolioRows grades each facility by what the analyst must do next", () => {
+  const openExceptions = [
+    { id: "x-harbor", facility_id: "f-harbor", status: "pending_review", computed_dscr: "1.12", reported_dscr: "1.12", required_dscr: "1.25" },
+    { id: "x-coastal", facility_id: "f-coastal", status: "new", computed_dscr: "1.08", reported_dscr: "1.30", required_dscr: "1.25" },
+  ];
+  const casefileByException = new Map([
+    ["x-harbor", { id: "cf-harbor", status: "pending_review", recommendation: "escalate" }],
+    // x-coastal has no casefile yet -> breach_investigate
+  ]);
+  const tests = [
+    { facility_id: "f-north", test_period_end: "2026-06-30", computed_dscr: 1.4, reported_dscr: 1.41, threshold: 1.25 },
+  ];
+  const rows = portfolioRows({ facilities: FACILITIES, openExceptions, casefileByException, tests, approvedTerms: TERMS, targetPeriod: "2026-06-30" });
+  const byId = Object.fromEntries(rows.map((r) => [r.facilityId, r]));
+
+  assert.equal(byId["f-coastal"].status, "breach_investigate"); // open exception, no casefile
+  assert.equal(byId["f-harbor"].status, "in_review");           // casefile pending_review
+  assert.equal(byId["f-north"].status, "compliant");            // a test, no exception
+  assert.equal(byId["f-new"].status, "not_tested");             // nothing
+
+  // Figures come from the exception for a breach, the test for compliant.
+  assert.equal(byId["f-coastal"].ours, 1.08);
+  assert.equal(byId["f-coastal"].required, 1.25);
+  assert.equal(byId["f-north"].ours, 1.4);
+  // Approved-terms flag drives whether a Run is allowed.
+  assert.equal(byId["f-new"].hasApprovedTerms, false);
+  assert.equal(byId["f-harbor"].hasApprovedTerms, true);
+});
+
+test("portfolioRows is sorted by triage rank, most urgent first", () => {
+  const openExceptions = [
+    { id: "x-coastal", facility_id: "f-coastal", status: "new", computed_dscr: 1.08, reported_dscr: 1.3, required_dscr: 1.25 },
+  ];
+  const rows = portfolioRows({ facilities: FACILITIES, openExceptions, casefileByException: new Map(), tests: [], approvedTerms: TERMS, targetPeriod: "2026-06-30" });
+  // Coastal (breach_investigate, rank 0) must come before the not_tested ones.
+  assert.equal(rows[0].facilityId, "f-coastal");
+  assert.ok(PORTFOLIO_STATUS[rows[0].status].rank <= PORTFOLIO_STATUS[rows[rows.length - 1].status].rank);
 });

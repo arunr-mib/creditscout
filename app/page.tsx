@@ -1,18 +1,13 @@
-import Link from "next/link";
-import { DocumentList, type DocumentView } from "@/components/DocumentList";
-import { InvestigateButton } from "@/components/InvestigateButton";
-import { RecommendationBadge } from "@/components/RecommendationBadge";
+import { PortfolioTable } from "@/components/PortfolioTable";
 import { RunTestButton } from "@/components/RunTestButton";
-import { TestResultCard } from "@/components/TestResultCard";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
-import { computeKpis, currentCasefiles, isReopened, runDisabledReason } from "@/components/portfolioModel";
+import { computeKpis, currentCasefiles, portfolioRows } from "@/components/portfolioModel";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
 export const dynamic = "force-dynamic";
-// The investigateException Server Action (startInvestigation) hosted on this
-// route can exceed Vercel's 10s default; 60s is the Hobby ceiling. Normal page
-// renders still return fast — this only raises the cap.
+// The investigateException / run Server Actions hosted on this route can exceed
+// Vercel's 10s default; 60s is the Hobby ceiling. Reads still return fast.
 export const maxDuration = 60;
 
 const must = (res: { data: unknown; error: { message: string } | null }, what: string): unknown => {
@@ -21,7 +16,6 @@ const must = (res: { data: unknown; error: { message: string } | null }, what: s
 };
 
 const num = (v: unknown): number | null => (v == null ? null : Number(v));
-const dscr = (v: number | null): string => (v == null ? "—" : v.toFixed(2));
 
 interface FacilityRow {
   id: string;
@@ -73,25 +67,29 @@ function latestCompleteQuarterEnd(today: Date): string {
   return `${year}-${endMonthDay}`;
 }
 
+/** The quarter end after `periodEnd`. DSCR is tested quarterly, so this is the next test. */
+function nextQuarterEnd(periodEnd: string): string {
+  const d = new Date(`${periodEnd}T00:00:00Z`);
+  const nextQ = (Math.floor(d.getUTCMonth() / 3) + 1) % 4;
+  const year = nextQ === 0 ? d.getUTCFullYear() + 1 : d.getUTCFullYear();
+  return `${year}-${["03-31", "06-30", "09-30", "12-31"][nextQ]}`;
+}
+
 /**
  * The portfolio — the analyst's landing screen.
  *
- * It opens with the WORK, not the roster: the exceptions that need a decision or
- * an investigation, triaged by what the analyst has to do next. The borrower
- * roster (with each test's code-computed provenance) sits below, secondary.
- *
- * Server Component: reads only, with the anon key under the RLS read policy.
- * Every write goes through a route handler or a Server Action on the service
- * role.
+ * One triage table: every borrower, graded by what the analyst has to do next,
+ * sortable, with a one-click action per row. Reads only, with the anon key under
+ * the RLS read policy; every write goes through a route handler or Server Action
+ * on the service role.
  */
 export default async function Home() {
   const db = anonReader();
 
-  const [facilitiesRes, testsRes, exceptionsRes, documentsRes, casefilesRes, termsRes] = await Promise.all([
+  const [facilitiesRes, testsRes, exceptionsRes, casefilesRes, termsRes] = await Promise.all([
     db.from("facilities").select("id, borrower_name, industry").order("borrower_name", { ascending: true }),
     db.from("tests").select("id, facility_id, test_period_end, computed_dscr, reported_dscr, threshold, passed, variance_flagged, calc_id, calc_error").eq("run_id", "demo"),
     db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
-    db.from("documents").select("id, facility_id, doc_type, title, effective_date").order("effective_date", { ascending: true }),
     db.from("casefiles").select("id, exception_id, status, recommendation, steps_count, created_at").eq("run_id", "demo"),
     db.from("covenant_terms").select("facility_id, terms, status, version").eq("status", "approved"),
   ]);
@@ -104,10 +102,7 @@ export default async function Home() {
     threshold: Number(t.threshold),
   }));
   const demoTestIds = new Set(tests.map((t) => t.id));
-  const exceptions = ((must(exceptionsRes, "select exceptions") ?? []) as ExceptionRow[]).filter((e) =>
-    demoTestIds.has(e.test_id),
-  );
-  const documents = (must(documentsRes, "select documents") ?? []) as (DocumentView & { facility_id: string })[];
+  const exceptions = ((must(exceptionsRes, "select exceptions") ?? []) as ExceptionRow[]).filter((e) => demoTestIds.has(e.test_id));
   const casefiles = (must(casefilesRes, "select casefiles") ?? []) as CasefileRow[];
   const approvedTerms = (must(termsRes, "select covenant_terms") ?? []) as TermsRow[];
 
@@ -115,31 +110,18 @@ export default async function Home() {
 
   const periods = tests.map((t) => t.test_period_end).sort();
   const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
+  const targetLabel = quarterLabel(targetPeriod);
+  const nextLabel = quarterLabel(nextQuarterEnd(targetPeriod));
 
   const casefileByException = currentCasefiles(casefiles);
-  const facilityName = new Map(facilities.map((f) => [f.id, f.borrower_name]));
-
-  // Triage every open exception by what the analyst has to do next.
-  const open = exceptions.filter((e) => e.status !== "closed");
-  const items = open.map((e) => {
-    const cf = casefileByException.get(e.id) ?? null;
-    const state = !cf
-      ? "investigate"
-      : cf.status === "pending_review"
-        ? "review"
-        : cf.status === "investigating"
-          ? "running"
-          : cf.status === "awaiting_docs"
-            ? "docs"
-            : "decided"; // approved / overridden
-    return { e, cf, state, borrower: facilityName.get(e.facility_id) ?? "Unknown borrower" };
+  const rows = portfolioRows({
+    facilities,
+    openExceptions: exceptions.filter((e) => e.status !== "closed"),
+    casefileByException,
+    tests,
+    approvedTerms,
+    targetPeriod,
   });
-  const group = (s: string) => items.filter((i) => i.state === s);
-  const review = group("review");
-  const investigate = group("investigate");
-  const running = group("running");
-  const docs = group("docs");
-  const actionable = review.length + investigate.length + running.length + docs.length;
 
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 
@@ -149,14 +131,10 @@ export default async function Home() {
       <header className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
-            <p className="text-label text-text-muted">Covenant monitoring · {quarterLabel(targetPeriod)}</p>
+            <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
             <h1 className="text-title text-text">Portfolio</h1>
           </div>
-          <RunTestButton
-            label={`Run ${quarterLabel(targetPeriod)}`}
-            endpoint="/api/tests/run-quarter"
-            body={{ test_period_end: targetPeriod }}
-          />
+          <RunTestButton label={`Run ${targetLabel}`} endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
         </div>
         <p className="max-w-prose text-body text-text-secondary">
           Every test is computed by code from approved terms. The borrower&apos;s reported figure is evidence to
@@ -168,163 +146,18 @@ export default async function Home() {
             { label: "Open exceptions", help: "Breaches not yet closed", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
             { label: "Awaiting your review", help: "The agent finished; you decide", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
             { label: "Avg steps / case", help: "Investigation steps", value: kpis.avgSteps, empty: "—", tone: "muted" },
-            { label: `Facilities tested`, help: `This quarter`, value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
+            { label: "Facilities tested", help: "This quarter", value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
           ]}
         />
       </header>
 
-      {/* ------------------------------------------------- needs your attention */}
-      <section aria-label="Needs your attention" className="space-y-5">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-section text-text">Needs your attention</h2>
-          {actionable > 0 && (
-            <span className="font-mono text-num text-text-muted">{actionable} open</span>
-          )}
-        </div>
-
-        {actionable === 0 ? (
-          <div className="rounded-lg border border-border bg-surface p-8 text-center">
-            <p className="text-body text-text-secondary">Nothing waiting on you this quarter.</p>
-            <p className="mt-1 text-label text-text-muted">
-              Run the quarter or upload a borrower&apos;s package to test the next period.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <QueueGroup
-              title="Awaiting your review"
-              hint="The agent has finished. You decide."
-              count={review.length}
-            >
-              {review.map(({ e, cf, borrower }) => (
-                <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="human"
-                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
-                  <RecommendationBadge recommendation={cf?.recommendation} />
-                  <Link
-                    href={`/casefiles/${cf!.id}`}
-                    className="rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text"
-                  >
-                    Review
-                  </Link>
-                </QueueRow>
-              ))}
-            </QueueGroup>
-
-            <QueueGroup
-              title="Breaches to investigate"
-              hint="Code found a shortfall. Start the agent to gather evidence."
-              count={investigate.length}
-            >
-              {investigate.map(({ e, cf, borrower }) => (
-                <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="danger"
-                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
-                  <InvestigateButton exceptionId={e.id} status={e.status} hasCasefile={cf != null} />
-                </QueueRow>
-              ))}
-            </QueueGroup>
-
-            <QueueGroup title="In progress" hint="The agent is working." count={running.length}>
-              {running.map(({ e, cf, borrower }) => (
-                <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="model"
-                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
-                  <span className="inline-flex items-center gap-2 text-label text-model-bright">
-                    <span className="inline-block h-2 w-2 rounded-sm bg-model motion-safe:animate-pulse" aria-hidden="true" />
-                    Investigating
-                  </span>
-                  <Link href={`/casefiles/${cf!.id}`} className="text-label text-text-secondary underline-offset-2 hover:underline">
-                    Watch live
-                  </Link>
-                </QueueRow>
-              ))}
-            </QueueGroup>
-
-            <QueueGroup title="Awaiting documents" hint="A review asked for more before deciding." count={docs.length}>
-              {docs.map(({ e, cf, borrower }) => (
-                <QueueRow key={e.id} borrower={borrower} period={quarterLabel(e.test_period_end)} edge="muted"
-                  ours={num(e.computed_dscr)} theirs={num(e.reported_dscr)} required={num(e.required_dscr)}>
-                  <Link href={`/casefiles/${cf!.id}`} className="text-label text-text-secondary underline-offset-2 hover:underline">
-                    Open casefile
-                  </Link>
-                </QueueRow>
-              ))}
-            </QueueGroup>
-          </div>
-        )}
-      </section>
-
-      {/* ------------------------------------------------------------- roster */}
-      <section aria-label="Borrowers" className="space-y-5">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-section text-text">Borrowers</h2>
-          <span className="font-mono text-num text-text-muted">{facilities.length}</span>
-        </div>
-
+      {/* -------------------------------------------------------- portfolio table */}
+      <section aria-label="Portfolio" className="space-y-5">
+        <h2 className="text-section text-text">Borrowers</h2>
         {facilities.length === 0 ? (
           <p className="text-body text-text-secondary">No facilities on file. Board a covenant to add one.</p>
         ) : (
-          <div className="space-y-4">
-            {facilities.map((f) => {
-              const terms = approvedTerms.find((t) => t.facility_id === f.id) ?? null;
-              const hasApprovedTerms = terms != null;
-              const facilityDocs = documents.filter((d) => d.facility_id === f.id);
-              const test = tests.find((t) => t.facility_id === f.id && t.test_period_end === targetPeriod) ?? null;
-              const notBoarded = facilityDocs.length; // detail lives in DocumentList
-
-              return (
-                <article key={f.id} className="overflow-hidden rounded-lg border border-border-strong bg-surface">
-                  <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-5 py-4">
-                    <h3 className="text-card text-text">
-                      {f.borrower_name}
-                      {f.industry && <span className="ml-2 text-label font-normal text-text-muted">{f.industry}</span>}
-                      {terms && <span className="ml-2 font-mono text-label font-normal text-text-muted">Terms v{terms.version}</span>}
-                    </h3>
-                    <RunTestButton
-                      label={test ? `Re-run ${quarterLabel(targetPeriod)}` : `Run ${quarterLabel(targetPeriod)}`}
-                      endpoint="/api/tests/run"
-                      body={{ facility_id: f.id, test_period_end: targetPeriod }}
-                      disabledReason={runDisabledReason({ hasApprovedTerms })}
-                    />
-                  </header>
-
-                  <div className="space-y-4 p-5">
-                    {test ? (
-                      <TestResultCard
-                        test={{
-                          borrower: f.borrower_name,
-                          period: quarterLabel(test.test_period_end),
-                          computed_dscr: test.computed_dscr,
-                          reported_dscr: test.reported_dscr,
-                          threshold: test.threshold,
-                          passed: test.passed,
-                          variance_flagged: test.variance_flagged,
-                          calc_id: test.calc_id,
-                          calc_error: test.calc_error,
-                        }}
-                      />
-                    ) : (
-                      <p className="text-body text-text-muted">
-                        No test for {quarterLabel(targetPeriod)} yet.{" "}
-                        {hasApprovedTerms ? "Run it to see where this borrower stands." : "Approve covenant terms, then run it."}
-                      </p>
-                    )}
-
-                    <details className="group">
-                      <summary className="flex cursor-pointer list-none items-center gap-2 text-label text-text-muted transition-colors hover:text-text-secondary">
-                        <span className="transition-transform group-open:rotate-90" aria-hidden="true">›</span>
-                        Documents on file ({notBoarded})
-                      </summary>
-                      <div className="mt-3">
-                        <DocumentList
-                          documents={facilityDocs.map((d) => ({ id: d.id, title: d.title, doc_type: d.doc_type, effective_date: d.effective_date }))}
-                          approvedTerms={terms}
-                        />
-                      </div>
-                    </details>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+          <PortfolioTable rows={rows} targetPeriod={targetPeriod} targetLabel={targetLabel} nextLabel={nextLabel} />
         )}
       </section>
 
@@ -339,7 +172,7 @@ export default async function Home() {
 
 /* ------------------------------------------------------------------ pieces */
 
-/** The header stat band: one bordered strip, dividers between, actionable counts tinted. */
+/** The header KPIs as raised tiles (dark-native depth: surface-raised, no shadow). */
 function StatBand({
   stats,
 }: {
@@ -347,11 +180,11 @@ function StatBand({
 }) {
   const tone = { danger: "text-danger", human: "text-human", muted: "text-text" } as const;
   return (
-    <div className="grid grid-cols-2 divide-y divide-border rounded-lg border border-border bg-surface sm:grid-cols-4 sm:divide-y-0 sm:divide-x">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {stats.map((s) => {
         const show = s.value != null && s.value > 0;
         return (
-          <div key={s.label} className="px-5 py-4">
+          <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-5 py-4">
             <p className="text-label text-text-muted">{s.label}</p>
             {show ? (
               <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>
@@ -363,90 +196,5 @@ function StatBand({
         );
       })}
     </div>
-  );
-}
-
-/** A labelled group in the attention queue. Renders nothing when empty. */
-function QueueGroup({
-  title,
-  hint,
-  count,
-  children,
-}: {
-  title: string;
-  hint: string;
-  count: number;
-  children: React.ReactNode;
-}) {
-  if (count === 0) return null;
-  return (
-    <div className="space-y-2">
-      <div className="flex items-baseline gap-3">
-        <h3 className="text-label text-text">{title}</h3>
-        <span className="text-label text-text-muted">{hint}</span>
-      </div>
-      <ul className="space-y-2">{children}</ul>
-    </div>
-  );
-}
-
-const EDGE = {
-  danger: "border-l-danger",
-  human: "border-l-border-strong",
-  model: "border-l-model",
-  muted: "border-l-border-strong",
-} as const;
-
-/** One triage row: borrower + period, the DSCR comparison, then its action(s). */
-function QueueRow({
-  borrower,
-  period,
-  ours,
-  theirs,
-  required,
-  edge,
-  children,
-}: {
-  borrower: string;
-  period: string;
-  ours: number | null;
-  theirs: number | null;
-  required: number | null;
-  edge: keyof typeof EDGE;
-  children: React.ReactNode;
-}) {
-  const short = ours != null && required != null ? (ours - required).toFixed(2) : null;
-  return (
-    <li
-      className={`flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-md border border-border border-l-2 ${EDGE[edge]} bg-surface px-4 py-3`}
-    >
-      <div className="grow">
-        <p className="text-card text-text">{borrower}</p>
-        <p className="text-label text-text-muted">{period}</p>
-      </div>
-      <dl className="flex items-center gap-6 font-mono text-num">
-        <div>
-          {/* Ours: code-computed, amber provenance. Theirs: the borrower's own
-              figure, never amber. Showing both answers "does their report agree?" */}
-          <dt className="text-label text-text-muted">Ours</dt>
-          <dd className="text-code-bright">{dscr(ours)}</dd>
-        </div>
-        <div>
-          <dt className="text-label text-text-muted">Theirs</dt>
-          <dd className="text-text-secondary">{theirs == null ? "not reported" : dscr(theirs)}</dd>
-        </div>
-        <div>
-          <dt className="text-label text-text-muted">Required</dt>
-          <dd className="text-text-secondary">{dscr(required)}</dd>
-        </div>
-        {short != null && (
-          <div>
-            <dt className="text-label text-text-muted">Short by</dt>
-            <dd className="text-danger">{short}</dd>
-          </div>
-        )}
-      </dl>
-      <div className="flex flex-wrap items-center gap-3">{children}</div>
-    </li>
   );
 }

@@ -55,7 +55,7 @@ export function RunTestButton(props: {
         onClick={run}
         disabled={disabled || busy}
         aria-describedby={disabled ? reasonId : undefined}
-        className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast ease-out disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-md border border-model bg-gradient-to-b from-model-bright to-model px-4 py-2 text-body font-medium leading-5 text-bg transition duration-fast ease-out hover:-translate-y-px hover:brightness-105 active:translate-y-px active:brightness-95 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {busy ? "Running…" : label}
       </button>

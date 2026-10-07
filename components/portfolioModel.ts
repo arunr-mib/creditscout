@@ -190,3 +190,127 @@ export function currentCasefiles<T extends { exception_id: string; status: strin
   }
   return out;
 }
+
+// ------------------------------------------------------- the portfolio table
+
+/**
+ * One borrower's standing in the portfolio, graded. The order of the union is
+ * the triage order (most urgent first), which `PORTFOLIO_STATUS[...].rank`
+ * mirrors so a sort and the badge never disagree.
+ */
+export type PortfolioStatus =
+  | "breach_investigate"
+  | "in_review"
+  | "investigating"
+  | "awaiting_docs"
+  | "decided"
+  | "compliant"
+  | "not_tested";
+
+/**
+ * The badge for each status: a word AND an icon, never colour alone (design.md
+ * §5). `needsAction` drives the table's "Needs action" filter; `rank` drives its
+ * default sort.
+ */
+export const PORTFOLIO_STATUS: Record<
+  PortfolioStatus,
+  { label: string; tone: "danger" | "human" | "model" | "success" | "muted"; icon: string; rank: number; needsAction: boolean }
+> = {
+  breach_investigate: { label: "Breach — investigate", tone: "danger", icon: "↑", rank: 0, needsAction: true },
+  in_review: { label: "In review", tone: "human", icon: "•", rank: 1, needsAction: true },
+  investigating: { label: "Investigating", tone: "model", icon: "◆", rank: 2, needsAction: true },
+  awaiting_docs: { label: "Awaiting docs", tone: "human", icon: "?", rank: 3, needsAction: true },
+  decided: { label: "Decided", tone: "muted", icon: "✓", rank: 4, needsAction: false },
+  compliant: { label: "Compliant", tone: "success", icon: "✓", rank: 5, needsAction: false },
+  not_tested: { label: "Not tested", tone: "muted", icon: "—", rank: 6, needsAction: false },
+};
+
+export interface PortfolioRow {
+  facilityId: string;
+  borrower: string;
+  industry: string | null;
+  termsVersion: number | null;
+  hasApprovedTerms: boolean;
+  /** Our code-computed DSCR (amber), the borrower's reported figure, and the requirement. */
+  ours: number | null;
+  theirs: number | null;
+  required: number | null;
+  status: PortfolioStatus;
+  /** The casefile to open, when an exception has one. */
+  casefileId: string | null;
+  exceptionId: string | null;
+  exceptionStatus: string | null;
+  recommendation: string | null;
+}
+
+const toNum = (v: unknown): number | null => (v == null || v === "" ? null : Number(v));
+
+/**
+ * The portfolio table's rows: every facility, graded by what the analyst has to
+ * do next. An OPEN exception decides the status (its casefile's state, or
+ * "investigate" when it has none yet); with no open exception, a test for the
+ * period reads as "compliant", and no test reads as "not tested". Pure: the page
+ * supplies already-filtered open exceptions and the live casefile per exception.
+ */
+export function portfolioRows(input: {
+  facilities: { id: string; borrower_name: string; industry: string | null }[];
+  openExceptions: { id: string; facility_id: string; status: string; computed_dscr: unknown; reported_dscr: unknown; required_dscr: unknown }[];
+  casefileByException: Map<string, { id: string; status: string; recommendation: string | null }>;
+  tests: { facility_id: string; test_period_end: string; computed_dscr: number | null; reported_dscr: number | null; threshold: number }[];
+  approvedTerms: { facility_id: string; version: number }[];
+  targetPeriod: string;
+}): PortfolioRow[] {
+  const rows = input.facilities.map((f): PortfolioRow => {
+    const terms = input.approvedTerms.find((t) => t.facility_id === f.id) ?? null;
+    const ex = input.openExceptions.find((e) => e.facility_id === f.id) ?? null;
+    const cf = ex ? input.casefileByException.get(ex.id) ?? null : null;
+    const test = input.tests.find((t) => t.facility_id === f.id && t.test_period_end === input.targetPeriod) ?? null;
+
+    let status: PortfolioStatus;
+    let ours: number | null;
+    let theirs: number | null;
+    let required: number | null;
+    if (ex) {
+      ours = toNum(ex.computed_dscr);
+      theirs = toNum(ex.reported_dscr);
+      required = toNum(ex.required_dscr);
+      status = !cf
+        ? "breach_investigate"
+        : cf.status === "pending_review"
+          ? "in_review"
+          : cf.status === "investigating"
+            ? "investigating"
+            : cf.status === "awaiting_docs"
+              ? "awaiting_docs"
+              : "decided";
+    } else if (test) {
+      ours = test.computed_dscr;
+      theirs = test.reported_dscr;
+      required = test.threshold;
+      status = "compliant";
+    } else {
+      ours = null;
+      theirs = null;
+      required = null;
+      status = "not_tested";
+    }
+
+    return {
+      facilityId: f.id,
+      borrower: f.borrower_name,
+      industry: f.industry,
+      termsVersion: terms?.version ?? null,
+      hasApprovedTerms: terms != null,
+      ours,
+      theirs,
+      required,
+      status,
+      casefileId: cf?.id ?? null,
+      exceptionId: ex?.id ?? null,
+      exceptionStatus: ex?.status ?? null,
+      recommendation: cf?.recommendation ?? null,
+    };
+  });
+  // Default order: triage rank, then borrower.
+  return rows.sort((a, b) => PORTFOLIO_STATUS[a.status].rank - PORTFOLIO_STATUS[b.status].rank || a.borrower.localeCompare(b.borrower));
+}
