@@ -32,13 +32,14 @@ export default async function GovernancePage() {
   const runs = (must(evalRes, "select eval_runs") ?? []) as EvalRunLike[];
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-title text-text">Governance &amp; evals</h1>
-        <p className="text-body text-text-secondary">
+    <div className="space-y-12">
+      <header className="max-w-prose space-y-1">
+        <p className="text-label text-text-muted">Policy &amp; evaluation</p>
+        <h1 className="text-title text-text">Governance</h1>
+        <p className="pt-1 text-body text-text-secondary">
           The policy that constrains every investigation, and how the agent scores against it — cold memory versus warm.
         </p>
-      </div>
+      </header>
 
       <GovernancePanel rows={policy} />
       <Scoreboard runs={runs} />
