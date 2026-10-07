@@ -75,6 +75,18 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
     return () => clearInterval(t);
   }, []);
 
+  // Keep the on-screen trace current WHILE a drive() slice is still in flight.
+  // One `pollInvestigation` call drives the run for up to ~25s and only then
+  // hands back, but `syncRun` mirrors each step into `casefiles.trace` as it
+  // happens — so a steady refresh shows the steps arriving live, instead of the
+  // screen sitting on "starting" until the whole slice returns. This component
+  // is mounted only while the casefile is `investigating` (the page hands off to
+  // the concluded view otherwise), so refreshing while mounted is always right.
+  useEffect(() => {
+    const t = setInterval(() => router.refresh(), 2000);
+    return () => clearInterval(t);
+  }, [router]);
+
   const { steps } = trace;
 
   return (
@@ -113,7 +125,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
         <p className="mt-4 flex items-center gap-3 border-t border-border pt-4 text-label text-text-muted">
           <span className="inline-block h-2 w-2 rounded-sm bg-model motion-safe:animate-pulse" aria-hidden="true" />
           <span>
-            {phase === "starting"
+            {phase === "starting" && steps.length === 0
               ? "Starting the investigation…"
               : "Investigation running — a reasoning step (teal) chooses the next evidence or calculation (amber)."}
           </span>
