@@ -168,40 +168,53 @@ const TERMS = [
 ]; // f-new has no approved terms
 
 test("portfolioRows grades each facility by what the analyst must do next", () => {
-  const openExceptions = [
-    { id: "x-harbor", facility_id: "f-harbor", status: "pending_review", computed_dscr: "1.12", reported_dscr: "1.12", required_dscr: "1.25" },
-    { id: "x-coastal", facility_id: "f-coastal", status: "new", computed_dscr: "1.08", reported_dscr: "1.30", required_dscr: "1.25" },
+  const exceptions = [
+    { id: "x-harbor", facility_id: "f-harbor", status: "pending_review", test_period_end: "2026-06-30", computed_dscr: "1.12", reported_dscr: "1.12", required_dscr: "1.25" },
+    { id: "x-coastal", facility_id: "f-coastal", status: "new", test_period_end: "2026-06-30", computed_dscr: "1.08", reported_dscr: "1.30", required_dscr: "1.25" },
   ];
   const casefileByException = new Map([
     ["x-harbor", { id: "cf-harbor", status: "pending_review", recommendation: "escalate" }],
     // x-coastal has no casefile yet -> breach_investigate
   ]);
   const tests = [
-    { facility_id: "f-north", test_period_end: "2026-06-30", computed_dscr: 1.4, reported_dscr: 1.41, threshold: 1.25 },
+    { facility_id: "f-north", test_period_end: "2026-06-30", computed_dscr: 1.4, reported_dscr: 1.41, threshold: 1.25, passed: true },
   ];
-  const rows = portfolioRows({ facilities: FACILITIES, openExceptions, casefileByException, tests, approvedTerms: TERMS, targetPeriod: "2026-06-30" });
+  const rows = portfolioRows({ facilities: FACILITIES, exceptions, casefileByException, tests, approvedTerms: TERMS, targetPeriod: "2026-06-30" });
   const byId = Object.fromEntries(rows.map((r) => [r.facilityId, r]));
 
   assert.equal(byId["f-coastal"].status, "breach_investigate"); // open exception, no casefile
   assert.equal(byId["f-harbor"].status, "in_review");           // casefile pending_review
-  assert.equal(byId["f-north"].status, "compliant");            // a test, no exception
+  assert.equal(byId["f-north"].status, "compliant");            // a passing test, no exception
   assert.equal(byId["f-new"].status, "not_tested");             // nothing
 
-  // Figures come from the exception for a breach, the test for compliant.
   assert.equal(byId["f-coastal"].ours, 1.08);
   assert.equal(byId["f-coastal"].required, 1.25);
   assert.equal(byId["f-north"].ours, 1.4);
-  // Approved-terms flag drives whether a Run is allowed.
   assert.equal(byId["f-new"].hasApprovedTerms, false);
   assert.equal(byId["f-harbor"].hasApprovedTerms, true);
 });
 
-test("portfolioRows is sorted by triage rank, most urgent first", () => {
-  const openExceptions = [
-    { id: "x-coastal", facility_id: "f-coastal", status: "new", computed_dscr: 1.08, reported_dscr: 1.3, required_dscr: 1.25 },
+test("a CLOSED/decided breach reads 'Decided', never 'Compliant' (the false-compliant bug)", () => {
+  // Northgate: its Q2 exception is closed and a test exists for the period. The
+  // test's figure is a breach (1.08 < 1.25). It must NOT read compliant.
+  const exceptions = [
+    { id: "x-north", facility_id: "f-north", status: "closed", test_period_end: "2026-06-30", computed_dscr: 1.08, reported_dscr: 1.31, required_dscr: 1.25 },
   ];
-  const rows = portfolioRows({ facilities: FACILITIES, openExceptions, casefileByException: new Map(), tests: [], approvedTerms: TERMS, targetPeriod: "2026-06-30" });
-  // Coastal (breach_investigate, rank 0) must come before the not_tested ones.
+  const casefileByException = new Map([["x-north", { id: "cf-north", status: "approved", recommendation: "escalate" }]]);
+  const tests = [{ facility_id: "f-north", test_period_end: "2026-06-30", computed_dscr: 1.08, reported_dscr: 1.31, threshold: 1.25, passed: false }];
+  const rows = portfolioRows({ facilities: FACILITIES, exceptions, casefileByException, tests, approvedTerms: TERMS, targetPeriod: "2026-06-30" });
+  const north = rows.find((r) => r.facilityId === "f-north");
+  assert.equal(north.status, "decided");
+  assert.notEqual(north.status, "compliant");
+  assert.equal(north.ours, 1.08);
+  assert.equal(north.casefileId, "cf-north");
+});
+
+test("portfolioRows is sorted by triage rank, most urgent first", () => {
+  const exceptions = [
+    { id: "x-coastal", facility_id: "f-coastal", status: "new", test_period_end: "2026-06-30", computed_dscr: 1.08, reported_dscr: 1.3, required_dscr: 1.25 },
+  ];
+  const rows = portfolioRows({ facilities: FACILITIES, exceptions, casefileByException: new Map(), tests: [], approvedTerms: TERMS, targetPeriod: "2026-06-30" });
   assert.equal(rows[0].facilityId, "f-coastal");
   assert.ok(PORTFOLIO_STATUS[rows[0].status].rank <= PORTFOLIO_STATUS[rows[rows.length - 1].status].rank);
 });

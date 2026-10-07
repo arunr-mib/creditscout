@@ -116,7 +116,7 @@ export default async function Home() {
   const casefileByException = currentCasefiles(casefiles);
   const rows = portfolioRows({
     facilities,
-    openExceptions: exceptions.filter((e) => e.status !== "closed"),
+    exceptions,
     casefileByException,
     tests,
     approvedTerms,

@@ -254,15 +254,18 @@ const toNum = (v: unknown): number | null => (v == null || v === "" ? null : Num
  */
 export function portfolioRows(input: {
   facilities: { id: string; borrower_name: string; industry: string | null }[];
-  openExceptions: { id: string; facility_id: string; status: string; computed_dscr: unknown; reported_dscr: unknown; required_dscr: unknown }[];
+  /** ALL exceptions for the demo (open AND closed) — a closed/decided breach must read "Decided", never "Compliant". */
+  exceptions: { id: string; facility_id: string; status: string; test_period_end: string; computed_dscr: unknown; reported_dscr: unknown; required_dscr: unknown }[];
   casefileByException: Map<string, { id: string; status: string; recommendation: string | null }>;
-  tests: { facility_id: string; test_period_end: string; computed_dscr: number | null; reported_dscr: number | null; threshold: number }[];
+  tests: { facility_id: string; test_period_end: string; computed_dscr: number | null; reported_dscr: number | null; threshold: number; passed: boolean | null }[];
   approvedTerms: { facility_id: string; version: number }[];
   targetPeriod: string;
 }): PortfolioRow[] {
   const rows = input.facilities.map((f): PortfolioRow => {
     const terms = input.approvedTerms.find((t) => t.facility_id === f.id) ?? null;
-    const ex = input.openExceptions.find((e) => e.facility_id === f.id) ?? null;
+    // The exception for THIS period, open or closed — so a decided breach is
+    // graded "Decided", not collapsed into "Compliant" because it is no longer open.
+    const ex = input.exceptions.find((e) => e.facility_id === f.id && e.test_period_end === input.targetPeriod) ?? null;
     const cf = ex ? input.casefileByException.get(ex.id) ?? null : null;
     const test = input.tests.find((t) => t.facility_id === f.id && t.test_period_end === input.targetPeriod) ?? null;
 
@@ -274,16 +277,21 @@ export function portfolioRows(input: {
       ours = toNum(ex.computed_dscr);
       theirs = toNum(ex.reported_dscr);
       required = toNum(ex.required_dscr);
-      status = !cf
-        ? "breach_investigate"
-        : cf.status === "pending_review"
-          ? "in_review"
-          : cf.status === "investigating"
-            ? "investigating"
-            : cf.status === "awaiting_docs"
-              ? "awaiting_docs"
-              : "decided";
-    } else if (test) {
+      status =
+        ex.status === "closed"
+          ? "decided"
+          : !cf
+            ? "breach_investigate"
+            : cf.status === "pending_review"
+              ? "in_review"
+              : cf.status === "investigating"
+                ? "investigating"
+                : cf.status === "awaiting_docs"
+                  ? "awaiting_docs"
+                  : "decided";
+    } else if (test && test.passed === true) {
+      // Compliant ONLY on a genuine pass. A failing test always has an exception
+      // (handled above), so this branch cannot mislabel a breach.
       ours = test.computed_dscr;
       theirs = test.reported_dscr;
       required = test.threshold;
