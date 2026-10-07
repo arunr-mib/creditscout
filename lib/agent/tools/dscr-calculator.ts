@@ -146,13 +146,35 @@ function malformedCitations(citations: unknown, financials: Record<string, unkno
   const amounts = own(financials, "addback_amounts");
   const addbackNames = isObject(amounts) ? Object.keys(amounts) : [];
   const addbackNamed = (key: string): string | undefined => addbackNames.find((n) => normaliseLabel(n) === normaliseLabel(key));
+
+  // Collect EVERY offending top-level key, not just the first. F5 carries two
+  // add-backs; mis-filing both one level up used to cost two correction steps
+  // (one 400 per round) against an eight-step cap, which skews the fewer-steps
+  // memory measurement. Naming them all in one 400 lets the model fix them in a
+  // single step. The single-key messages are kept verbatim so a lone mistake
+  // reads exactly as before.
+  const misplaced: { key: string; name: string }[] = [];
+  const notFields: string[] = [];
   for (const key of Object.keys(citations)) {
     if (CITATION_KEYS.includes(key)) continue;
     const name = addbackNamed(key);
-    if (name !== undefined) {
+    if (name !== undefined) misplaced.push({ key, name });
+    else notFields.push(key);
+  }
+  const offending = misplaced.length + notFields.length;
+  if (offending === 1) {
+    if (misplaced.length === 1) {
+      const { key, name } = misplaced[0];
       return `financial_citations["${key}"] is misplaced: an add-back's citation belongs at financial_citations.addback_amounts["${name}"]`;
     }
-    return `financial_citations["${key}"] is not a field: financial_citations takes only ${CITATION_KEYS_TEXT}`;
+    return `financial_citations["${notFields[0]}"] is not a field: financial_citations takes only ${CITATION_KEYS_TEXT}`;
+  }
+  if (offending > 1) {
+    const parts = [
+      ...misplaced.map(({ key, name }) => `"${key}" belongs at financial_citations.addback_amounts["${name}"]`),
+      ...notFields.map((key) => `"${key}" is not a field`),
+    ];
+    return `financial_citations has misplaced or unknown keys: ${parts.join("; ")}. financial_citations takes only ${CITATION_KEYS_TEXT}`;
   }
 
   for (const field of FINANCIAL_FIELDS) {
