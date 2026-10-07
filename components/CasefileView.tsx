@@ -2,12 +2,17 @@ import { type CalcSection, type ClaimView, type Notice, decidedHeadline, excepti
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
+import Link from "next/link";
 import { RecommendationBadge } from "./RecommendationBadge";
+import { ReinvestigateButton } from "./ReinvestigateButton";
 import { ReviewActions } from "./ReviewActions";
 import { SeenSimilarBadge } from "./SeenSimilarBadge";
 import type { Clause } from "./termsReview";
 
 /** The recorded human decision, from `reviews`. Absent when a decided casefile has no review row (see `submitReview`'s crash window). */
+/** Mirrors `SUPERSEDABLE_STATUSES` in the orchestrator, which this client component cannot import. */
+const SUPERSEDABLE_STATUSES = ["approved", "overridden", "awaiting_docs", "pending_review"];
+
 export interface ReviewRecord {
   decision: string;
   reason: string | null;
@@ -18,6 +23,10 @@ export interface ReviewRecord {
 
 export interface CasefileViewModel {
   casefileId: string;
+  /** The owning exception, for the re-run action. */
+  exceptionId: string;
+  /** For a superseded casefile: the current casefile of the same exception, if one exists. */
+  supersededBy: string | null;
   status: string;
   borrower: string;
   period: string;
@@ -62,7 +71,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         </div>
       </header>
 
-      {mode === "not_ready" && <NotReady status={view.status} />}
+      {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
+      {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
 
       {mode !== "not_ready" && view.explanation && (
         <section aria-labelledby="explanation-heading" className="space-y-2">
@@ -85,7 +95,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           </ul>
           {view.status === "awaiting_docs" && (
             <p className="text-label text-text-muted">
-              Re-running the investigation once a document is ingested is not available on this screen yet.
+              After a document is ingested, use Re-run investigation below.
             </p>
           )}
         </section>
@@ -105,7 +115,23 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           exceptionStatus={view.exceptionStatus}
         />
       )}
+      {SUPERSEDABLE_STATUSES.includes(view.status) && (
+        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
+      )}
     </article>
+  );
+}
+
+function Superseded({ currentId }: { currentId: string | null }) {
+  return (
+    <p role="status" className="rounded-md border border-border bg-surface p-4 text-body text-text-muted">
+      Superseded by a later investigation. This casefile is kept as history.{" "}
+      {currentId && (
+        <Link href={`/casefiles/${currentId}`} className="text-text-secondary underline">
+          Open the current casefile
+        </Link>
+      )}
+    </p>
   );
 }
 

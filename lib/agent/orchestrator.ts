@@ -109,7 +109,19 @@ export interface OrchestratorDeps {
   sleep?: (ms: number) => Promise<void>;
   deadlineMs?: number;
   pollIntervalMs?: number;
+  /**
+   * Opt-in re-investigation. When the exception's newest casefile has reached a
+   * TERMINAL status (a human could act on it), mark it `superseded` and claim a
+   * fresh one. History is kept: only the status changes. Never touches an
+   * `investigating` casefile; without this flag a terminal casefile is reused.
+   */
+  supersede?: boolean;
 }
+
+/** Statuses an investigation can end in that a human can act on; the only ones `supersede` may retire. */
+export const SUPERSEDABLE_STATUSES = ["approved", "overridden", "awaiting_docs", "pending_review"];
+/** Statuses that do NOT hold the one-live-casefile slot (migration 0010's index). */
+const FREE_SLOT_STATUSES = ["failed", "superseded"];
 
 async function defaultClient(): Promise<Db> {
   const { supabaseAdmin } = await import("../supabase/server.ts");
@@ -240,7 +252,9 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   const bundle = await buildExceptionProfile(exceptionId, { client });
 
   const existing = await latestCasefile(client, exceptionId);
-  if (existing && existing.status !== "failed") {
+  const supersedeExisting =
+    deps.supersede === true && existing !== null && SUPERSEDABLE_STATUSES.includes(existing.status);
+  if (existing && !FREE_SLOT_STATUSES.includes(existing.status) && !supersedeExisting) {
     return { casefileId: existing.id, status: existing.status, reused: true };
   }
 
@@ -256,6 +270,17 @@ export async function startInvestigation(exceptionId: string, deps: Orchestrator
   }
 
   const maxSteps = await readMaxSteps(client);
+
+  // Retire the prior casefile only now, after every cheap refusal above, so a
+  // 409 never leaves an exception with no live casefile. Only the status moves:
+  // the row, its exception link, trace and agent_output stay as the audit
+  // record. The status guard means a casefile that changed under us is left alone.
+  if (supersedeExisting && existing) {
+    check(
+      await client.from("casefiles").update({ status: "superseded" }).eq("id", existing.id).eq("status", existing.status),
+      "supersede casefile",
+    );
+  }
 
   // THE CLAIM, before anything slow. Everything above is a cheap read; the
   // lesson search below embeds a string over the network and takes well over a

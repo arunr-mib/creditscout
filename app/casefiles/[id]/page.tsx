@@ -14,6 +14,7 @@ import {
 } from "@/components/casefileModel";
 import type { Clause } from "@/components/termsReview";
 import { loadFacilityChunks } from "@/lib/agent/evidence";
+import { currentCasefileId } from "@/lib/casefile-current";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
@@ -102,10 +103,14 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
     chunks.map((c): Clause => ({ citation: c.citation, doc_title: c.doc_title, doc_type: c.doc_type, section: c.section, content: c.content })),
   );
 
+  const supersededBy = casefile.status === "superseded" ? await currentCasefileId(db, casefile.exception_id) : null;
+
   return (
     <CasefileView
       view={{
         casefileId: id,
+        exceptionId: casefile.exception_id,
+        supersededBy,
         status: casefile.status,
         borrower: (must(facility, "select facilities") as { borrower_name: string } | null)?.borrower_name ?? "Unknown borrower",
         period: quarterLabel(exception.test_period_end),
