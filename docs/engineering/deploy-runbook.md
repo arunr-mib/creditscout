@@ -62,19 +62,25 @@ who reaches the URL. Concretely, a stranger could **approve/override casefiles,
 run tests, and spend Azure tokens by hammering Investigate.** Per-route gating
 can't fix this — the UI *is* the analyst surface. Two viable options:
 
-- **Option A (recommended) — Vercel Deployment Protection (password/SSO) on the
-  whole app.** One gate covers every route, Server Action and the token-spend
-  surface. MVP-appropriate (the spec puts analyst auth out of scope). **Cost:**
-  the server's self-calls to `/api/tools/*` would be blocked by the gate, so you
-  must also turn on **Protection Bypass for Automation** (Vercel generates a
-  secret); set it as `VERCEL_AUTOMATION_BYPASS_SECRET`, and the controller adds
-  that bypass header to the two self-call sites (a ~10-line change, ready on
-  request). Without the bypass, investigations 401.
+**CHOSEN: Option A — Vercel Deployment Protection (password/SSO). The code change
+for it is already done (commit 0b69296).** To turn it on:
+1. Vercel → Project → Settings → **Deployment Protection** → enable Standard
+   Protection (Vercel Authentication) or Password Protection.
+2. Settings → Deployment Protection → **Protection Bypass for Automation** →
+   enable; Vercel generates a secret.
+3. Add that secret as the env var **`VERCEL_AUTOMATION_BYPASS_SECRET`** (all
+   environments). The agent's self-calls already send the
+   `x-vercel-protection-bypass` header when this is set, so investigations work
+   through the protection gate; without the secret set, the header is never sent
+   (safe for public/dev).
+4. Redeploy after setting it.
 
-- **Option B — deploy PUBLIC, no protection.** Simplest, no code change. Accept
-  that anyone with the URL can mutate the synthetic demo and spend tokens. Only
-  sane if the URL is kept private and short-lived. All data is synthetic and
-  re-seedable, but **token spend is real money.**
+One gate now covers every route, Server Action and the token-spend surface.
+MVP-appropriate (the spec puts analyst auth out of scope). Read-only reads stay
+on the publishable key under anon RLS.
+
+_(Option B — deploy public, no protection — remains possible with no code change,
+but was not chosen: anyone with the URL could spend Azure tokens.)_
 
 The read-only reads (portfolio, casefile, governance) use the publishable key
 under anon RLS (SELECT-only) — safe to be public either way.
