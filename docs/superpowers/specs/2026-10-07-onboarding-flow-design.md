@@ -24,7 +24,7 @@ Today, loans (DB table `facilities`) exist only via the seed script. There is no
 - A **4th synthetic borrower**'s documents (loan agreement + amendment + a quarter's financials + compliance certificate, each marked `SYNTHETIC — FOR DEMONSTRATION`) generated as demo upload material.
 
 **Out of scope**
-- Uploading the quarter's financials, running the first test, and the investigation — those are the **existing Portfolio → test → casefile flow**, deliberately not part of onboarding.
+- Running the first test and the investigation — the **existing Portfolio → test → casefile flow**, deliberately not part of onboarding. (The financials and compliance certificate **are** uploaded during onboarding, so they're on file; only the test run + investigation happen later.)
 - A document execution-status field (noted as a known gap; today execution is encoded in the title, e.g. "Waiver Request Letter — unexecuted").
 - Renaming the `facilities` table or any other DB change.
 - The F1/F5 boarding-lag and F3 uncited-clause twists — untouched; the new borrower is separate.
@@ -34,7 +34,7 @@ Today, loans (DB table `facilities`) exist only via the seed script. There is no
 A persistent stepper (1→4) sits above every step. State is carried by the URL: once the loan row exists, its id is in the path.
 
 1. **New Borrower** — `/borrowers/new`. Form: borrower name, industry, (optional) loan reference. Submitting calls the **create-loan** action → inserts a `facilities` row → redirects to step 2 for that id.
-2. **Upload the loan agreement** — `/borrowers/[id]/onboarding?step=documents`. Upload one or more documents (agreement required; amendments optional), each with **document type + effective date** → `POST /api/ingest` (reuses the existing UploadPackage fields). "Continue" is enabled once an agreement is ingested.
+2. **Upload documents** — `/borrowers/[id]/onboarding?step=documents`. **All documents in one place**: the loan agreement (required), any amendments, the quarter's financials, and the compliance certificate — each tagged with its **document type + effective date** → `POST /api/ingest` (reuses the existing UploadPackage fields). "Continue" is enabled once the **agreement** is ingested (it is what the agent needs to propose terms); the financials/certificate are ingested here too so they are on file for the first test later, but they are not required to proceed.
 3. **Agent extracts the terms** — same route, `?step=propose`. Copy: *"The Credit-scout Agent is extracting the covenant terms from your loan agreement."* Calls `POST /api/covenant-terms/propose` for the loan; shows a working state while the definition-agent reads the ingested chunks; on success a `proposed` covenant_terms row exists and we advance to step 4.
 4. **Review & approve** — redirect to the **existing** `/facilities/[id]/covenant-setup` page (rendered inside the stepper chrome, or linked as the final step), which already shows the proposed terms, their citations, uncited-clause warnings, edits, and the approve action. Approving writes the versioned `approved` row.
 
