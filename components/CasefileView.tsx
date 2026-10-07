@@ -1,4 +1,4 @@
-import { type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, isRecommendation, reviewMode } from "./casefileModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
@@ -58,16 +58,46 @@ export interface CasefileViewModel {
 export function CasefileView({ view }: { view: CasefileViewModel }) {
   const mode = reviewMode(view.status);
 
+  const showRec = mode !== "not_ready";
+  const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
+  const accent =
+    rec === "resolve" ? "border-l-success"
+      : rec === "escalate" ? "border-l-danger"
+        : rec === "request" ? "border-l-human"
+          : "border-l-border-strong";
+
   return (
     <article className="space-y-6">
-      <header className="space-y-2">
-        <p className="text-label text-text-muted">Casefile review</p>
-        <h1 className="text-title text-text">
-          {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
-        </h1>
-        <div className="flex flex-wrap items-center gap-3">
-          {mode !== "not_ready" && <RecommendationBadge recommendation={view.recommendation} />}
-          <SeenSimilarBadge count={view.seenSimilar} />
+      {/* The decision banner: the recommendation is the first thing the analyst
+          sees, and a cue to the guardrail notices they must read before deciding
+          (the notices themselves still render in full above the action bar). */}
+      <header className={`overflow-hidden rounded-lg border border-border-strong ${showRec ? `border-l-2 ${accent}` : ""} bg-surface`}>
+        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+          <div className="space-y-2">
+            <p className="text-label text-text-muted">Casefile review</p>
+            <h1 className="text-title text-text">
+              {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
+            </h1>
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              <SeenSimilarBadge count={view.seenSimilar} />
+              {view.notes.length > 0 && (
+                <a
+                  href="#guardrail-notices"
+                  className="inline-flex items-center gap-1 rounded-sm border border-code bg-code-bg px-2 py-px text-label text-code-bright"
+                >
+                  <span aria-hidden="true">⟡</span>
+                  {view.notes.length} guardrail {view.notes.length === 1 ? "notice" : "notices"} to review
+                </a>
+              )}
+            </div>
+          </div>
+          {showRec && rec && (
+            <div className={`shrink-0 inline-flex items-center gap-2 rounded-md px-3 py-2 text-section ${RECOMMENDATION_BADGE[rec].tone}`}>
+              <span aria-hidden="true">{RECOMMENDATION_BADGE[rec].icon}</span>
+              {RECOMMENDATION_BADGE[rec].label}
+            </div>
+          )}
+          {showRec && !rec && <RecommendationBadge recommendation={view.recommendation} />}
         </div>
       </header>
 
@@ -102,7 +132,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       )}
 
       {/* Above the actions, always visible, never collapsible. */}
-      <GuardrailNotices notes={view.notes} />
+      <div id="guardrail-notices" className="scroll-mt-4">
+        <GuardrailNotices notes={view.notes} />
+      </div>
 
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} />
