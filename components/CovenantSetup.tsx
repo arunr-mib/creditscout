@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { approveTerms } from "@/app/actions";
 import { ApproveBar, type ApprovalState, type OmissionCounts } from "./ApproveBar";
 import { ClausePanel } from "./ClausePanel";
 import { ProposeTrace } from "./ProposeTrace";
@@ -230,16 +231,12 @@ export function CovenantSetup(props: {
   async function approve() {
     if (!proposal) return;
     setApproval({ kind: "sending" });
-    let res: Response;
+    let res: { status: number; body: Record<string, unknown> };
     try {
-      res = await fetch("/api/covenant-terms/approve", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          terms_id: proposal.termsId,
-          approved_by: approver,
-          ...(Object.keys(edits).length > 0 ? { edits: Object.values(edits) } : {}),
-        }),
+      res = await approveTerms({
+        terms_id: proposal.termsId,
+        approved_by: approver,
+        ...(Object.keys(edits).length > 0 ? { edits: Object.values(edits) } : {}),
       });
     } catch {
       setApproval({
@@ -248,8 +245,8 @@ export function CovenantSetup(props: {
       });
       return;
     }
-    const body = await res.json().catch(() => null);
-    if (res.ok && body && typeof body === "object") {
+    const body = res.body;
+    if (res.status === 200 && body && typeof body === "object") {
       const b = body as { version: number; effective_from: string };
       setApproval({ kind: "approved", version: b.version, effectiveFrom: b.effective_from, by: approver.trim() });
       setEditing(null);

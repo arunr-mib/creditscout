@@ -1,5 +1,7 @@
 "use server";
 
+import { ingestFromForm } from "@/lib/ingest-form";
+import { runApprove } from "@/lib/terms";
 import { InvestigationError, startInvestigation } from "@/lib/agent/orchestrator";
 
 /**
@@ -25,5 +27,30 @@ export async function investigateException(
     if (err instanceof InvestigationError) return { ok: false, error: err.message };
     console.error("investigate from queue failed", err);
     return { ok: false, error: "The investigation could not be started. Check the server log." };
+  }
+}
+
+/**
+ * Upload a document from the portfolio dropzone. A Server Action, not a browser
+ * POST to `/api/ingest`: that route is gated by the shared key, which must never
+ * reach the browser. The action runs the same ingest code in-process and
+ * returns only `{status, body}`.
+ */
+export async function uploadPackage(form: FormData): Promise<{ status: number; body: Record<string, unknown> }> {
+  return ingestFromForm(form);
+}
+
+/**
+ * Approve covenant terms from the setup screen. A Server Action for the same
+ * reason as the upload: `/api/covenant-terms/approve` is key-gated. Provenance
+ * is still re-verified server-side by `runApprove`; the reply has the same
+ * `{status, body}` shape the route's response had.
+ */
+export async function approveTerms(body: unknown): Promise<{ status: number; body: Record<string, unknown> }> {
+  try {
+    return await runApprove(body);
+  } catch (err) {
+    console.error("approve failed", err);
+    return { status: 500, body: { error: "Approval failed. Check the server log." } };
   }
 }

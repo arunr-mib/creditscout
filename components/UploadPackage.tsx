@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadPackage } from "@/app/actions";
 
 export interface UploadFacility {
   id: string;
@@ -23,8 +24,8 @@ type State =
   | { kind: "rejected"; reason: string };
 
 /**
- * design.md §12.4 — the quarterly-package dropzone. It posts to the existing
- * `/api/ingest`; wiring the re-run after an upload is a later task (F9f), so
+ * design.md §12.4 — the quarterly-package dropzone. It calls the `uploadPackage`
+ * Server Action (the `/api/ingest` route is key-gated); wiring the re-run after an upload is a later task (F9f), so
  * this does the upload and nothing more.
  *
  * The success state is a SLATE toast, never green — green means *compliant*, and
@@ -53,10 +54,9 @@ export function UploadPackage({ facilities }: { facilities: UploadFacility[] }) 
     form.set("doc_type", docType);
     if (effectiveDate) form.set("effective_date", effectiveDate);
     try {
-      const res = await fetch("/api/ingest", { method: "POST", body: form });
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        setState({ kind: "rejected", reason: (data && typeof data.error === "string" && data.error) || `Upload failed (${res.status}).` });
+      const { status, body: data } = await uploadPackage(form);
+      if (status !== 200) {
+        setState({ kind: "rejected", reason: (data && typeof data.error === "string" && data.error) || `Upload failed (${status}).` });
         return;
       }
       setState({ kind: "done", sections: Number(data?.chunks_created ?? 0), title: file.name });
