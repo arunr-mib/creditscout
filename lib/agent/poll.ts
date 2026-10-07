@@ -1,4 +1,4 @@
-import { TOOL_KEY_HEADER } from "./auth.ts";
+import { TOOL_KEY_HEADER, protectionBypassHeaders } from "./auth.ts";
 import { DEFAULT_BASE_URL } from "./openapi.ts";
 import { LIVE_STATUS, toSyncState, type SyncState } from "../../components/traceModel.ts";
 
@@ -35,7 +35,7 @@ export async function syncInvestigation(casefileId: string, deps: SyncDeps = {})
   try {
     res = await fetchImpl(`${base}/api/investigate/sync`, {
       method: "POST",
-      headers: { "content-type": "application/json", [TOOL_KEY_HEADER]: toolKey },
+      headers: { "content-type": "application/json", [TOOL_KEY_HEADER]: toolKey, ...protectionBypassHeaders() },
       body: JSON.stringify({ casefile_id: casefileId }),
     });
   } catch (err) {

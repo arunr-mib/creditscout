@@ -48,3 +48,21 @@ export function requireToolKey(req: Request): Response | null {
   if (provided === null || !constantTimeEqual(provided, expected)) return unauthorized();
   return null;
 }
+
+/**
+ * Vercel Deployment Protection bypass for the server's own self-calls.
+ *
+ * When the deployment is password/SSO-protected, the server's fetches to its own
+ * `/api/tools/*` and `/api/investigate/sync` routes would be bounced by the
+ * protection gate. Vercel's "Protection Bypass for Automation" exempts a request
+ * that carries this header with the project's bypass secret. We send it ONLY
+ * when the secret is set, so a public (unprotected) deploy and local dev are
+ * unaffected. The tool-key check above still runs regardless — the bypass gets
+ * past the protection wall, the tool key is what actually authorises the call.
+ */
+export const VERCEL_PROTECTION_BYPASS_HEADER = "x-vercel-protection-bypass";
+
+export function protectionBypassHeaders(): Record<string, string> {
+  const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  return secret ? { [VERCEL_PROTECTION_BYPASS_HEADER]: secret } : {};
+}

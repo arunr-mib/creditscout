@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildExceptionProfile, topLessons } from "../memory.ts";
 import { DEFAULT_RUN_ID, type PastCaseHit } from "../retrieval.ts";
 import { termsInForce } from "../terms.ts";
-import { TOOL_KEY_HEADER } from "./auth.ts";
+import { TOOL_KEY_HEADER, protectionBypassHeaders } from "./auth.ts";
 import {
   cancelRun,
   getRun,
@@ -467,6 +467,7 @@ async function callToolRoute(name: string, args: unknown, ctx: ToolContext): Pro
       headers: {
         "content-type": "application/json",
         [TOOL_KEY_HEADER]: process.env.CREDITSCOUT_TOOL_KEY ?? "",
+        ...protectionBypassHeaders(),
       },
       body: JSON.stringify(toolRequestBody(name, args, ctx)),
       signal: AbortSignal.timeout(TOOL_TIMEOUT_MS),
