@@ -46,11 +46,15 @@ Set every variable from `.env.example`. The values are in your local `.env`
 - `CREDITSCOUT_TOOL_KEY` — the shared key the server uses to call its own tool
   routes, and now the gate on ingest/approve. **Secret.** Generate a long random
   value; the same value is used everywhere.
-- `PUBLIC_BASE_URL` — **the deployed URL itself** (e.g.
-  `https://creditscout.vercel.app`). The agent calls its own `/api/tools/*`
-  routes at this URL while investigating, so it must be the deployment's own
-  origin. Set it after the first deploy gives you the URL, then redeploy (or set
-  it to your known production domain up front).
+- `PUBLIC_BASE_URL` — **leave it unset.** The agent calls its own
+  `/api/tools/*` routes while investigating, and the app derives that origin
+  from Vercel's own `VERCEL_PROJECT_PRODUCTION_URL` (falling back to
+  `VERCEL_URL`). That cannot go stale when a project is renamed or a duplicate
+  deployment is deleted — a hand-pasted host that still parses but points
+  somewhere dead gives you 404s on every tool call and a run stuck at zero
+  steps, with no error to read. Set this **only** for a real custom domain, with
+  the full scheme (`https://covenants.example.com`); a non-localhost value
+  always wins over the platform host.
 
 ## 4. Access control — the one real decision (read this)
 The pre-deploy batch gated the two most dangerous raw routes (`/api/ingest`,
@@ -92,14 +96,17 @@ Fine for the demo's synthetic PDFs (small); note it if you upload big files.
 
 ## 5. Deploy
 1. Trigger the deploy. First build ~2–4 min.
-2. Copy the deployment URL → set `PUBLIC_BASE_URL` to it → redeploy so the agent
-   can reach its own routes.
+2. Nothing to do for the agent's own routes — the origin comes from Vercel's
+   environment, so there is no "copy the URL back into an env var and redeploy"
+   step any more. Confirm with
+   `curl -s https://<host>/api/tools/openapi | head -c 200` and check
+   `servers[0].url` is the live host.
 
 ## 6. Foundry note
 The orchestrator currently uses **function tools** (the run parks at
 `requires_action`; the server submits outputs via the self-calls above). This
-works unchanged on Vercel once `PUBLIC_BASE_URL` and `CREDITSCOUT_TOOL_KEY` are
-set — no Foundry reconfiguration needed to deploy. (The OpenAPI-tool path, where
+works unchanged on Vercel once `CREDITSCOUT_TOOL_KEY` is set (the base URL is
+derived, not configured) — no Foundry reconfiguration needed to deploy. (The OpenAPI-tool path, where
 Foundry calls the routes directly, is committed in `lib/agent/openapi.ts` for a
 future switch but is not required now.)
 

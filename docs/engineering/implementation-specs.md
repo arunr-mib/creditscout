@@ -521,7 +521,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 # F10 — Deploy and evaluate ✅ DEPLOYED 2026-10-06 · HARNESS BUILT 2026-10-07
 
-*Stage 10 · depends on F9 · live at `https://credit-scout.vercel.app` (project `creditscout-nrb7`, deploys `main`; runbook: `deploy-runbook.md`)*
+*Stage 10 · depends on F9 · live at `https://credit-scout.vercel.app` (one Vercel project, deploys `main`; runbook: `deploy-runbook.md`)*
 
 ### Product & UX
 - **Description:** Public Vercel deployment behind a shared-credential demo gate, and the eval scoreboard.

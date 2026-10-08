@@ -15,16 +15,55 @@ export const SECURITY_SCHEME = "ToolKey";
 /**
  * The base URL for the agent's self-calls, normalised.
  *
- * `PUBLIC_BASE_URL` is set by hand in the deploy environment, and the common
- * mistake is to paste the bare host (`creditscout.vercel.app`) with no scheme —
- * which makes `fetch(base + path)` throw "Invalid URL" and every tool call fail.
- * So a scheme-less value gets `https://` prepended. Trailing slashes are
- * trimmed. An unset value falls back to localhost for local work.
+ * `PUBLIC_BASE_URL` is set by hand in the deploy environment, which makes it the
+ * single most stale-prone value we have. Two failure modes, both seen for real:
+ *
+ *   1. The bare host with no scheme (`credit-scout.vercel.app`) — `fetch(base +
+ *      path)` throws "Invalid URL" and every tool call fails loudly. A
+ *      scheme-less value gets `https://` prepended.
+ *   2. A *valid* URL pointing somewhere dead — a renamed project or a deleted
+ *      duplicate deployment. Nothing throws; the self-calls just 404 and the
+ *      investigation stalls at zero steps. This one is silent and cost us a
+ *      debugging session.
+ *
+ * So on a deployment we do not trust the hand-pasted value as the last word:
+ * when it is missing, or still points at localhost (which on a serverless
+ * function means the function itself, never the app), we take the platform's
+ * own host instead. An explicit non-localhost value always wins, so a custom
+ * domain or a deliberate override is still honoured.
+ *
+ * Off-platform, an unset value falls back to localhost — which is what the live
+ * eval harness depends on, since it drives the agent against `npm run dev`.
  */
 export function resolveBaseUrl(env: Record<string, string | undefined> = process.env): string {
-  const raw = (env.PUBLIC_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
-  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  const withScheme = (host: string) => {
+    const trimmed = host.replace(/\/+$/, "");
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  };
+
+  const configured = (env.PUBLIC_BASE_URL || "").trim();
+  if (configured) {
+    const url = withScheme(configured);
+    // A localhost value is only meaningful off-platform.
+    if (!(isDeployed(env) && isLocalhost(url))) return url;
+  }
+
+  if (isDeployed(env)) {
+    // VERCEL_PROJECT_PRODUCTION_URL is the stable production domain;
+    // VERCEL_URL is this specific deployment. Prefer the stable one.
+    const platformHost = env.VERCEL_PROJECT_PRODUCTION_URL || env.VERCEL_URL;
+    if (platformHost) return withScheme(platformHost);
+  }
+
+  return DEFAULT_BASE_URL;
 }
+
+/** True when running on Vercel, where a localhost base URL cannot reach the app. */
+function isDeployed(env: Record<string, string | undefined>): boolean {
+  return Boolean(env.VERCEL || env.VERCEL_ENV);
+}
+
+const isLocalhost = (url: string) => /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(url);
 
 /** The header name as it appears on the wire (the auth check reads it case-insensitively). */
 export const HEADER_NAME = "X-CreditScout-Tool-Key";

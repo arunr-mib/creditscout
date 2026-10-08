@@ -16,7 +16,7 @@ and the rest has been refreshed to 2026-10-08.
 ### 0.1 What is done
 
 The product is **built, deployed and verified live** at `https://credit-scout.vercel.app`
-(Vercel project `creditscout-nrb7`, deploys `main`; shared-credential demo gate,
+(one Vercel project, deploys `main`; shared-credential demo gate,
 credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 
 | Area | State |
@@ -45,7 +45,7 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | **The five onboarding packages are never seeded** | Onboarding must genuinely create the loan live. The eval harness therefore *skips* them until onboarded (4.11). | onboarding spec §5 |
 | **Eval set is 10 signed cases, reported as 10** (not 24); scoreboard grouped **Honest / Harmless / Helpful**; evals are **hybrid** — grading is deterministic Node code against the signed key, the investigations run on Azure, only groundedness goes to the Foundry judge | The safety numbers must not be judged by a model. | PRD §5.1/§6.1, HLD §11 |
 | `generate()` **refuses to overwrite a signed oracle**; the drift test compares generator-owned columns only | `npm run generate:data` would otherwise erase the owner's values. | `data/generate.mjs`, `data/generate.test.js` |
-| One Vercel project (`creditscout-nrb7` → `credit-scout.vercel.app`); the duplicate was deleted; deploy auth via service principal with the **"Foundry User"** role ("Azure AI User" does not exist in this subscription) | Two projects were both auto-deploying `main`. | `docs/engineering/deploy-runbook.md`, memory notes |
+| One Vercel project serving **`credit-scout.vercel.app`**; the duplicate project and its `*.vercel.app` host were deleted; deploy auth via service principal with the **"Foundry User"** role ("Azure AI User" does not exist in this subscription) | Two projects were both auto-deploying `main`. Refer to the deploy by its live host, never by a project slug — the slug is cosmetic and has already changed once. | `docs/engineering/deploy-runbook.md` |
 
 ### 0.3 What is left — in order
 
@@ -94,7 +94,7 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | Deterministic eval | `npm run eval` (free) · `npm run eval -- --write` (records the row) |
 | Live eval | `npm run dev` (background) then `npm run eval -- --live` (billable; see 0.3) |
 | Regenerate synthetic docs | `npm run generate:data` — safe: will not touch the signed oracle |
-| Deploy | push `main`; `vercel ls creditscout-nrb7 --prod`; runbook in `docs/engineering/deploy-runbook.md` |
+| Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
 ### 0.6 Live eval results — 2026-10-08 — read this before quoting any number
@@ -341,7 +341,7 @@ Verified with live calls, not assumed.
 | Azure Foundry project | ✅ `creditscout` under account `contractreviewagent-resource`, resource group `AI_Learning`, eastus2 |
 | Azure embeddings | ✅ `text-embedding-3-small`, **1536 dimensions** (the schema depends on this number) |
 | Azure chat models | ✅ `gpt-4.1-mini` (orchestrator) and `gpt-5-mini` (specialists) deployed; Connected Agents spiked green then dropped (§0.2) |
-| Vercel | ✅ one project, `creditscout-nrb7` → `credit-scout.vercel.app`, deploys `main`; CLI logged in as `arunrmib-3989`; agent env vars incl. SP creds, `FOUNDRY_ORCHESTRATOR_AGENT_ID`, `PUBLIC_BASE_URL` set on the project |
+| Vercel | ✅ one project serving `credit-scout.vercel.app`, deploys `main`; CLI logged in as `arunrmib-3989`; agent env vars incl. SP creds and `FOUNDRY_ORCHESTRATOR_AGENT_ID`. `PUBLIC_BASE_URL` no longer needs setting — the app reads Vercel's own production host, so a renamed project cannot strand the agent's tool calls |
 | Local `.env` | ✅ Supabase + Azure OpenAI + tool key set; **`PUBLIC_BASE_URL` and the SP vars are unset** on purpose — locally the `az` CLI authenticates Foundry and tool self-calls go to `localhost:3000` (so a live eval needs `npm run dev` running) |
 | CLIs | ✅ `az` 2.90 (+ `ml` ext), `supabase` 2.119, `uv`, `gh`, `docker`, Node 24.8 (`engines` requires ≥22.18 — the `.ts` files run directly) |
 | Supabase **CLI** token | ❌ **`SUPABASE_ACCESS_TOKEN` is dead** and regenerating it fails with the same `FGA Authentication Error`. Not blocking: migrations go to the owner as SQL for the dashboard editor, and everything else uses the service-role key. |
@@ -433,7 +433,7 @@ If the gate blocks terms that are right, the analyst cannot board a covenant at 
 7. **Whether full `gpt-4.1` gets deployed** for the judge. Billable (parking-lot 4.8).
 8. **Making the repo public.** Not decided.
 9. **How four-eyes is described in the pitch** (§6). It is recorded, not enforced, and that distinction is worth stating before someone asks.
-10. **The Vercel project slug** — the owner may rename `creditscout-nrb7` to `credit-scout` in the dashboard; cosmetic.
+10. **The Vercel project slug** is cosmetic and is not recorded anywhere in the repo or docs on purpose — identify the deploy by its live host, `credit-scout.vercel.app`.
 11. **Transcribe the oracle + HHH mapping into the cohort's evals spreadsheet** (parking-lot 3.4) before submission.
 
 ## 12. Working notes for agents
