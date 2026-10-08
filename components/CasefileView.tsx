@@ -1,6 +1,7 @@
 import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileEvidence } from "./CasefileEvidence";
+import { CasefileFindings } from "./CasefileFindings";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
 import Link from "next/link";
@@ -147,6 +148,25 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
               <span aria-hidden="true">⚠</span> Provisional · amendment not reflected in approved terms
             </p>
           )}
+
+          {/* The agent's own account is secondary and no longer takes a section
+              of its own. It is one click away, labelled for what it is. */}
+          {view.explanation && (
+            <details className="group mt-3">
+              <summary className="cursor-pointer list-none text-label text-model-bright underline-offset-2 hover:underline marker:content-['']">
+                {overridden ? "Read the agent draft that was not accepted" : "Read the agent’s reasoning"}
+                <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+              </summary>
+              <div className="mt-2 border-l-2 border-border-strong pl-3">
+                <p className="max-w-prose text-body text-text-secondary">{view.explanation}</p>
+                <p className="mt-2 max-w-prose text-label text-text-muted">
+                  {overridden
+                    ? "Enforcement rejected this draft and replaced its recommendation with the result above. It is kept for the record, not as the supported conclusion."
+                    : "The agent’s account, not the decision. Where it and the figures above disagree, the enforced result and the validation notices govern. The code decides the number, not the narrative."}
+                </p>
+              </div>
+            </details>
+          )}
         </section>
       )}
 
@@ -178,179 +198,23 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         </dl>
       )}
 
-      {/* ------------------------------------ what was found / what to check */}
+      {/* ---------------------------------- findings, evidence and attention */}
       {showRec && (summary.steps.length > 0 || view.amendments.length > 0 || view.notes.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          <section aria-label="What the agent found" className="rounded-lg border border-border-strong bg-surface lg:col-span-2">
-            <h2 className="border-b border-border px-4 py-3 text-card text-text">What the agent found</h2>
-            <ol className="space-y-4 p-4">
-              {summary.steps.map((step) => (
-                <li key={step.n} className="flex gap-3">
-                  <span
-                    aria-hidden="true"
-                    className="mt-px inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-model bg-model-bg font-mono text-label text-model-bright"
-                  >
-                    {step.n}
-                  </span>
-                  <div>
-                    <p className="text-body font-medium text-text">{step.title}</p>
-                    <p className="mt-1 max-w-prose text-body text-text-secondary">{step.detail}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-
-            {summary.comparison.length > 1 && (
-              <div className="border-t border-border p-4">
-                <h3 className="text-card text-text">Calculation comparison</h3>
-                <div className="mt-2 overflow-x-auto rounded-md border border-border">
-                  <table className="w-full border-collapse text-left">
-                    <thead className="bg-surface-raised">
-                      <tr className="text-label uppercase tracking-wide text-text-muted">
-                        <th className="px-3 py-2 font-medium">Basis</th>
-                        <th className="px-3 py-2 text-right font-medium">DSCR</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {summary.comparison.map((row) => (
-                        <tr key={row.basis} className="border-t border-border">
-                          <td className="px-3 py-2 text-body text-text">{row.basis}</td>
-                          <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text">{fmtX(row.dscr)}</td>
-                          <td className="px-3 py-2">
-                            <StatusPill status={row.status} />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </section>
-
-          {/* Points AT the notices rather than replacing them: the full text
-              still renders below, where the decision is made. */}
-          <section aria-label="What needs your attention" className="rounded-lg border border-border-strong bg-surface">
-            <h2 className="border-b border-border px-4 py-3 text-card text-text">What needs your attention</h2>
-            <div className="space-y-4 p-4">
-              {view.amendments.filter((a) => a.effectiveForPeriod && !a.boarded).map((a) => (
-                <div key={a.title} className="flex gap-3">
-                  <span aria-hidden="true" className="text-card text-code-bright">⚠</span>
-                  <div>
-                    <p className="text-body text-text">Amendment review pending</p>
-                    <p className="mt-1 text-label text-text-muted">
-                      {a.title} is not reflected in approved terms{view.termsVersion != null ? ` v${view.termsVersion}` : ""}.
-                    </p>
-                    <Link
-                      href={`/facilities/${view.facilityId}/covenant-setup`}
-                      className="mt-2 inline-flex rounded-md border border-border-strong px-3 py-1 text-label text-text hover:bg-surface-raised"
-                    >
-                      Review amendment and terms
-                    </Link>
-                  </div>
-                </div>
-              ))}
-              {view.notes.length > 0 && (
-                <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
-                  <p className="text-body text-text-secondary">
-                    {view.notes.length} validation notice{view.notes.length === 1 ? "" : "s"} to review
-                  </p>
-                  <a href="#guardrail-notices" className="shrink-0 text-label text-model-bright underline-offset-2 hover:underline">
-                    View notice{view.notes.length === 1 ? "" : "s"}
-                  </a>
-                </div>
-              )}
-              {view.missingEvidence.length > 0 && (
-                <div className="border-t border-border pt-4">
-                  <p className="text-body text-text">Evidence the agent says is not on file</p>
-                  <ul className="mt-1 space-y-1">
-                    {view.missingEvidence.map((m, i) => (
-                      <li key={i} className="text-label text-text-muted">{m}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </section>
-        </div>
+        <CasefileFindings
+          summary={summary}
+          sections={view.sections}
+          amendments={view.amendments}
+          notes={view.notes}
+          termsVersion={view.termsVersion}
+          facilityId={view.facilityId}
+          missingEvidence={view.missingEvidence}
+        />
       )}
-
-      {view.amendments.length > 0 && <AmendmentPanel amendments={view.amendments} termsVersion={view.termsVersion} />}
 
       {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
       {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
 
-      {mode !== "not_ready" && view.explanation && (
-        <section aria-labelledby="explanation-heading" className="space-y-2">
-          <div className="flex flex-wrap items-baseline gap-3">
-            <h2 id="explanation-heading" className={`text-card ${overridden ? "text-text-muted" : "text-text"}`}>
-              {overridden ? "Agent draft — not accepted" : "Agent’s reasoning"}
-            </h2>
-            <span
-              className={`rounded-sm border px-2 py-px text-label ${
-                overridden ? "border-code bg-code-bg text-code-bright" : "border-border-strong text-text-muted"
-              }`}
-            >
-              {overridden ? "rejected by enforcement · not the conclusion" : "provisional · secondary to the enforced result"}
-            </span>
-          </div>
-          <p className="max-w-content text-body text-text-secondary">{view.explanation}</p>
-          <p className="max-w-content text-label text-text-muted">
-            {overridden ? (
-              <>
-                Enforcement rejected this draft and replaced its recommendation with the enforced result above. It is
-                kept for the record, not as the supported conclusion — do not read it as what the product concluded.
-                The notices below say which check rejected it.
-              </>
-            ) : (
-              <>
-                This is the agent&rsquo;s account, not the decision. Where it and the computed result above disagree —
-                for example if it applies an amendment the approved terms do not yet reflect — the enforced result and
-                the guardrail notices below are what govern. The code decides the number, not the narrative.
-              </>
-            )}
-          </p>
-        </section>
-      )}
-
-      {mode !== "not_ready" && <CasefileEvidence sections={view.sections} claims={view.claims} clauses={view.clauses} trace={view.trace} />}
-
-      {view.missingEvidence.length > 0 && (
-        <section aria-labelledby="missing-heading" className="space-y-2">
-          <h2 id="missing-heading" className="text-card text-text">
-            {view.status === "awaiting_docs" ? "Awaiting these documents" : "Evidence the agent says is not on file"}
-          </h2>
-          <ul className="space-y-1 rounded-md border border-border bg-surface p-3">
-            {view.missingEvidence.map((m, i) => (
-              <li key={i} className="text-body text-text-secondary">{m}</li>
-            ))}
-          </ul>
-          {view.status === "awaiting_docs" && (
-            <p className="text-label text-text-muted">
-              After a document is ingested, use Re-run investigation below.
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Collapsible (owner's call), but OPEN BY DEFAULT when a notice actually
-          changed the answer. A flag is context; an abstain or escalate replaced
-          the recommendation being reviewed, and that must not start hidden. */}
-      {view.notes.length > 0 && (
-        <details id="guardrail-notices" open={overridden} className="scroll-mt-4 rounded-lg border border-border-strong bg-surface">
-          <summary className="cursor-pointer list-none px-4 py-3 text-card text-text marker:content-['']">
-            <span aria-hidden="true" className="mr-2 text-code-bright">⟡</span>
-            {view.notes.length} validation notice{view.notes.length === 1 ? "" : "s"}
-            <span className="ml-2 text-label text-text-muted">
-              {overridden ? "— enforcement changed the recommendation; read before deciding" : "— click to read"}
-            </span>
-          </summary>
-          <div className="border-t border-border p-4">
-            <GuardrailNotices notes={view.notes} />
-          </div>
-        </details>
-      )}
+      {mode !== "not_ready" && <CasefileEvidence sections={view.sections} claims={view.claims} clauses={view.clauses} trace={view.trace} showCalculation={false} />}
 
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} />

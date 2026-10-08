@@ -29,8 +29,10 @@ export function CasefileEvidence(props: {
   claims: ClaimView[];
   clauses: Record<string, Clause | null>;
   trace: LiveTraceView;
+  /** False on the casefile: the calculation now opens inside the finding that produced it. */
+  showCalculation?: boolean;
 }) {
-  const { sections, claims, clauses, trace } = props;
+  const { sections, claims, clauses, trace, showCalculation = true } = props;
   const [selected, setSelected] = useState<Selection | null>(null);
   const [tab, setTab] = useState<"source" | "trace">("source");
 
@@ -57,6 +59,7 @@ export function CasefileEvidence(props: {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
       {/* LEFT — calculation and claims */}
       <div className="min-w-0 space-y-6 lg:col-span-3">
+        {showCalculation && (
         <section aria-labelledby="calc-heading" className="space-y-2">
           <div className="flex items-baseline gap-3">
             <h2 id="calc-heading" className="text-card text-text">
@@ -77,6 +80,7 @@ export function CasefileEvidence(props: {
             </details>
           )}
         </section>
+        )}
 
         <section aria-labelledby="claims-heading" className="space-y-2">
           <h2 id="claims-heading" className="text-card text-text">Claims and their citations</h2>

@@ -537,6 +537,10 @@ export interface FoundStep {
   n: number;
   title: string;
   detail: string;
+  /** What this finding opens: a logged calculation, or the amendment evidence. */
+  kind: "initial" | "addback" | "recalculation";
+  /** The calculation to reveal; null for the evidence step, which has none. */
+  calcId: string | null;
 }
 
 export interface ComparisonRow {
@@ -609,6 +613,8 @@ export function investigationSummary(
     const below = initial.dscr != null && required != null && initial.dscr < required;
     steps.push({
       n: steps.length + 1,
+      kind: "initial",
+      calcId: initial.calcId,
       title: below ? "Initial test below minimum" : "Initial test calculated",
       detail: `The original calculation returned ${x(initial.dscr)} against a ${x(required)} minimum.`,
     });
@@ -617,6 +623,8 @@ export function investigationSummary(
   if (addback) {
     steps.push({
       n: steps.length + 1,
+      kind: "addback",
+      calcId: null,
       title: "Additional add-back identified",
       detail:
         addback.cap == null
@@ -630,6 +638,8 @@ export function investigationSummary(
     const above = governing.dscr != null && required != null && governing.dscr >= required;
     steps.push({
       n: steps.length + 1,
+      kind: "recalculation",
+      calcId: governing.calcId,
       title: above ? "Recalculation above minimum" : "Recalculation still below minimum",
       detail: onAmendedTerms
         ? `Applying the amendment produced ${x(governing.dscr)}. The amendment basis still requires review.`
