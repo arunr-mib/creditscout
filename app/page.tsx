@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PortfolioTable } from "@/components/PortfolioTable";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
@@ -134,7 +135,12 @@ export default async function Home() {
             <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
             <h1 className="text-title text-text">Portfolio</h1>
           </div>
-          <RunTestButton label={`Run ${targetLabel}`} endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/borrowers/new" className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast hover:border-model">
+              + New borrower
+            </Link>
+  <RunTestButton label={`Run ${targetLabel}`} endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
+          </div>
         </div>
         <p className="max-w-prose text-body text-text-secondary">
           Every test is computed by code from approved terms. The borrower&apos;s reported figure is evidence to
