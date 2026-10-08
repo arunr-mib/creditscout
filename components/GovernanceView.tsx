@@ -56,7 +56,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
         <>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-strong border-l-2 border-l-model bg-surface px-4 py-3">
             <p className="flex items-center gap-3 text-card text-text">
-              <span aria-hidden="true">🔒</span> Human approval is required for every recommendation.
+              Human approval is required for every recommendation.
             </p>
             <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">Locked</span>
           </div>
@@ -97,7 +97,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <p className="text-body text-text">{r.title}</p>
                         <span
-                          className={`shrink-0 rounded-full border px-2 py-px text-label ${
+                          className={`shrink-0 rounded border px-2 py-px text-label ${
                             r.action === "abstain" || r.action === "escalate"
                               ? "border-danger/40 text-danger"
                               : "border-code/40 text-code-bright"

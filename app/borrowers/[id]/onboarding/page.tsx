@@ -90,7 +90,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-model bg-gradient-to-b from-model-bright to-model text-bg hover:-translate-y-px active:translate-y-px"}`}>
+        <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-model bg-model text-bg hover:bg-model-bright"}`}>
           Continue to covenant terms
         </Link>
         {derived === "documents" && (

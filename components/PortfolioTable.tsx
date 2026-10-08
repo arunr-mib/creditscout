@@ -138,7 +138,7 @@ export function PortfolioTable({
                   <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
                   <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded-full border px-3 py-px text-label ${RESULT_TONE[result]}`}>
+                    <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded border px-3 py-px text-label ${RESULT_TONE[result]}`}>
                       <span aria-hidden="true">●</span>
                       {TEST_RESULT_LABEL[result]}
                     </span>

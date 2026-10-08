@@ -88,7 +88,7 @@ function Card({ card }: { card: TermsCard }) {
         </div>
         {card.unboarded.length > 0 && (
           <span
-            className="inline-flex items-center gap-2 rounded-full border border-code bg-code-bg px-3 py-1 text-label text-code-bright"
+            className="inline-flex items-center gap-2 rounded border border-code bg-code-bg px-3 py-1 text-label text-code-bright"
             title={NOT_BOARDED_TOOLTIP}
           >
             <span aria-hidden="true">●</span> {TERMS_PENDING}
@@ -169,7 +169,7 @@ function StatusPill({ status }: { status: string }) {
         ? "border-code bg-code-bg text-code-bright"
         : "border-border-strong text-text-muted";
   return (
-    <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-px text-label ${tone}`}>
+    <span className={`inline-flex items-center gap-2 rounded border px-3 py-px text-label ${tone}`}>
       <span aria-hidden="true">●</span> {TERMS_STATUS_LABEL[status] ?? status}
     </span>
   );

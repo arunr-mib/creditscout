@@ -51,7 +51,7 @@ export function RecommendationCard({
         <h2 className="text-section text-text">{headline}</h2>
         {humanReviewRequired && (
           <span className="inline-flex items-center gap-2 rounded-md border border-success bg-success-bg px-3 py-px text-label text-success">
-            <span aria-hidden="true">🔒</span> Human approval required
+            Human approval required
           </span>
         )}
       </div>

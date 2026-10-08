@@ -275,7 +275,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
         <section aria-label="Recommendation" className="rounded-lg border border-border-strong bg-surface">
           <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h2 className="text-card text-text">Recommendation</h2>
-            <span className="rounded-full border border-border-strong px-3 py-px text-label text-text-muted">Pending</span>
+            <span className="rounded border border-border-strong px-3 py-px text-label text-text-muted">Pending</span>
           </header>
           <div className="space-y-4 p-4">
             <div>
@@ -292,7 +292,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
                   <li key={o.label} className="flex items-start gap-3">
                     <span
                       aria-hidden="true"
-                      className="mt-px inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border-strong text-label text-text-muted"
+                      className="mt-px inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-border-strong text-label text-text-muted"
                     >
                       {o.icon}
                     </span>

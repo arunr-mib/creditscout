@@ -81,7 +81,7 @@ export function CasefileFindings({
                 <div className="flex gap-3">
                   <span
                     aria-hidden="true"
-                    className="relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-model bg-model-bg font-mono text-label text-model-bright"
+                    className="relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-model bg-model-bg font-mono text-label text-model-bright"
                   >
                     {step.n}
                   </span>
@@ -320,5 +320,5 @@ function Pill({ status }: { status: string }) {
       : status === "meets_minimum" ? "Meets minimum"
         : status === "provisional" ? "Provisional"
           : "Not computed";
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-3 py-px text-label ${tone}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded border px-3 py-px text-label ${tone}`}>{label}</span>;
 }

@@ -111,7 +111,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         {/* The memory badge sits under the status pill rather than taking a row
             of its own below the subtitle. */}
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-body ${statusPill.tone}`}>
+          <span className={`inline-flex items-center gap-2 rounded border px-4 py-2 text-body ${statusPill.tone}`}>
             <span aria-hidden="true">●</span> {statusPill.label}
           </span>
           <SeenSimilarBadge count={view.seenSimilar} />
@@ -225,7 +225,7 @@ function StatusPill({ status }: { status: string }) {
       : status === "meets_minimum" ? "Meets minimum"
         : status === "provisional" ? "Provisional"
           : "Not computed";
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-3 py-px text-label ${tone}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded border px-3 py-px text-label ${tone}`}>{label}</span>;
 }
 
 /** One figure in the decision banner's governing-figures strip. */
