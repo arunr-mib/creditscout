@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { boardingState, type BoardingState } from "@/components/portfolioModel";
 import { anonReader } from "@/lib/supabase/anon";
+import { NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, longDate } from "@/lib/terms-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -27,25 +28,6 @@ const DOC_TYPE_LABEL: Record<string, string> = {
  * carry is a "Terms review required" — the covenant-boarding lag the agent is
  * built to catch, surfaced as an action rather than buried in a borrower card.
  */
-/** One wording for the boarding states, so the card and the table cannot drift apart. */
-const TERMS_PENDING = "Terms update pending";
-const TERMS_INCLUDED = "Included in approved terms";
-const NOT_BOARDED_TOOLTIP = "This amendment is on file but is not reflected in approved covenant terms.";
-
-/**
- * "Apr 1, 2026" for prose. The table keeps the stored ISO date in monospace:
- * it is a column an analyst scans and sorts by eye, and design.md §3 puts every
- * such value in tabular figures. Parsed as UTC — `new Date("2026-04-01")` is
- * already UTC midnight, so formatting in a western timezone would render the
- * day before.
- */
-function longDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(`${iso}T00:00:00Z`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-}
-
 export default async function DocumentsPage() {
   const db = anonReader();
   const [facilitiesRes, documentsRes, termsRes] = await Promise.all([
