@@ -1,46 +1,57 @@
-import { TOOL_KEY_HEADER, protectionBypassHeaders } from "./auth.ts";
-import { resolveBaseUrl } from "./openapi.ts";
+import { InvestigationError, syncRun } from "./orchestrator.ts";
 import { LIVE_STATUS, toSyncState, type SyncState } from "../../components/traceModel.ts";
 
 /**
  * Drive one investigation forward from the browser, SAFELY.
  *
- * `POST /api/investigate/sync` is gated by the shared tool key (`requireToolKey`,
- * review finding I-4) and must never be called from the browser. This runs
- * server-side — behind a Server Action — and holds the key, exactly as
- * `callToolRoute` already fetches our own tool routes with it. The key goes into
- * the request header and NOTHING here returns it: the client gets only the
- * sanitised `SyncState`.
+ * This runs behind a Server Action, so it is already server-side. It therefore
+ * drives the run IN PROCESS by calling `syncRun` directly. The client gets only
+ * the sanitised `SyncState`; no key, no Foundry detail, ever.
  *
- * A network/unreachable error is reported as still `investigating`, not as a
- * failure, so a transient blip never stops the poll loop or reads to the analyst
- * as a failed investigation. A real failure comes back from the route as a
- * terminal `casefile_status`, which the reducer then stops on.
+ * IT USED TO HTTP-POST ITS OWN `/api/investigate/sync` ROUTE. That hop bought
+ * nothing — both ends are the same server, and the Server Action already held
+ * the tool key the route checks — and on Vercel it was the thing that broke:
+ * the function's fetch to its own public domain failed, so every drive returned
+ * "the investigation could not be reached: fetch failed" and the run sat at
+ * zero steps while Foundry waited. Calling the orchestrator directly removes
+ * the whole failure class.
+ *
+ * The ROUTE STAYS, key-gated, because `scripts/investigate.mjs` and the eval
+ * harness drive runs over HTTP from outside the server. It is simply no longer
+ * how the app talks to itself.
+ *
+ * A thrown drive is reported as still `investigating`, not as a failure, so a
+ * transient blip never stops the poll loop or reads to the analyst as a failed
+ * investigation. A real failure comes back as a terminal `casefile_status`,
+ * which the reducer then stops on.
  */
 
 export interface SyncDeps {
-  /** Injected only by tests. Defaults to the platform `fetch`. */
-  fetchImpl?: typeof fetch;
-  /** Injected only by tests. Defaults to the server-side env key. */
-  toolKey?: string;
-  baseUrl?: string;
+  /** Injected only by tests. Defaults to the in-process orchestrator. */
+  syncImpl?: (casefileId: string) => Promise<unknown>;
+}
+
+/**
+ * `fetch` failures surface as a bare "fetch failed" with the real reason hidden
+ * on `cause`. Unwrapping it is the difference between a diagnosable error and a
+ * shrug — that opacity cost real time on the first production run.
+ */
+function describe(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const cause = (err as { cause?: unknown }).cause;
+  const detail = cause instanceof Error ? cause.message : cause ? String(cause) : "";
+  return detail && !err.message.includes(detail) ? `${err.message} (${detail})` : err.message;
 }
 
 export async function syncInvestigation(casefileId: string, deps: SyncDeps = {}): Promise<SyncState> {
-  const fetchImpl = deps.fetchImpl ?? fetch;
-  const toolKey = deps.toolKey ?? process.env.CREDITSCOUT_TOOL_KEY ?? "";
-  const base = resolveBaseUrl({ PUBLIC_BASE_URL: deps.baseUrl ?? process.env.PUBLIC_BASE_URL });
-
-  let res: Response;
+  const drive = deps.syncImpl ?? syncRun;
   try {
-    res = await fetchImpl(`${base}/api/investigate/sync`, {
-      method: "POST",
-      headers: { "content-type": "application/json", [TOOL_KEY_HEADER]: toolKey, ...protectionBypassHeaders() },
-      body: JSON.stringify({ casefile_id: casefileId }),
-    });
+    return toSyncState(casefileId, await drive(casefileId));
   } catch (err) {
-    // Unreachable is transient, not terminal. Stay `investigating` so the poll
-    // keeps trying rather than dropping the analyst onto a false failure.
+    // An InvestigationError is the orchestrator refusing on purpose (a bad id, a
+    // casefile that is not ours to drive). Surface it, but let the poll loop
+    // keep going — the route's own terminal status is what concludes a casefile.
+    const message = err instanceof InvestigationError ? err.message : describe(err);
     return {
       casefileId,
       casefileStatus: LIVE_STATUS,
@@ -48,17 +59,7 @@ export async function syncInvestigation(casefileId: string, deps: SyncDeps = {})
       steps: 0,
       maxSteps: 0,
       stopped: null,
-      error: `the investigation could not be reached: ${err instanceof Error ? err.message : String(err)}`,
+      error: `the investigation could not be advanced: ${message}`,
     };
   }
-
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    // A non-2xx from the sync route is an error to surface, but it does not
-    // itself conclude the casefile — keep polling unless the route reported a
-    // terminal status in the body.
-    const state = toSyncState(casefileId, body);
-    return { ...state, error: state.error ?? `the investigation sync returned ${res.status}` };
-  }
-  return toSyncState(casefileId, body);
 }
