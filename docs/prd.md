@@ -7,9 +7,9 @@
 | **Product** | CreditScout — an AI work assistant for credit analysts in commercial lending |
 | **Author** | Arun Rajendiran |
 | **Mentor POC** | Yashshree |
-| **Date** | 2026-10-05 |
-| **Status** | Draft for review |
-| **Companion docs** | `docs/eng.md` (HLD) · `docs/spec.md` (LLD) · `docs/superpowers/specs/2026-10-01-creditscout-design.md` (design spec) |
+| **Date** | 2026-10-07 (revised; first draft 2026-10-05) |
+| **Status** | Built and deployed — `https://credit-scout.vercel.app`; eval harness in progress |
+| **Companion docs** | `docs/mental-model.md` (mental model + user flows) · `docs/engineering/engineering-doc.md` (HLD) · `docs/engineering/implementation-specs.md` (LLD) · `docs/superpowers/specs/2026-10-01-creditscout-design.md` (design spec) · `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md` (onboarding) · `docs/parking-lot.md` (deferred, with reasons) |
 
 > **One line:** A reasoning layer decides what evidence to inspect next. A
 > calculation layer never guesses. A human always approves.
@@ -24,11 +24,28 @@ appended. For traceability:
 | "Narrow it to one covenant type" | Scope is **DSCR only**, tested quarterly on a TTM basis (§2, §3) |
 | "Treat the Risk Officer as a config file rather than a second user" | The Credit Risk Officer is a **policy table**, not a persona with screens (§1.2, §2.2) |
 | "5–10 synthetic facilities, each with one amendment or waiver" | **6 synthetic facilities**, each with an amendment or waiver (§7) |
-| "Build 20–30 expert-labeled test cases" | **24 labeled cases** = 6 facilities × 4 variations, owner-signed (§5) |
+| "Build 20–30 expert-labeled test cases" | Planned as 24; **built and owner-signed as 10** (5 quarterly tests on the seeded loans + 5 onboarding loans). We report 10 as 10 (§5) |
 | "Make analyst-override memory the centerpiece of the demo" | F1 → F5 memory effect is the demo's centerpiece and a tracked metric (§1.5, §6) |
 | "Regulatory exposure: must stay decision support" | Hard-coded: `require_human_review` is a **locked** policy value (§8) |
 | "Monetization and go-to-market aren't stated" | §9 — pricing model, TAM/SAM, revenue scenarios, directional pricing |
 | "Real loan files won't be available" | **100% synthetic data**, every document marked `SYNTHETIC — FOR DEMONSTRATION` (§7) |
+
+### Scope changes since the 2026-10-05 draft
+
+What was built differs from the draft in these ways. Each is reflected in the
+section named; this table is the index.
+
+| Change | What it means | Where |
+|---|---|---|
+| **Loan onboarding wizard** (Flow A as a product flow) | "+ New borrower" → create loan → upload *all* documents in one place → the Credit-scout Agent extracts terms → review & approve, in one guided sequence. Covenant setup is a screen, not a pre-seeded database row | §2.1, §2.2 US-000 |
+| **"Loan", not "facility"** | Every screen says *loan*; the schema keeps `facility` | §2.1 |
+| **"Credit-scout Agent"** | The orchestrator's name in every user-facing surface; the trace reads as its orchestration plan, each step annotated with its purpose and each specialist step marked "delegated by the Credit-scout Agent" | §2.2 |
+| **Specialists are in-process function tools, not Connected Agents** | Connected Agents was tried and dropped — a connected agent's inner run cannot carry a function tool, so specialists could not retrieve for themselves | §1.4, §9.1 |
+| **Orchestrator model is `gpt-4.1-mini`** | The platform forces it: `gpt-5-mini` cannot carry the tool set. Specialists are `gpt-5-mini` | §5.2, §9.1 |
+| **Demo data: Bank of Stoic + 5 onboarding borrowers** | Lender renamed (the prior name resembled a real bank). Five new synthetic upload packages — Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works — never seeded, so onboarding runs for real | §7 |
+| **Eval oracle: 10 signed cases** | Planned 24 (6 × 4); built 10, every row owner-signed 2026-10-07. Scoreboard grouped Honest / Harmless / Helpful. Grading is deterministic code; only groundedness goes to the Foundry judge | §1.5, §5.1, §6.1 |
+| **Portfolio triage table; governing-first casefile** | Status badges and a "Needs action" filter on the portfolio; the casefile leads with the governing test-period figure and an amendment-status panel, and labels any amendment-dependent narrative *provisional* | §2.1 |
+| **Deployed with a demo gate** | Vercel, service-principal auth into Foundry, shared-credential landing page. Not multi-user auth | §4, §8 |
 
 ---
 
@@ -184,8 +201,8 @@ Three things that were not simultaneously true 18 months ago:
    context** (1M-token windows), which is what makes amendment-precedence
    reasoning tractable at all.
 2. **Tool-calling and multi-agent orchestration became managed infrastructure**
-   (Azure AI Foundry Agent Service, Connected Agents) rather than something each
-   team hand-rolls — so a small team can build this.
+   (Azure AI Foundry Agent Service with function tools) rather than something
+   each team hand-rolls — so a small team can build this.
 3. **Covenant exception volume rises when credit quality softens**, precisely
    when regional lenders are least able to add analyst headcount.
    `[NEED: current SMB/middle-market delinquency trend data to support this]` —
@@ -308,7 +325,7 @@ quote from a cited document, or a code guardrail forces the recommendation to
 
 | Metric | Baseline | Target | How tracked |
 |---|---|---|---|
-| **False-resolve rate** — recommends `resolve` when the expected outcome is not resolve | n/a (no tool today) | **0** — non-negotiable gate | Eval harness over 24 labeled cases |
+| **False-resolve rate** — recommends `resolve` when the expected outcome is not resolve | n/a (no tool today) | **0** — non-negotiable gate | Eval harness over the **10 owner-signed cases** (`data/expected-values-template.csv`) |
 | **Calculation accuracy** — DSCR matches independently computed expected value to 2dp | Manual, error-prone | **100%** | Unit tests + eval harness, against owner-computed spreadsheet values |
 | **Outcome accuracy** — recommended outcome matches expected outcome | n/a | **≥ 85%** | Eval harness |
 
@@ -316,7 +333,7 @@ quote from a cited document, or a code guardrail forces the recommendation to
 
 | Metric | Target | How tracked |
 |---|---|---|
-| Correct abstain/request on incomplete-evidence cases | ≥ 90% | Eval harness (cases F2, F4) |
+| Correct abstain/request on incomplete-evidence cases | ≥ 90% | Eval harness. **Unmeasured in the current set** — the incomplete-evidence cases (F2, F4) are parked; the scoreboard shows "—", never a 0 |
 | Citation hit rate — expected key clause actually cited | ≥ 90% | Eval harness |
 | Groundedness | Reported | Azure AI Foundry Evaluations, LLM judge |
 | **Memory effect** — avg steps per investigation, cold vs. warm memory | Visible reduction (target: F5 resolves in ~3 steps vs. F1's ~6) | `casefiles.steps_count`, compared across eval runs |
@@ -401,28 +418,56 @@ scope creep, and several of these have already been argued once.
 ### The flow at a glance
 
 ```
+FLOW A — LOAN ONBOARDING (once per loan, again per amendment)
 INPUT                     PROCESSING                        OUTPUT
 ─────                     ──────────                        ──────
 
-Quarterly package    ┌─► Ingest: extract text,          Exception appears
-(certificate,        │   chunk by section,              in the analyst's
-financials,          │   embed, store                   queue with reported
-agreement,           │                                  vs. required DSCR
-amendment)      ─────┤
-                     │   Certificate check:
-                     └─► reported DSCR vs. threshold
-                         → below? create exception
+"+ New borrower"     ──► create the loan row              step 1 of 4
+
+Upload ALL documents ──► Ingest: extract text,            chunks + embeddings
+in one place:            chunk by section, embed          filed under the loan
+agreement (effective
+date required),
+amendments, financials,
+certificate
+
+"The Credit-scout    ──► definition tool reads the        proposed Terms v1,
+ Agent is extracting     definitions article +            every line with a
+ the covenant terms      amendments → executable          citation + verbatim
+ from your loan          terms; CODE verifies every       quote
+ agreement"              cited quote is really there
+
+Analyst reviews      ──► edit / APPROVE (four-eyes)       Terms v1 APPROVED,
+beside the clause                                         effective-dated
+
+
+FLOW B — QUARTERLY MONITORING (every loan, every quarter)
+INPUT                     PROCESSING                        OUTPUT
+─────                     ──────────                        ──────
+
+Quarterly package    ──► Ingest (as above)
+(certificate,
+financials)
+"Run Q{N}"           ──► Load APPROVED terms in force      One `tests` row per
+                         for the period                   loan per quarter
+                     ──► DSCR CALCULATOR (CODE):
+                         OUR number vs threshold;
+                         borrower's figure reconciled
+                         → ≥ threshold, agree: compliant
+                         → ≥ threshold, differ: variance logged
+                         → < threshold: EXCEPTION          Portfolio: Needs action
 
 Analyst clicks       ┌─► Load memory: prior cases
 "Investigate"   ─────┤   + top 3 lessons
                      │
-                     ├─► ORCHESTRATOR AGENT loop ──┐    Live step trace,
-                     │     ├ document_agent        │    updating as the
-                     │     ├ definition_agent      │    agent works
-                     │     ├ dscr_calculator (CODE)│
-                     │     ├ research_agent        │
-                     │     └ search_past_cases     │
-                     │   ◄──────────────────────────┘
+                     ├─► CREDIT-SCOUT AGENT loop ─┐    Live trace that reads
+                     │     ├ search_documents(CODE)│    as an orchestration
+                     │     ├ dscr_calculator (CODE)│    plan: each step
+                     │     ├ search_past_cases     │    annotated with what
+                     │     ├ definition_agent      │    it was for, each
+                     │     ├ research_agent        │    specialist step
+                     │     └ document_agent        │    "delegated by the
+                     │   ◄──────────────────────────┘    Credit-scout Agent"
                      │
                      ├─► GUARDRAIL (code): every
                      │   number traces? every quote
@@ -432,49 +477,55 @@ Analyst clicks       ┌─► Load memory: prior cases
                          tolerance, breach depth,
                          prohibited actions
 
-                                                    Cited casefile:
-                                                    recommendation,
-                                                    explanation, calc
-                                                    table, citation chips
+                                                    Governing-first casefile:
+                                                    test-period figure under
+                                                    the governing terms,
+                                                    amendment status, then
+                                                    recommendation, claims,
+                                                    calc table, citation chips
 
 Analyst reviews  ────► Approve / Override / Request  Outcome recorded;
                        docs                          override becomes a
                                                      lesson in memory
 ```
 
-> **Visual diagram:** `docs/diagrams/creditscout-user-flow.svg` — deck-ready,
-> colour-coded (teal = model, amber = code, white = human), showing Flow A
-> (covenant setup, with the four-eyes approval checkpoint) and Flow B (quarterly
-> monitoring, with all three test outcomes). The conceptual framing behind it is
-> in `docs/mental-model.md`.
+> **Diagrams and the conceptual framing** are in `docs/mental-model.md` (§2
+> Flow A, §3 Flow B, §7 the screen inventory).
 
-**Note — the flow below describes end-to-end monitoring.** Earlier drafts of
-this PRD started the loop at "the borrower reported a figure below threshold".
-That was too narrow: it meant the system only ever checked borrowers whose own
+**Note — the flow describes end-to-end monitoring.** Earlier drafts of this PRD
+started the loop at "the borrower reported a figure below threshold". That was
+too narrow: it meant the system only ever checked borrowers whose own
 arithmetic had already raised a flag, and a borrower wrong in their own favour
-was invisible. The flow now **computes independently for every borrower every
+was invisible. The flow **computes independently for every loan every
 quarter**, and treats the borrower's reported figure as evidence to reconcile
 against rather than as the trigger.
 
 ### Detailed flow
 
-1. **Input.** The analyst uploads a borrower's quarterly package — compliance
-   certificate, financials, and (first time) the credit agreement and any
-   amendment or waiver. Text-based PDFs. An optional email intake path can
-   receive certificates automatically.
+1. **Onboard the loan (Flow A).** From "+ New borrower" on the portfolio, a
+   four-step wizard: create the loan; upload **all** of its documents in one
+   place (the agreement and any amendment must carry an effective date, because
+   that date anchors the terms' effective-from); the Credit-scout Agent extracts
+   the covenant terms, each with a citation and verbatim quote; the analyst
+   reviews each beside its source clause and approves. The loan then appears on
+   the portfolio as "Not tested". Later amendments re-enter at the upload step
+   and produce a new terms version.
 2. **Ingest.** Documents are split into section-level chunks using legal
    headings (`§`, `Section`, `ARTICLE`), embedded, and stored with metadata
-   tying each chunk to its facility, document and section. Citations are by
+   tying each chunk to its loan, document and section. Citations are by
    **document + section**, because PDF text extraction does not preserve page
-   numbers reliably.
-3. **Exception detection (code).** For a compliance certificate, the model
-   extracts a fixed schema — borrower, test period, reported DSCR, stated
-   requirement — and **code** compares the reported figure to the threshold.
-   Below threshold creates an exception. This step is deliberately deterministic.
-4. **Investigation (agent).** The orchestrator loads memory, then decides what
-   to inspect. It delegates to three specialist agents and calls a deterministic
-   calculator. Every tool call appends a step to a live trace. The loop is capped
-   by `policy.max_steps`.
+   numbers reliably. Scanned PDFs are rejected with a reason.
+3. **Quarterly test (code).** "Run Q{N}" loads the approved terms in force for
+   the period and **code computes the DSCR** from the six financial inputs. Our
+   number against the threshold decides the outcome: compliant, variance logged
+   (ours passes, theirs differs), or **exception** (ours fails). The borrower's
+   reported figure is reconciled, never used as the trigger. This step is
+   deliberately deterministic — no model is involved.
+4. **Investigation (agent).** The Credit-scout Agent loads memory, then decides
+   what to inspect. It calls three code tools (document search, the calculator,
+   past-case search) and three specialists it delegates to in-process. Every
+   tool call appends a step to a live trace, annotated with its purpose. The
+   loop is capped by `policy.max_steps`.
 5. **Output.** A casefile containing: a recommendation (`resolve` / `request` /
    `escalate` / `abstain`), an explanation under 150 words, a list of claims each
    with citation and verbatim quote, the calculation IDs behind every number,
@@ -501,7 +552,7 @@ against rather than as the trigger.
 
 | ID | User story | Acceptance criteria | Priority |
 |---|---|---|---|
-| **US-000** | As an analyst, I want the agent to extract the covenant from the credit agreement into executable terms that **I approve**, so every future quarter is tested against terms a human has signed off | Agent proposes threshold, EBITDA basis, add-backs, caps, denominator components and effective dates, **each with a citation and verbatim quote**; analyst reviews each beside its source clause and approves or edits; approved terms are versioned and effective-dated; an amendment creates a new version rather than overwriting | **P0** |
+| **US-000** | As an analyst, I want to onboard a new loan and have the agent extract the covenant from its credit agreement into executable terms that **I approve**, so every future quarter is tested against terms a human has signed off | **Built as a four-step wizard** from "+ New borrower": create loan → upload all documents in one place (agreement/amendment require an effective date) → agent proposes threshold, EBITDA basis, add-backs, caps, denominator components and effective dates, **each with a citation and verbatim quote**, and code verifies every quote is really in the cited clause → analyst reviews each beside its source clause and approves or edits. Approved terms are versioned and effective-dated; an amendment creates a new version rather than overwriting. A half-finished onboarding resumes at the right step | **P0** |
 | **US-001** | As an analyst, I want the system to **independently compute** the covenant each quarter for every borrower, so a borrower whose arithmetic is wrong in their own favour is still caught | Accepts text PDFs; loads the approved terms in force for the test period; **code computes DSCR from the financials and compares it to the threshold** — the borrower's reported figure is reconciled against ours, not used as the trigger; failing calculation creates an exception | **P0** |
 | **US-001b** | As an analyst, I want to be told when our number and the borrower's disagree even though both pass, so I know their reporting is unreliable before it matters | Variance beyond `variance_tolerance` is **logged against the facility**; no investigation is started (deliberate — investigations are reserved for real exceptions) | **P1** |
 | **US-002** | As an analyst, I want the agent to investigate a flagged exception and produce a recommendation, so I don't have to do the document archaeology myself | Returns `resolve` / `request` / `escalate` / `abstain` with explanation ≤150 words, claims, calculation IDs, missing evidence and a suggested tag | **P0** |
@@ -522,13 +573,14 @@ P0 = required to prove the hypothesis · P1 = ship if possible · P2 = stretch
 | Agent / component | Input | Output | Autonomy | Human-in-loop trigger |
 |---|---|---|---|---|
 | **Ingest & chunking** | Uploaded PDF | Section-level chunks with metadata | Fully autonomous | Extraction failure → document rejected with a reason |
-| **Certificate check** | Certificate text | `{borrower, test_period_end, reported_dscr, required_dscr_stated}` | Autonomous, schema-validated | Schema failure → `needs_filing` queue |
-| **Orchestrator** | Exception + memory lessons | Casefile: recommendation, explanation, claims, calc IDs | **Suggests; never decides** | **Always** — every casefile goes to a human |
-| `document_agent` | Question + facility scope | Facts with `{citation, quote}` | Autonomous, quote-verified downstream | — |
-| `definition_agent` | Agreement + amendments | `terms` JSON, schema-validated, with citations | Autonomous, quote-verified downstream | Mapping failure → missing evidence |
+| **Quarterly test** | Approved terms in force + the period's six financial figures | One `tests` row: our DSCR, the borrower's, pass/fail, variance; an `exceptions` row when ours fails | **Deterministic code — no model** | Missing input → the test records the error, never a zero |
+| **Credit-scout Agent** (the orchestrator; the only agent object, Foundry `gpt-4.1-mini`) | Exception + memory lessons | Casefile: recommendation, explanation, claims, calc IDs | **Suggests; never decides** | **Always** — every casefile goes to a human |
+| `document_agent` (specialist, in-process, `gpt-5-mini`) | Question + loan scope | Facts with `{citation, quote}` | Autonomous, quote-verified downstream | — |
+| `definition_agent` (specialist, in-process; also the onboarding extraction) | Agreement + amendments | `terms` JSON, schema-validated, with citations | Autonomous, quote-verified downstream | Mapping failure → missing evidence; in onboarding, an uncited clause is flagged for the analyst |
 | **`dscr_calculator`** | `terms` + six financial figures | `{calc_id, components, dscr, threshold, pass, margin}` | **Deterministic code — no model** | Missing input, denominator ≤ 0, or unknown component → returns an error, never a default |
-| `research_agent` | A gap to explain | Findings with citations | Autonomous | Nothing found → `escalate` |
-| `search_past_cases` | Exception profile | Matching lessons from prior casefiles | Autonomous | — |
+| `research_agent` (specialist, in-process, `gpt-5-mini`) | A gap to explain | Findings with citations | Autonomous | Nothing found → `escalate` |
+| `search_documents` | Question + loan scope | Matching chunks from this loan's documents only | Code | — |
+| `search_past_cases` | Exception profile | Matching lessons from prior casefiles | Code (memory) | — |
 | **Guardrail** | Draft casefile | Validated casefile + guardrail notes | **Deterministic code** | Any forced downgrade is displayed to the analyst |
 | **Policy** | Validated casefile | Final recommendation | **Deterministic code** | Prohibited action proposed → forced `escalate` |
 
@@ -654,7 +706,7 @@ confidence. Behaviours 11–17 need the eval set.
 | Check | Result | Explanation |
 |---|---|---|
 | Is ML necessary? | **PASS** | Deciding "is this enough to resolve?" is contextual reasoning over heterogeneous evidence. No fixed rule expresses it. |
-| Do you have data to train/evaluate? | **FAIL** | "Sufficient evidence" is a judgment call. **Mitigation:** 24 cases with expected outcomes, **signed off by the owner** (a credit domain expert) before being called expert-validated. |
+| Do you have data to train/evaluate? | **FAIL** | "Sufficient evidence" is a judgment call. **Mitigation:** 10 cases with expected outcomes, **signed off by the owner** (a credit domain expert, 2026-10-07) before being called expert-validated. |
 | ML feasibility | PASS | Within reach for a frontier model given cited evidence and a bounded output schema. |
 | Meets accuracy requirements? | PASS, conditionally | ≥85% outcome accuracy is the target; **0 false resolves** is the gate. The system is biased toward abstaining — an over-cautious agent is recoverable, a falsely confident one is not. |
 | Scales? | PASS | Per-case, stateless apart from retrieved memory. |
@@ -724,8 +776,9 @@ terms in the UI.
 
 | Release | Features | Duration |
 |---|---|---|
-| **MVP (demo build)** | End-to-end flow: covenant setup with analyst approval → independent quarterly calculation for every borrower → exception → investigation → cited casefile → approve/override → memory. **3 synthetic facilities** (F1, F3, F5), **6 labeled eval cases**, 3 screens, deterministic calculator, guardrails, policy, deployed on Vercel | **Course build** |
-| **Post-MVP backlog** *(cut from the demo build to protect scope — first things to restore)* | Facilities **F2, F4, F6**; eval set **6 → 24 cases**; the **4th screen** (Governance & evals) as an editable page rather than a static panel; **Foundry groundedness judge** for independent scoring; **covenant setup approval screen** if it was pre-seeded in the demo; **email intake** (US-011); policy editing in the UI | Immediately after the demo |
+| **MVP (demo build) — built** | End-to-end flow: **loan onboarding wizard** with analyst approval → independent quarterly calculation for every loan → exception → investigation by the Credit-scout Agent → governing-first cited casefile → approve/override → memory. **3 seeded loans** (F1, F3, F5) + **5 onboarding upload packages**, **10 owner-signed eval cases**, screens: portfolio triage, onboarding, casefile, governance, documents/terms/lessons, global search; deterministic calculator, guardrails, policy; deployed on Vercel behind a demo gate | **Course build** |
+| **In progress** | Eval harness (`evals/run.mjs`): deterministic grading against the signed oracle, cold + warm passes, HHH-grouped scoreboard on the Governance page; live-agent run and Foundry groundedness as an opt-in billable step | Now |
+| **Post-MVP backlog** *(see `docs/parking-lot.md` §4 — first things to restore)* | **Agentic covenant-term extraction** (4.9); memory and guardrail **trace beats**; facilities **F2, F4, F6** (the `abstain`/`request` cases); eval set 10 → 24; Governance page editable; **email intake** (US-011); policy editing in the UI; the "Prepare test" checkpoint; approval gate on uncited clauses | Immediately after the demo |
 | **MVP 1** | Second covenant (fixed-charge coverage); multi-quarter trend view; PDF export of the casefile for the credit file; analyst-configurable notification rules | Months 2–4 |
 | **Launch** | Authentication and multi-user teams; role separation for the Risk Officer; real-document pilot with one design partner under NDA; OCR for scanned agreements; audit-log export; SOC 2 readiness | Months 5–9 |
 | **Iteration** | Remaining covenant types; integration with loan document systems (e.g. nCino); integration with spreading tools for financial inputs; fine-tuned term-mapping model once correction volume justifies it; portfolio-level early-warning view | Ongoing |
@@ -745,9 +798,10 @@ terms in the UI.
 
 | Dependency | Blocks | Status |
 |---|---|---|
-| Owner validates the six facility twists for realism | Synthetic document generation | **Open** |
-| Owner computes expected DSCR values in a spreadsheet and signs off each row | Eval harness can run | **Open** |
-| Owner signs off the 24 eval labels | Reportable accuracy numbers | **Open** |
+| Owner validates the three facility twists for realism | Synthetic document generation | **Done** (2026-10-05) |
+| Owner verifies the expected DSCR values and signs off each row | Eval harness can run | **Done** — 10 rows signed 2026-10-07 |
+| Owner signs off the eval outcome labels | Reportable accuracy numbers | **Done** — in the same 10 rows |
+| Eval harness built and run (cold + warm) | Scoreboard shows measured numbers | **In progress** |
 | Azure AI Foundry project with model deployments | Agent build | Done |
 | Supabase project with pgvector | Schema, retrieval, memory | Done |
 
@@ -761,20 +815,35 @@ terms in the UI.
 
 ### Establishing ground truth — and keeping it independent
 
-The eval set is **24 cases = 6 facilities × 4 variations** (quarter, figures,
-documents present or missing). Each case specifies inputs and an expected
-`{outcome, dscr, key_citation, pattern_tag}`.
+The eval set is **10 cases**, all owner-signed on 2026-10-07, in
+`data/expected-values-template.csv`:
+
+| Cases | What they exercise |
+|---|---|
+| F1 Q2-2026, F5 Q2-2026 | `resolve` via an unboarded amendment (the boarding-lag twist); F5 is the warm-memory repeat |
+| F3 Q2-2026, Vantage Print Works Q3-2026 | `escalate` on a true breach — F3 reports *compliant* and we compute a breach |
+| F5 Q4-2025, Zhatsapp, Marcus, Orion, Petworks | Compliant, code-only — no investigation should start |
+| F5 Q1-2026 | Variance logged, not investigated — ours passes, theirs differs (an over-cap add-back) |
+
+Each row carries the six calculator inputs, the add-backs with their caps and
+*which terms version permits them*, the expected DSCR **as tested** (under the
+boarded terms) and **remapped** (under the unboarded amendment, where one
+exists), the expected outcome and the expected pattern tag. The planned 24
+(6 facilities × 4 variations) is backlog; **we report 10 as 10.** The set has
+no incomplete-evidence case, so the abstain/request metric is unmeasured and
+shown as such.
 
 Three rules keep the oracle honest:
 
-1. **The expected DSCR values are computed by the owner in a spreadsheet** — not
-   by the calculator under test, and not by the AI. If the thing grading the
-   calculator shares an author with the calculator, the tests only prove it
-   agrees with itself. The build produces a template listing each case's covenant
-   terms and six financial inputs; the owner fills in the expected DSCR.
+1. **The expected DSCR values are verified by the owner independently** — not
+   by the calculator under test, and not trusted from the AI. If the thing
+   grading the calculator shares an author with the calculator, the tests only
+   prove it agrees with itself. The build produced the template listing each
+   case's covenant terms and six financial inputs with the arithmetic shown;
+   the owner checked and signed each row.
 2. **The eval runner refuses to run while any row is unsigned.** Sign-off is a
    per-row flag, not a blanket claim.
-3. **The AI drafts the outcome labels; the owner reviews and signs every one**
+3. **The AI drafted the outcome labels; the owner reviewed and signed every one**
    before they are described as expert-validated.
 
 ### Evaluation plan
@@ -794,9 +863,19 @@ Three rules keep the oracle honest:
 (lessons from scripted analyst overrides loaded). The delta is the memory-effect
 metric and the demo's centerpiece.
 
-**Development subset:** a 6-case subset (one per facility) runs during
-development — enough to catch regressions. All 24 run twice only when producing
-reportable numbers. This is a deliberate cost control.
+**Where it runs — hybrid, by design.** The grading (false-resolve gate,
+calculation accuracy, outcome accuracy, memory effect) is deterministic Node
+code in `evals/run.mjs`, run locally or in CI against the signed oracle; it
+writes `results.csv`, `report.md` and an `eval_runs` row that the Governance
+scoreboard reads. The investigations being graded are real Credit-scout Agent
+runs on Azure. Only **groundedness** — a language judgment — goes to Azure AI
+Foundry Evaluations, via the `foundry.jsonl` the harness exports. The safety
+numbers are therefore computed by code against a human-signed key, not judged
+by another model.
+
+**Cost control.** The set is small enough that every case runs in both passes;
+there is no development subset. The live-agent run is billable and is started
+on the owner's say-so, never automatically.
 
 ### Monitoring AI performance over time
 
@@ -829,19 +908,20 @@ reportable numbers. This is a deliberate cost control.
 
 | Role | Model | Rationale |
 |---|---|---|
-| Orchestrator | `gpt-5.4` | Makes the evidence-sufficiency judgment, which drives the headline metric. Not the place to economise. |
-| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, every quote is code-verified anyway, and this is where most calls happen. Already deployed. |
-| Eval judge | `gpt-4.1` | Deliberately a different generation from the agents, so the judge is not grading its own kind. |
-| Embeddings | `text-embedding-3-small` | **1536 dimensions** — the vector schema depends on this. Already deployed. |
+| Orchestrator (the Credit-scout Agent) | **`gpt-4.1-mini`** | **Forced by the platform:** on Foundry Agent Service, `gpt-5-mini` cannot carry the tool set the orchestrator needs. Makes the evidence-sufficiency judgment; the guardrail, not the model, is what keeps that judgment safe. Deployed. |
+| `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, every quote is code-verified anyway, and this is where most calls happen. Deployed. |
+| Eval judge (groundedness) | `gpt-4.1-mini` deployed; `gpt-4.1` is backlog 4.8 | A different generation from the specialists, so the judge is not grading its own kind. The full `gpt-4.1` is billable and the owner's call. |
+| Embeddings | `text-embedding-3-small` | **1536 dimensions** — the vector schema depends on this. Deployed. |
 
 **Justification and alternatives considered.** A frontier model on the
 orchestrator was the initial recommendation, on the grounds that the
 evidence-sufficiency judgment drives the headline metric. It was **rejected for
-the MVP** for three reasons: `gpt-5-mini` is already deployed so there is no new
-billable resource, a single model means a single prompt surface to tune under a
-tight build, and — most importantly — **the guardrail is code, so a weaker model
-cannot produce an unverifiable number regardless of its judgment**. The
-architecture absorbs model weakness in a way a prompt-only design could not.
+the MVP**: the platform constraint settled the orchestrator at `gpt-4.1-mini`,
+no new billable deployment was needed, and — most importantly — **the guardrail
+is code, so a weaker model cannot produce an unverifiable number regardless of
+its judgment**. The architecture absorbs model weakness in a way a prompt-only
+design could not. Verified live: the orchestrator attempted a `resolve` without
+a logged passing calculation and the guardrail downgraded it to `escalate`.
 
 This inverts the planned experiment in a useful way: instead of asking "can the
 cheap model cope?", the post-demo comparison asks **"does a stronger orchestrator
@@ -862,17 +942,26 @@ configuration.
 | **Honest** | Every figure traces to a logged calculation or a verbatim quote; every claim's quote is verified against the cited chunk; every guardrail intervention is shown to the analyst, not hidden | The model could construct a plausible narrative from genuinely cited pieces that is still wrong in aggregate | Human review is mandatory and locked. `resolve` requires a passing calculation *and* cited effective terms. The step trace lets the analyst audit the reasoning path, not just the conclusion. |
 | **Harmless** | Cannot make a credit decision. Cannot waive a covenant, amend terms, or contact a borrower — these are prohibited actions that force escalation. All data is synthetic. | Worst case: an analyst over-trusts a `resolve` and a real breach goes unescalated, creating credit and regulatory exposure | **0 false resolves** is a hard gate, not a target. Deep breaches always escalate regardless of what the agent concluded. Human review cannot be disabled. The product is positioned and labelled as decision support throughout. |
 
-**Evaluation spreadsheet:** *[Owner to create from the cohort HHH template and
-link here]* — minimum columns: Case ID | Facility | Variation | Expected outcome
-| Expected DSCR | Expected key citation | Expected tag | Actual outcome | Actual
-DSCR | Citations returned | Steps | Pass/Fail | Notes.
+**How the scoreboard maps to HHH.** The Governance page groups the eval metrics
+by pillar, so the cohort frame and the product's numbers are the same table:
+
+| Pillar | Metrics | Target |
+|---|---|---|
+| **Honest** | Calculation accuracy · Citation hit rate · Groundedness (Foundry judge) | 100% · ≥ 90% · reported |
+| **Harmless** | **False resolves** (the gate) · Correct abstain/request | **0** · ≥ 90% (unmeasured in the current set — shown as "—") |
+| **Helpful** | Outcome accuracy · Memory effect (avg steps, cold vs warm) | ≥ 85% · visible reduction |
+
+**Evaluation spreadsheet:** the oracle is `data/expected-values-template.csv`
+(10 rows, owner-signed). The harness's `results.csv` adds the actual columns —
+actual outcome, actual DSCR, citations returned, steps, pass/fail, notes — per
+case and per pass (cold, warm).
 
 ## 6.2 Launch plan
 
 | Launch stage | Helpful | Honest | Harmless | Go criteria |
 |---|---|---|---|---|
-| **Measurement (internal, 6-case subset)** | Produces a complete casefile end-to-end on all 6 facilities | Calculation accuracy 100% on unit tests | 0 false resolves on the subset | Full flow runs with no P0 defects; guardrail tests all pass |
-| **Beta (full 24-case eval, cold + warm)** | Median time-to-decision < 30 min; measurable memory effect | Outcome accuracy ≥ 85%; citation hit rate ≥ 90% | **0 false resolves**; correct abstain ≥ 90% | All metrics met across two consecutive runs; owner has signed every eval label |
+| **Measurement (internal, 10 signed cases)** | Produces a complete casefile end-to-end on every investigated case; onboarding creates a loan live | Calculation accuracy 100% on unit tests and against the signed oracle | 0 false resolves on the set | Full flow runs with no P0 defects; guardrail tests all pass; owner has signed every row (**done 2026-10-07**) |
+| **Beta (full eval, cold + warm, 24 cases once F2/F4/F6 are restored)** | Median time-to-decision < 30 min; measurable memory effect | Outcome accuracy ≥ 85%; citation hit rate ≥ 90% | **0 false resolves**; correct abstain ≥ 90% (needs the incomplete-evidence cases) | All metrics met across two consecutive runs |
 | **Launch (design-partner pilot, real documents)** | Analyst reports the output usable without rework in ≥ 70% of cases | Groundedness reported from an independent judge; override rate stable | **0 false resolves sustained**; security review complete; audit log in place | All Beta criteria sustained on real documents; legal review of positioning and disclaimers complete |
 
 **Experimentation plan**
@@ -921,8 +1010,8 @@ new one, never deleted, because the audit trail is the product.
 | Area | Description |
 |---|---|
 | **Model fine-tuning** | **Not planned for MVP.** Prompting + retrieval + schema validation + code guardrails are expected to meet the targets. Fine-tuning the term-mapping component is revisited once there is real correction data — the trigger is a sustained mapping-correction rate above 5% with enough labeled examples to justify training and re-evaluation. |
-| **Data preparation** | Used for **evaluation** (ground truth) and as the **RAG knowledge base**, not for training. Six synthetic facilities are generated by script, each with: a credit agreement (~15–20pp, with a definitions article, a financial covenants article, events of default and notices), one amendment or waiver (2–3pp, with an effective date and amended definitions), quarterly financials, and a borrower compliance certificate in a standard form. |
-| **Data quantity** | 6 facilities × ~4 documents = ~24 documents; 24 labeled eval cases. Sized against the mentor's "5–10 facilities, 20–30 test cases" guidance and against what one owner can genuinely validate — a larger set that nobody has checked is worse than a smaller set that has been signed off. |
+| **Data preparation** | Used for **evaluation** (ground truth) and as the **RAG knowledge base**, not for training. Generated by script (`data/generate.mjs`) with the lender **Bank of Stoic** (fictional) on every document. **Three seeded loans** — Harbor Logistics, Northgate Foods, Coastal Marine — each with a credit agreement (definitions article, financial covenants article, events of default, notices), an amendment or waiver-request letter with an effective date, quarterly financials, and a compliance certificate. **Five onboarding loans** — Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works — exist only as upload packages under `data/facilities/`, never seeded, so the onboarding wizard genuinely creates them. |
+| **Data quantity** | 8 synthetic borrowers, ~30 documents, **10 owner-signed eval cases**. Below the mentor's "20–30 test cases" guidance and sized against what one owner can genuinely validate — a larger set that nobody has checked is worse than a smaller set that has been signed off. Growing it to 24 is backlog. |
 | **Iterative data collection** | Every analyst override is captured with a verbatim reason, a corrected outcome and a confirmed pattern tag, and becomes a retrievable lesson. This is both the learning loop and the future training corpus. |
 | **Iterative fine-tuning** | Not active. Future trigger as above. |
 | **Knowledge base (RAG)** | Section-level chunks of each facility's own documents, embedded at 1536 dimensions, filtered by facility at query time so one borrower's agreement can never be cited in another borrower's casefile. Plus casefile summaries and analyst lessons as a second retrieval surface. |
@@ -1048,8 +1137,8 @@ Calculator output (code, not model):
 
 | # | Item | What we used | Why | Trade-offs |
 |---|---|---|---|---|
-| 1 | Agent platform | **Azure AI Foundry Agent Service** (Connected Agents) | Managed multi-agent orchestration; traces and token accounting built in; matches the production story of running inside a bank's own Azure tenant | Less fine-grained loop control than hand-written orchestration; Connected Agents is a preview feature |
-| 2 | LLM for inference | `gpt-5.4` orchestrator + `gpt-5-mini` specialists | Capability where judgment happens, economy where retrieval happens | A two-model split means two behaviours to tune and evaluate |
+| 1 | Agent platform | **Azure AI Foundry Agent Service** — one orchestrator with six function tools; specialists serviced in-process | Managed agent runtime; traces and token accounting built in; matches the production story of running inside a bank's own Azure tenant. **Connected Agents was tried and dropped**: a connected agent's inner run cannot carry a function tool, so specialists could not retrieve for themselves | We own the specialist loop ourselves; the platform still owns the orchestrator run |
+| 2 | LLM for inference | `gpt-4.1-mini` orchestrator + `gpt-5-mini` specialists | The platform forces the orchestrator model (`gpt-5-mini` cannot carry the tool set); economy where retrieval happens | A two-model split means two behaviours to tune and evaluate; a frontier-vs-mini orchestrator comparison is an open experiment (§6.2) |
 | 3 | Deterministic layer | Plain JavaScript, zero dependencies, unit-tested | The calculator and guardrails must be auditable and independently testable | Hand-written rather than inherited from a library; more code we own |
 | 4 | User interface | Next.js + React on Vercel | One codebase for UI and API; the tool endpoints the agent calls live beside the screens | Server-side execution limits shaped the async design |
 | 5 | Vector database | Supabase pgvector | Vectors, relational data and memory in one managed Postgres; no second system | Not a specialised vector store; fine at this scale, would be revisited at portfolio scale |
@@ -1381,16 +1470,16 @@ numbers rest on domain judgment rather than published data:
 
 | # | Question | Owner | Deadline | Blocks |
 |---|---|---|---|---|
-| 1 | Validate the three facility twists (F1, F3, F5) for realism | **Owner** | Before synthetic doc generation | The build |
-| 2 | Compute and sign off 3 expected DSCR values | **Owner** | Before the eval runs | The scoreboard, not the build |
+| 1 | Validate the three facility twists (F1, F3, F5) for realism | **Owner** | ~~Before synthetic doc generation~~ | **Resolved 2026-10-05** |
+| 2 | Verify and sign off the expected DSCR values and outcome labels | **Owner** | ~~Before the eval runs~~ | **Resolved 2026-10-07** — 10 rows signed |
 | 3 | `[NEED: 5 analyst interviews]` — primary user research | **Owner** | Before design-partner outreach | Launch gate, not MVP |
 | 4 | `[NEED: 3+ verbatim customer quotes]` | **Owner** | Before Launch gate | Credibility of §1.3 |
 | 5 | `[NEED: SMB/middle-market delinquency trend data]` for "why now" | **Owner** | Before the pitch | One claim in §1.3 |
 | 6 | Fully-loaded analyst cost per hour | **Owner** | Before the pitch | ROI precision, not direction |
 | 7 | Analyst hours per contested exception | **Owner** | Before the pitch | North Star baseline |
-| 8 | Does Foundry **Connected Agents** (preview) work reliably here? | Claude | **First hour of the build** | The whole agent design — fallback is plain tools |
+| 8 | Does Foundry **Connected Agents** (preview) work reliably here? | Claude | ~~First hour of the build~~ | **Resolved** — it works but cannot carry function tools inside a specialist; the documented fallback (specialists as in-process function tools) was taken |
 | 9 | India domestic lender market size | **Owner** | Post-MVP | §9.4 completeness |
-| 10 | Copy the cohort HHH evals spreadsheet and link it | **Owner** | Before submission | Checklist item |
+| 10 | Copy the cohort HHH evals spreadsheet and link it | **Owner** | Before submission | Checklist item — the oracle (`data/expected-values-template.csv`) and the HHH mapping (§6.1) are the source; the cohort sheet is a transcription |
 
 ### Still unconfirmed figures — flagged, not assumed away
 
