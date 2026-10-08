@@ -81,7 +81,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         className="pointer-events-none absolute inset-x-0 top-0 h-[1200px]"
         style={{
           background: [
-            "radial-gradient(1100px 620px at 18% -8%, rgba(45,212,191,0.15), transparent 62%)",
+            "radial-gradient(1100px 620px at 18% -8%, rgba(129,140,248,0.18), transparent 62%)",
             "radial-gradient(980px 680px at 88% -4%, rgba(99,102,241,0.20), transparent 60%)",
             "radial-gradient(1200px 700px at 55% 22%, rgba(30,41,59,0.55), transparent 72%)",
           ].join(","),

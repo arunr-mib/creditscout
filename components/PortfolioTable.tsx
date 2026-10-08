@@ -3,122 +3,151 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { InvestigateButton } from "./InvestigateButton";
-import { RecommendationBadge } from "./RecommendationBadge";
 import { RunTestButton } from "./RunTestButton";
-import { PORTFOLIO_STATUS, runDisabledReason, type PortfolioRow, type PortfolioStatus } from "./portfolioModel";
+import {
+  TEST_RESULT_LABEL,
+  queueCounts,
+  reviewStatusOf,
+  runDisabledReason,
+  testResultOf,
+  type PortfolioRow,
+  type TestResult,
+} from "./portfolioModel";
 
 /**
- * The portfolio triage table (the Covenant-IQ "borrower table" idea, kept on our
- * dark system and our provenance): every facility, graded by what the analyst
- * must do next, sortable, with a one-click action per row. "Our DSCR" stays
- * amber — the reconcile-vs-reported point survives the table.
+ * The credit analysis queue: every loan, graded by what the analyst must do
+ * next, with one action per row.
  *
- * Depth is dark-native: raised header, a per-row hover lift, and a left status
- * accent. No shadows (design.md §4).
+ * TEST RESULT AND REVIEW STATUS ARE SEPARATE COLUMNS, deliberately. A failing
+ * quarter stays "Below minimum" after a decision is recorded on it; collapsing
+ * the two is how a screen ends up implying a breach stopped failing because
+ * someone wrote down what they decided about it.
+ *
+ * Both columns are derived by `portfolioModel`, never here.
  */
 
-const BADGE_TONE: Record<string, string> = {
-  danger: "border-danger bg-danger-bg text-danger",
-  human: "border-border-strong bg-human-bg text-human",
-  model: "border-model bg-model-bg text-model-bright",
-  success: "border-success bg-success-bg text-success",
-  muted: "border-border-strong text-text-muted",
-};
-const EDGE_TONE: Record<string, string> = {
-  danger: "border-l-danger",
-  human: "border-l-border-strong",
-  model: "border-l-model",
-  success: "border-l-success",
-  muted: "border-l-border",
+const dscr = (v: number | null): string => (v == null ? "—" : `${v.toFixed(2)}x`);
+
+const RESULT_TONE: Record<TestResult, string> = {
+  below_minimum: "border-danger bg-danger-bg text-danger",
+  meets_minimum: "border-success bg-success-bg text-success",
+  not_tested: "border-border-strong text-text-muted",
 };
 
-const dscr = (v: number | null): string => (v == null ? "—" : v.toFixed(2));
+const REVIEW_TONE: Record<string, string> = {
+  human: "text-text",
+  model: "text-model-bright",
+  code: "text-code-bright",
+  muted: "text-text-muted",
+};
 
-type SortKey = "status" | "borrower" | "ours" | "theirs";
+const DETAIL_TONE: Record<string, string> = {
+  "Suggests resolution": "text-success",
+  "Suggests escalation": "text-danger",
+};
+
+type Filter = "all" | "review" | "untested";
 
 export function PortfolioTable({
   rows,
   targetPeriod,
   targetLabel,
-  nextLabel,
 }: {
   rows: PortfolioRow[];
   /** Raw YYYY-MM-DD, for the run action body. */
   targetPeriod: string;
   /** Human label of the period under test, e.g. "Q2 2026". */
   targetLabel: string;
-  /** Human label of the next period due. */
-  nextLabel: string;
 }) {
-  const [onlyAction, setOnlyAction] = useState(false);
-  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "status", dir: 1 });
+  const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+
+  const counts = useMemo(() => queueCounts(rows), [rows]);
 
   const view = useMemo(() => {
-    const filtered = onlyAction ? rows.filter((r) => PORTFOLIO_STATUS[r.status].needsAction) : rows;
-    const by = (r: PortfolioRow): number | string => {
-      switch (sort.key) {
-        case "borrower": return r.borrower.toLowerCase();
-        case "ours": return r.ours ?? -Infinity;
-        case "theirs": return r.theirs ?? -Infinity;
-        default: return PORTFOLIO_STATUS[r.status].rank;
-      }
-    };
-    return [...filtered].sort((a, b) => {
-      const x = by(a);
-      const y = by(b);
-      return (x < y ? -1 : x > y ? 1 : a.borrower.localeCompare(b.borrower)) * sort.dir;
-    });
-  }, [rows, onlyAction, sort]);
-
-  const toggleSort = (key: SortKey) =>
-    setSort((s) => (s.key === key ? { key, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { key, dir: 1 }));
-
-  const actionCount = rows.filter((r) => PORTFOLIO_STATUS[r.status].needsAction).length;
+    const byFilter =
+      filter === "review"
+        ? rows.filter((r) => r.status === "in_review")
+        : filter === "untested"
+          ? rows.filter((r) => testResultOf(r) === "not_tested")
+          : rows;
+    const q = query.trim().toLowerCase();
+    return q === "" ? byFilter : byFilter.filter((r) => r.borrower.toLowerCase().includes(q));
+  }, [rows, filter, query]);
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterChip active={!onlyAction} onClick={() => setOnlyAction(false)}>All · {rows.length}</FilterChip>
-        <FilterChip active={onlyAction} onClick={() => setOnlyAction(true)}>Needs action · {actionCount}</FilterChip>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
+            All loans · {counts.total}
+          </FilterChip>
+          <FilterChip active={filter === "review"} onClick={() => setFilter("review")}>
+            Ready for review · {counts.readyForReview}
+          </FilterChip>
+          <FilterChip active={filter === "untested"} onClick={() => setFilter("untested")}>
+            Untested · {counts.untested}
+          </FilterChip>
+        </div>
+        <label className="flex items-center gap-2">
+          <span className="sr-only">Search borrowers</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search borrowers…"
+            className="w-64 rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text placeholder:text-text-muted"
+          />
+        </label>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border-strong bg-surface">
         <table className="w-full border-collapse text-left">
           <thead className="bg-surface-raised">
             <tr className="text-label text-text-muted">
-              <Th onClick={() => toggleSort("borrower")} active={sort.key === "borrower"} dir={sort.dir}>Borrower</Th>
-              <Th onClick={() => toggleSort("ours")} active={sort.key === "ours"} dir={sort.dir} numeric>Computed DSCR</Th>
-              <Th numeric>Reported DSCR</Th>
-              <Th numeric>Required</Th>
-              <Th onClick={() => toggleSort("status")} active={sort.key === "status"} dir={sort.dir}>Status</Th>
-              <Th>Next test</Th>
-              <Th>Action</Th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Borrower</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Computed DSCR</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Reported DSCR</th>
+              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Minimum</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Test result</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Review status</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Next action</th>
             </tr>
           </thead>
           <tbody>
+            {view.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-body text-text-muted">
+                  No loans match that filter.
+                </td>
+              </tr>
+            )}
             {view.map((r) => {
-              const meta = PORTFOLIO_STATUS[r.status];
+              const result = testResultOf(r);
+              const review = reviewStatusOf(r);
               return (
-                <tr key={r.facilityId} className={`border-t border-border border-l-2 ${EDGE_TONE[meta.tone]} transition-colors duration-fast hover:bg-surface-raised`}>
+                <tr key={r.facilityId} className="border-t border-border transition-colors duration-fast hover:bg-surface-raised">
                   <td className="px-4 py-3">
                     <p className="text-body text-text">{r.borrower}</p>
                     <p className="text-label text-text-muted">
                       {r.industry ?? "—"}
-                      {r.termsVersion != null && <span className="ml-2 font-mono">Terms v{r.termsVersion}</span>}
+                      {r.termsVersion != null && <span className="ml-2 font-mono">· Terms v{r.termsVersion}</span>}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-num text-code-bright">{dscr(r.ours)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-num text-text-secondary">{r.theirs == null ? "—" : dscr(r.theirs)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-num text-text-secondary">{dscr(r.required)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center gap-1 rounded-sm border px-2 py-px text-label ${BADGE_TONE[meta.tone]}`}>
-                      <span aria-hidden="true">{meta.icon}</span>
-                      {meta.label}
+                    <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded-full border px-3 py-px text-label ${RESULT_TONE[result]}`}>
+                      <span aria-hidden="true">●</span>
+                      {TEST_RESULT_LABEL[result]}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="text-body text-text-secondary">{nextLabel}</p>
-                    <p className="text-label text-text-muted">Quarterly</p>
+                    <p className={`text-body ${REVIEW_TONE[review.tone]}`}>{review.label}</p>
+                    {review.detail && (
+                      <p className={`text-label ${DETAIL_TONE[review.detail] ?? "text-text-muted"}`}>{review.detail}</p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <RowAction row={r} targetPeriod={targetPeriod} targetLabel={targetLabel} />
@@ -129,41 +158,64 @@ export function PortfolioTable({
           </tbody>
         </table>
       </div>
+
+      <p className="text-label text-text-muted">
+        <span aria-hidden="true">ⓘ </span>
+        Test results reflect the approved terms used for the selected period.
+      </p>
     </div>
   );
 }
 
+/**
+ * One action per row, named for what it does next.
+ *
+ * A loan with no approved terms gets "Review terms" rather than a disabled run
+ * button: nothing can be tested until someone approves its covenant, so the
+ * covenant is the work.
+ */
 function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targetPeriod: string; targetLabel: string }) {
+  const primary =
+    "inline-flex rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text";
+  const secondary =
+    "inline-flex rounded-md border border-border-strong px-3 py-1 text-body leading-5 text-text transition-colors duration-fast hover:bg-surface-raised";
+
   switch (row.status) {
     case "breach_investigate":
       return <InvestigateButton exceptionId={row.exceptionId!} status={row.exceptionStatus ?? "new"} hasCasefile={false} />;
     case "in_review":
       return (
-        <div className="flex flex-wrap items-center gap-3">
-          <RecommendationBadge recommendation={row.recommendation} />
-          <Link href={`/casefiles/${row.casefileId}`} className="rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text">
-            Review
-          </Link>
-        </div>
+        <Link href={`/casefiles/${row.casefileId}`} className={primary}>
+          Review
+        </Link>
       );
     case "investigating":
       return (
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-2 text-label text-model-bright">
-            <span className="inline-block h-2 w-2 rounded-sm bg-model motion-safe:animate-pulse" aria-hidden="true" />
-            Investigating
-          </span>
-          <Link href={`/casefiles/${row.casefileId}`} className="text-label text-text-secondary underline-offset-2 hover:underline">Watch live</Link>
-        </div>
+        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
+          Watch live
+        </Link>
       );
     case "awaiting_docs":
-    case "decided":
       return (
-        <Link href={`/casefiles/${row.casefileId}`} className="text-label text-text-secondary underline-offset-2 hover:underline">
+        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
           Open casefile
         </Link>
       );
-    default: // compliant / not_tested
+    case "decided":
+      return (
+        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
+          View decision
+        </Link>
+      );
+    default: {
+      // compliant / not_tested
+      if (!row.hasApprovedTerms) {
+        return (
+          <Link href={`/facilities/${row.facilityId}/covenant-setup`} className={secondary}>
+            Review terms
+          </Link>
+        );
+      }
       return (
         <RunTestButton
           label={row.status === "compliant" ? `Re-run ${targetLabel}` : `Run ${targetLabel}`}
@@ -172,20 +224,8 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
           disabledReason={runDisabledReason({ hasApprovedTerms: row.hasApprovedTerms })}
         />
       );
+    }
   }
-}
-
-function Th({ children, onClick, active, dir, numeric }: { children: React.ReactNode; onClick?: () => void; active?: boolean; dir?: 1 | -1; numeric?: boolean }) {
-  const align = numeric ? "text-right" : "text-left";
-  if (!onClick) return <th className={`px-4 py-3 font-medium ${align}`}>{children}</th>;
-  return (
-    <th className={`px-4 py-3 font-medium ${align}`}>
-      <button type="button" onClick={onClick} className={`inline-flex items-center gap-1 transition-colors hover:text-text-secondary ${active ? "text-text" : ""}`}>
-        {children}
-        {active && <span aria-hidden="true">{dir === 1 ? "↑" : "↓"}</span>}
-      </button>
-    </th>
-  );
 }
 
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -193,7 +233,9 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-md border px-3 py-1 text-label transition-colors duration-fast ${active ? "border-border-strong bg-surface-raised text-text" : "border-border text-text-muted hover:text-text-secondary"}`}
+      className={`rounded-md border px-3 py-2 text-label transition-colors duration-fast ${
+        active ? "border-model bg-model-bg text-model-bright" : "border-border text-text-muted hover:text-text-secondary"
+      }`}
     >
       {children}
     </button>

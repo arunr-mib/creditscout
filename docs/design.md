@@ -18,7 +18,7 @@ reading a word**. That is what the colour system is for.
 
 | Hue | Means | Never used for |
 |---|---|---|
-| **Teal** | A model did this — an agent step, a retrieved quote, a judgment | Anything deterministic |
+| **Indigo** | A model did this — an agent step, a retrieved quote, a judgment | Anything deterministic |
 | **Amber** | **Code did this** — a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
 | **Slate / white** | A human did this, or must | System output |
 | **Rose** | A breach, a failure, an escalation | General emphasis |
@@ -61,8 +61,8 @@ Dark theme only. There is no light theme in the MVP — don't build one.
 
 | Token | Hex | Bg pair | Meaning |
 |---|---|---|---|
-| `model` | `#2DD4BF` | `#0F3B3A` | Agent / model step |
-| `model-bright` | `#5EEAD4` | — | Model headings, active trace step |
+| `model` | `#818CF8` | `#1E1B4B` | Agent / model step |
+| `model-bright` | `#A5B4FC` | — | Model headings, active trace step |
 | `code` | `#F59E0B` | `#3B2A0A` | **Deterministic computation** |
 | `code-bright` | `#FBBF24` | — | Calculation headings, `calc_id` badges |
 | `human` | `#E2E8F0` | `#1E293B` | Approval, review, analyst action |
@@ -74,10 +74,10 @@ Dark theme only. There is no light theme in the MVP — don't build one.
 - Body text must hit **4.5:1** against its surface; UI elements and large text
   **3:1**. The pairs above clear it, but re-check any new combination.
 - **Never encode meaning in colour alone.** Every semantic colour is paired with
-  an icon or a text label — teal steps carry an agent name, amber values carry
+  an icon or a text label — indigo steps carry an agent name, amber values carry
   `computed by code`, breaches carry the word *breach*. A colour-blind analyst
   must read the same information.
-- Focus ring: `2px solid #5EEAD4`, `offset 2px`. Visible on every interactive
+- Focus ring: `2px solid #A5B4FC`, `offset 2px`. Visible on every interactive
   element. Do not remove it.
 
 ---
@@ -150,8 +150,8 @@ Value in `code-bright` monospace; badge in `code` on `#3B2A0A` at 11px. The
 
 ### 5.3 Citation chip
 
-Inline, teal, `radius-sm`, 12px: `CA §7.11 ↗`. Clicking opens the clause panel.
-Hover raises background to `#0F3B3A`. **A claim without a chip must not render** —
+Inline, indigo, `radius-sm`, 12px: `CA §7.11 ↗`. Clicking opens the clause panel.
+Hover raises background to `#1E1B4B`. **A claim without a chip must not render** —
 if the data lacks a citation that is a guardrail failure and should surface as
 one, not render silently.
 
@@ -159,7 +159,7 @@ one, not render silently.
 
 Right-hand drawer, 480px, `surface-raised`, `radius-lg`. Document title and
 section as header; full chunk text in monospace; **the quoted span highlighted
-with `#0F3B3A` background and a 2px `model` left border**. The analyst's job here
+with `#1E1B4B` background and a 2px `model` left border**. The analyst's job here
 is a two-second verification — the highlight is the whole point.
 
 ### 5.5 Step trace
@@ -167,17 +167,17 @@ is a two-second verification — the highlight is the whole point.
 Vertical timeline, one row per step, polled every 1s.
 
 ```
- ①  definition_agent        teal      2.3s
+ ①  definition_agent        indigo      2.3s
  │   mapped DSCR terms from CA §1.01
  ②  dscr_calculator         AMBER     0.1s
  │   1.12 — below 1.25 threshold
- ③  research_agent          teal      4.1s
+ ③  research_agent          indigo      4.1s
  │   found Amendment No. 2 §3(a)
  ④  dscr_calculator         AMBER     0.1s
      1.31 — passes
 ```
 
-Agent steps teal, calculator steps amber. **The alternation is the product
+Agent steps indigo, calculator steps amber. **The alternation is the product
 demo** — it shows reasoning and computation interleaving, which is the thesis
 made visible. Active step pulses `model-bright`; completed steps settle to
 `text-secondary`.
@@ -197,7 +197,7 @@ them would be hiding the best evidence the product has.
 
 | Variant | Fill | Text | Use |
 |---|---|---|---|
-| Primary | `#2DD4BF` | `#0A1628` | Approve, Investigate, Run test |
+| Primary | `#818CF8` | `#0A1628` | Approve, Investigate, Run test |
 | Secondary | transparent, `border-strong` | `text` | Override, Request docs |
 | Danger | transparent, `danger` border | `danger` | Escalate |
 
@@ -388,7 +388,7 @@ Inline pill, `rounded-sm`, `text-badge` mono. Shows the **signed** delta.
 
 ### 12.3 `SeenSimilarBadge`
 
-Teal pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
+Indigo pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
 
 **Rule:** renders only when at least one lesson matched. **Never renders empty or as "0 prior cases"** — an empty memory badge implies the feature is broken rather than new.
 
@@ -482,12 +482,12 @@ One row of the step trace. Number · tool name · duration · one-line summary.
 
 | Step type | Token |
 |---|---|
-| Agent / specialist | `text-model`, teal left rule |
+| Agent / specialist | `text-model`, indigo left rule |
 | **Calculator** | `text-code`, amber left rule |
 | Active | `text-model-bright`, subtle pulse |
 | Complete | settles to `text-text-secondary` |
 
-**Rule:** the teal/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
+**Rule:** the indigo/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
 
 ### 12.16 `Scoreboard`
 

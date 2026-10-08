@@ -53,10 +53,12 @@ export default {
         "text-secondary": "#CBD5E1",
         "text-muted": "#94A3B8",
 
-        // teal = a MODEL did this
-        model: "#2DD4BF",
-        "model-bright": "#5EEAD4",
-        "model-bg": "#0F3B3A",
+        // indigo = a MODEL did this. (Was teal; the hue changed, the rule did not.)
+        // `model` stays light enough that the 20-odd `bg-model text-bg` buttons
+        // keep ~5.8:1 — indigo-500 would drop them to ~3.9:1 and fail.
+        model: "#818CF8",
+        "model-bright": "#A5B4FC",
+        "model-bg": "#1E1B4B",
 
         // amber = CODE did this. Never decoration, never a warning.
         code: "#F59E0B",

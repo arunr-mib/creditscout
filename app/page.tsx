@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PortfolioTable } from "@/components/PortfolioTable";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
-import { computeKpis, currentCasefiles, portfolioRows } from "@/components/portfolioModel";
+import { currentCasefiles, portfolioRows, queueCounts } from "@/components/portfolioModel";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
@@ -107,8 +107,6 @@ export default async function Home() {
   const casefiles = (must(casefilesRes, "select casefiles") ?? []) as CasefileRow[];
   const approvedTerms = (must(termsRes, "select covenant_terms") ?? []) as TermsRow[];
 
-  const kpis = computeKpis({ exceptions, casefiles, tests });
-
   const periods = tests.map((t) => t.test_period_end).sort();
   const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
   const targetLabel = quarterLabel(targetPeriod);
@@ -124,6 +122,7 @@ export default async function Home() {
     targetPeriod,
   });
 
+  const counts = queueCounts(rows);
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 
   return (
@@ -132,7 +131,7 @@ export default async function Home() {
       <header className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
-            <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
+            <p className="text-label text-text-muted">DSCR monitoring · {targetLabel}</p>
             <h1 className="text-title text-text">Credit Analysis Queue</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -150,20 +149,21 @@ export default async function Home() {
 
         <StatBand
           stats={[
-            { label: "Open exceptions", help: "Breaches not yet closed", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
-            { label: "Awaiting your review", help: "The agent finished; you decide", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
-            { label: "Loans tested", help: "This quarter", value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
+            { label: "Ready for review", value: String(counts.readyForReview), tone: counts.readyForReview ? "human" : "muted" },
+            // A ratio, not a bare count: "3" alone never says how much of the
+            // book is still untested.
+            { label: "Loans tested", value: `${counts.tested} of ${counts.total}`, tone: "muted" },
+            { label: "Terms approval needed", value: String(counts.termsApprovalNeeded), tone: counts.termsApprovalNeeded ? "code" : "muted" },
           ]}
         />
       </header>
 
       {/* -------------------------------------------------------- portfolio table */}
-      <section aria-label="Portfolio" className="space-y-6">
-        <h2 className="text-section text-text">Borrowers</h2>
+      <section aria-label="Loans" className="space-y-3">
         {facilities.length === 0 ? (
           <p className="text-body text-text-secondary">No loans on file. Board a covenant to add one.</p>
         ) : (
-          <PortfolioTable rows={rows} targetPeriod={targetPeriod} targetLabel={targetLabel} nextLabel={nextLabel} />
+          <PortfolioTable rows={rows} targetPeriod={targetPeriod} targetLabel={targetLabel} />
         )}
       </section>
 
@@ -187,25 +187,17 @@ export default async function Home() {
 function StatBand({
   stats,
 }: {
-  stats: { label: string; help?: string; value: number | null; empty: string; tone: "danger" | "human" | "muted" }[];
+  stats: { label: string; value: string; tone: "danger" | "human" | "code" | "muted" }[];
 }) {
-  const tone = { danger: "text-danger", human: "text-human", muted: "text-text" } as const;
+  const tone = { danger: "text-danger", human: "text-human", code: "text-code-bright", muted: "text-text" } as const;
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {stats.map((s) => {
-        const show = s.value != null && s.value > 0;
-        return (
-          <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-4 py-4">
-            <p className="text-label text-text-muted">{s.label}</p>
-            {show ? (
-              <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>
-            ) : (
-              <p className="mt-1 text-body text-text-muted">{s.empty}</p>
-            )}
-            {s.help && <p className="mt-1 text-badge text-text-muted">{s.help}</p>}
-          </div>
-        );
-      })}
+      {stats.map((s) => (
+        <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-4 py-4">
+          <p className="text-label text-text-muted">{s.label}</p>
+          <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>
+        </div>
+      ))}
     </div>
   );
 }

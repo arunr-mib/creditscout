@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="12 12 88 88" role="img" aria-label="CreditScout">
-  <!-- The mark alone: the wordmark is unreadable at 16-32px. Kept in the
-       artwork's own teal rather than the app's dark-surface palette, because a
-       tab icon sits on browser chrome that may be light or dark, and mid-tone
-       teal reads on both. -->
+  <!-- The mark alone: the wordmark is unreadable at 16-32px. A step darker
+       than the app's accent, because a tab icon sits on browser chrome that may
+       be light or dark, and mid-tone indigo reads on both. -->
   <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M39 20h-9a10 10 0 0 0-10 10v9M73 20h9a10 10 0 0 1 10 10v9M92 73v9a10 10 0 0 1-10 10h-9M20 73v9a10 10 0 0 0 10 10h9" stroke="#208C7B" stroke-width="7.5"/>
-    <path d="M37 56h38" stroke="#8BB7AF" stroke-width="5"/>
-    <circle cx="39" cy="56" r="5" fill="#8BB7AF" stroke="none"/>
-    <circle cx="56" cy="56" r="6.5" fill="#208C7B" stroke="none"/>
-    <circle cx="74" cy="56" r="5" fill="#8BB7AF" stroke="none"/>
-    <path d="M56 44v-7" stroke="#208C7B" stroke-width="4"/>
+    <path d="M39 20h-9a10 10 0 0 0-10 10v9M73 20h9a10 10 0 0 1 10 10v9M92 73v9a10 10 0 0 1-10 10h-9M20 73v9a10 10 0 0 0 10 10h9" stroke="#6366F1" stroke-width="7.5"/>
+    <path d="M37 56h38" stroke="#A5B4FC" stroke-width="5"/>
+    <circle cx="39" cy="56" r="5" fill="#A5B4FC" stroke="none"/>
+    <circle cx="56" cy="56" r="6.5" fill="#6366F1" stroke="none"/>
+    <circle cx="74" cy="56" r="5" fill="#A5B4FC" stroke="none"/>
+    <path d="M56 44v-7" stroke="#6366F1" stroke-width="4"/>
   </g>
 </svg>

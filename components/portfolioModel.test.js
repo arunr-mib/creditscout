@@ -7,6 +7,9 @@ import {
   boardingState,
   computeKpis,
   isReopened,
+  queueCounts,
+  reviewStatusOf,
+  testResultOf,
   portfolioRows,
   runDisabledReason,
   varianceBadge,
@@ -217,4 +220,60 @@ test("portfolioRows is sorted by triage rank, most urgent first", () => {
   const rows = portfolioRows({ facilities: FACILITIES, exceptions, casefileByException: new Map(), tests: [], approvedTerms: TERMS, targetPeriod: "2026-06-30" });
   assert.equal(rows[0].facilityId, "f-coastal");
   assert.ok(PORTFOLIO_STATUS[rows[0].status].rank <= PORTFOLIO_STATUS[rows[rows.length - 1].status].rank);
+});
+
+// ------------------------------------- test result vs review status (queue)
+
+test("the test result is the TEST, not the review: a decided breach is still below minimum", () => {
+  const breach = { ours: 1.08, required: 1.25, status: "breach_investigate" };
+  assert.equal(testResultOf(breach), "below_minimum");
+  // The analyst recorded a decision. The quarter did not stop failing.
+  assert.equal(testResultOf({ ...breach, status: "decided" }), "below_minimum");
+  assert.equal(testResultOf({ ...breach, status: "in_review" }), "below_minimum");
+});
+
+test("a pass is a pass, and a missing figure is never read as a pass", () => {
+  assert.equal(testResultOf({ ours: 1.4, required: 1.25, status: "compliant" }), "meets_minimum");
+  assert.equal(testResultOf({ ours: 1.25, required: 1.25, status: "compliant" }), "meets_minimum", "at the floor meets it");
+  assert.equal(testResultOf({ ours: null, required: 1.25, status: "compliant" }), "not_tested");
+  assert.equal(testResultOf({ ours: 1.4, required: null, status: "compliant" }), "not_tested");
+  assert.equal(testResultOf({ ours: null, required: null, status: "not_tested" }), "not_tested");
+});
+
+test("review status carries the agent's suggestion only while a human still has to decide", () => {
+  assert.deepEqual(reviewStatusOf({ status: "in_review", recommendation: "resolve", hasApprovedTerms: true }), {
+    label: "Ready for review",
+    detail: "Suggests resolution",
+    tone: "human",
+  });
+  assert.equal(reviewStatusOf({ status: "in_review", recommendation: "escalate", hasApprovedTerms: true }).detail, "Suggests escalation");
+  // Decided: the suggestion is history, and showing it beside a recorded
+  // decision invites reading the agent's view as the outcome.
+  assert.equal(reviewStatusOf({ status: "decided", recommendation: "escalate", hasApprovedTerms: true }).detail, null);
+  assert.equal(reviewStatusOf({ status: "decided", recommendation: "escalate", hasApprovedTerms: true }).label, "Decision recorded");
+  // An unrecognised recommendation must not render "Suggests undefined".
+  assert.equal(reviewStatusOf({ status: "in_review", recommendation: "sideways", hasApprovedTerms: true }).detail, null);
+  assert.equal(reviewStatusOf({ status: "in_review", recommendation: null, hasApprovedTerms: true }).detail, null);
+});
+
+test("an untested loan with no approved terms names the real blocker", () => {
+  assert.equal(reviewStatusOf({ status: "not_tested", recommendation: null, hasApprovedTerms: false }).label, "Terms approval needed");
+  assert.equal(reviewStatusOf({ status: "not_tested", recommendation: null, hasApprovedTerms: true }).label, "Not tested");
+});
+
+test("queueCounts: tested is a ratio of the book, and terms-approval counts loans that cannot be tested at all", () => {
+  const rows = [
+    { ours: 1.12, required: 1.25, status: "in_review", recommendation: "resolve", hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "in_review", recommendation: "escalate", hasApprovedTerms: true },
+    { ours: 1.08, required: 1.25, status: "decided", recommendation: null, hasApprovedTerms: true },
+    { ours: null, required: null, status: "not_tested", recommendation: null, hasApprovedTerms: false },
+    { ours: null, required: null, status: "not_tested", recommendation: null, hasApprovedTerms: false },
+  ];
+  assert.deepEqual(queueCounts(rows), {
+    readyForReview: 2,
+    tested: 3,
+    total: 5,
+    termsApprovalNeeded: 2,
+    untested: 2,
+  });
 });

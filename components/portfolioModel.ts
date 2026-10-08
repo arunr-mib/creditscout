@@ -322,3 +322,88 @@ export function portfolioRows(input: {
   // Default order: triage rank, then borrower.
   return rows.sort((a, b) => PORTFOLIO_STATUS[a.status].rank - PORTFOLIO_STATUS[b.status].rank || a.borrower.localeCompare(b.borrower));
 }
+
+// -------------------------------------------- test result vs review status
+
+/**
+ * THE TEST OUTCOME, which is not the review state.
+ *
+ * A failing quarter stays failing after an analyst records a decision on it —
+ * conflating the two is how a screen ends up claiming a breach was "resolved"
+ * when what happened is that a person wrote down what they decided about it.
+ */
+export type TestResult = "below_minimum" | "meets_minimum" | "not_tested";
+
+export function testResultOf(row: Pick<PortfolioRow, "ours" | "required" | "status">): TestResult {
+  if (row.status === "not_tested") return "not_tested";
+  if (row.ours == null || row.required == null) return "not_tested";
+  return row.ours < row.required ? "below_minimum" : "meets_minimum";
+}
+
+export const TEST_RESULT_LABEL: Record<TestResult, string> = {
+  below_minimum: "Below minimum",
+  meets_minimum: "Meets minimum",
+  not_tested: "Not tested",
+};
+
+/** What the agent put forward, in an analyst's words. Null when it has not finished. */
+const SUGGESTS: Record<string, string> = {
+  resolve: "Suggests resolution",
+  escalate: "Suggests escalation",
+  request: "Suggests requesting documents",
+  abstain: "Suggests no conclusion",
+};
+
+export interface ReviewStatusView {
+  label: string;
+  /** The agent's suggestion, shown under the label. Never the decision itself. */
+  detail: string | null;
+  tone: "human" | "model" | "code" | "muted";
+}
+
+/**
+ * WHERE THE HUMAN DECISION STANDS.
+ *
+ * An untested loan with no approved terms is not merely untested — nothing can
+ * be tested until someone approves its covenant terms, so that is the state
+ * worth naming and the action worth offering.
+ */
+export function reviewStatusOf(
+  row: Pick<PortfolioRow, "status" | "recommendation" | "hasApprovedTerms">,
+): ReviewStatusView {
+  switch (row.status) {
+    case "in_review":
+      return { label: "Ready for review", detail: SUGGESTS[row.recommendation ?? ""] ?? null, tone: "human" };
+    case "investigating":
+      return { label: "Investigating", detail: null, tone: "model" };
+    case "awaiting_docs":
+      return { label: "Awaiting documents", detail: null, tone: "human" };
+    case "decided":
+      return { label: "Decision recorded", detail: null, tone: "muted" };
+    case "breach_investigate":
+      return { label: "Not investigated", detail: null, tone: "code" };
+    case "compliant":
+      return { label: "No review needed", detail: null, tone: "muted" };
+    case "not_tested":
+      return row.hasApprovedTerms
+        ? { label: "Not tested", detail: null, tone: "muted" }
+        : { label: "Terms approval needed", detail: null, tone: "code" };
+  }
+}
+
+/** Queue-level counts. `tested` is "3 of 5" — loans with a result this period. */
+export function queueCounts(rows: readonly PortfolioRow[]): {
+  readyForReview: number;
+  tested: number;
+  total: number;
+  termsApprovalNeeded: number;
+  untested: number;
+} {
+  return {
+    readyForReview: rows.filter((r) => r.status === "in_review").length,
+    tested: rows.filter((r) => testResultOf(r) !== "not_tested").length,
+    total: rows.length,
+    termsApprovalNeeded: rows.filter((r) => !r.hasApprovedTerms).length,
+    untested: rows.filter((r) => testResultOf(r) === "not_tested").length,
+  };
+}
