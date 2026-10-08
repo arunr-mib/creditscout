@@ -55,11 +55,6 @@ export function ReinvestigateButton({
       >
         {pending ? "Starting…" : failed ? "Start the investigation again" : awaitingDocs ? "Re-run investigation after documents" : "Re-run investigation"}
       </button>
-      <p className="text-label text-text-muted">
-        {failed
-          ? "The failed attempt is kept as a record; a new investigation starts."
-          : "The current casefile is kept and marked superseded; a new investigation starts."}
-      </p>
       {error && (
         <p role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>

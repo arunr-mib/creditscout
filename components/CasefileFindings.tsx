@@ -64,13 +64,13 @@ export function CasefileFindings({
       <section aria-label="What the agent found" className="min-w-0 rounded-lg border border-border-strong bg-surface lg:col-span-2">
         <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">What the agent found</h2>
 
-        <ol className="p-4">
+        <ol className="px-4 py-3">
           {summary.steps.map((step, i) => {
             const open = openStep === step.n;
             const sec = sectionFor(step.calcId);
             const last = i === summary.steps.length - 1;
             return (
-              <li key={step.n} className="relative pb-5 last:pb-0">
+              <li key={step.n} className="relative pb-4 last:pb-0">
                 {/* The connector: the findings are a sequence, and the arrow is
                     what says so without a sentence. */}
                 {!last && (
@@ -141,9 +141,15 @@ export function CasefileFindings({
         </ol>
 
         {summary.comparison.length > 1 && (
-          <div className="border-t border-border-strong p-4">
-            <h3 className="text-card text-text">Calculation comparison</h3>
-            <div className="mt-2 overflow-x-auto rounded-md border border-border">
+          <details className="border-t border-border-strong">
+            {/* Collapsed by default: the figure strip above already states both
+                figures, so this is the detail behind a summary the analyst has
+                already read. */}
+            <summary className="cursor-pointer list-none px-4 py-3 text-card text-text marker:content-['']">
+              Calculation comparison <span aria-hidden="true" className="text-label text-model-bright">›</span>
+            </summary>
+            <div className="px-4 pb-4">
+            <div className="overflow-x-auto rounded-md border border-border">
               <table className="w-full border-collapse text-left">
                 <thead className="bg-surface-raised">
                   <tr className="text-label uppercase tracking-wide text-text-muted">
@@ -167,7 +173,8 @@ export function CasefileFindings({
                 </tbody>
               </table>
             </div>
-          </div>
+            </div>
+          </details>
         )}
       </section>
 
@@ -196,7 +203,7 @@ export function CasefileFindings({
               </button>
             </div>
             {evidenceTab === "activity" ? (
-              <div className="space-y-4 p-4">
+              <div className="space-y-3 px-4 py-3">
                 {trace.steps.length === 0 ? (
                   <p className="text-body text-text-muted">No activity was recorded for this investigation.</p>
                 ) : (
@@ -211,7 +218,7 @@ export function CasefileFindings({
                 )}
               </div>
             ) : (
-            <ul className="space-y-4 p-4">
+            <ul className="space-y-3 px-4 py-3">
               {amendments.map((a) => (
                 <li key={a.title}>
                   <p className="text-body text-text">{a.title}</p>
@@ -239,7 +246,7 @@ export function CasefileFindings({
 
         <section aria-label="What needs your attention" className="rounded-lg border border-border-strong bg-surface">
           <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">What needs your attention</h2>
-          <div className="space-y-4 p-4">
+          <div className="space-y-3 px-4 py-3">
             {unboarded.map((a) => (
               <div key={a.title} className="flex gap-3">
                 <span aria-hidden="true" className="text-card text-code-bright">⚠</span>

@@ -1,6 +1,7 @@
 import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
+import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
 import Link from "next/link";
@@ -95,16 +96,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         : { label: view.status, tone: "border-border-strong text-text-muted" };
 
   return (
-    <article className="space-y-6">
+    <article className="space-y-3">
       {/* ------------------------------------------------------------ header */}
-      <nav aria-label="Breadcrumb" className="text-label text-text-muted">
-        <Link href="/" className="underline-offset-2 hover:text-text-secondary hover:underline">
-          Credit Analysis Queue
-        </Link>
-        <span aria-hidden="true"> / </span>
-        <span className="text-text-secondary">{view.borrower}</span>
-      </nav>
-
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
           <p className="text-label uppercase tracking-[0.14em] text-model-bright">DSCR exception investigation</p>
@@ -114,52 +107,28 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           <p className="max-w-prose text-body text-text-secondary">
             Review the agent&rsquo;s recommendation, calculations, and supporting evidence.
           </p>
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <SeenSimilarBadge count={view.seenSimilar} />
-          </div>
         </div>
-        <span className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-body ${statusPill.tone}`}>
-          <span aria-hidden="true">●</span> {statusPill.label}
-        </span>
+        {/* The memory badge sits under the status pill rather than taking a row
+            of its own below the subtitle. */}
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-body ${statusPill.tone}`}>
+            <span aria-hidden="true">●</span> {statusPill.label}
+          </span>
+          <SeenSimilarBadge count={view.seenSimilar} />
+        </div>
       </header>
 
       {/* ------------------------------------------------- the recommendation */}
       {showRec && rec && (
-        <section
-          aria-label="Agent recommendation"
-          className={`rounded-lg border border-border-strong border-l-2 ${accent} bg-surface p-4`}
-        >
-          {/* The reasoning sits on the RIGHT of the card's first line, so it
-              costs no vertical space at all. */}
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <p className="text-label text-model-bright">CreditScout Agent recommendation</p>
-            {view.explanation && (
-              <details className="group min-w-0 shrink-0">
-                <summary className="cursor-pointer list-none text-label text-model-bright underline-offset-2 hover:underline marker:content-['']">
-                  {overridden ? "Read the agent draft that was not accepted" : "Read the agent’s reasoning"}
-                  <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
-                </summary>
-                <p className="mt-2 max-w-prose border-l-2 border-border-strong pl-3 text-body text-text-secondary">
-                  {view.explanation}
-                </p>
-              </details>
-            )}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h2 className="text-section text-text">{RECOMMENDATION_HEADLINE[rec]}</h2>
-            {view.humanReviewRequired && (
-              <span className="inline-flex items-center gap-2 rounded-md border border-success bg-success-bg px-3 py-px text-label text-success">
-                <span aria-hidden="true">🔒</span> Human approval required
-              </span>
-            )}
-          </div>
-          {summary.headline && <p className="mt-2 max-w-prose text-body text-text-secondary">{summary.headline}</p>}
-          {onAmendedTerms && (
-            <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-code bg-code-bg px-3 py-1 text-label text-code-bright">
-              <span aria-hidden="true">⚠</span> Provisional · amendment not reflected in approved terms
-            </p>
-          )}
-        </section>
+        <RecommendationCard
+          accent={accent}
+          headline={RECOMMENDATION_HEADLINE[rec]}
+          summary={summary.headline}
+          humanReviewRequired={view.humanReviewRequired}
+          onAmendedTerms={onAmendedTerms}
+          explanation={view.explanation}
+          overridden={overridden}
+        />
       )}
 
       {/* ---------------------------------------------------------- figures */}

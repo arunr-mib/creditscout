@@ -63,8 +63,11 @@ export function ReviewActions(props: {
   // The wording follows the ACTUAL policy value, never a hard-coded "mandatory".
   const notice = humanReviewNotice(humanReviewRequired);
 
+  // An ordinary section, not a pinned bar. Pinned, it sat over the evidence the
+  // decision is supposed to rest on, and followed the analyst down the page
+  // like a standing prompt to decide.
   return (
-    <footer className="sticky bottom-0 z-10 rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
+    <section aria-label="Review the recommendation" className="rounded-lg border border-border-strong bg-surface p-4">
       <div className="mb-3 space-y-1">
         <LockedPolicyValue name="require_human_review" value={humanReviewRequired} />
         <p className="text-label text-text-muted">{notice.text}</p>
@@ -99,7 +102,7 @@ export function ReviewActions(props: {
         onCancel={() => setDialog(false)}
         onSubmit={(draft) => send("override", draft)}
       />
-    </footer>
+    </section>
   );
 }
 

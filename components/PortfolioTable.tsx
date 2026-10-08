@@ -150,7 +150,12 @@ export function PortfolioTable({
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <RowAction row={r} targetPeriod={targetPeriod} targetLabel={targetLabel} />
+                    {/* One width for the column whichever component renders the
+                        action — Investigate and Run are their own components
+                        and were sizing themselves. */}
+                    <div className="w-[132px] [&_a]:w-full [&_button]:w-full [&_button]:justify-center">
+                      <RowAction row={r} targetPeriod={targetPeriod} targetLabel={targetLabel} />
+                    </div>
                   </td>
                 </tr>
               );
