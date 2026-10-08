@@ -42,6 +42,7 @@ Dark theme only. There is no light theme in the MVP — don't build one.
 
 | Token | Hex | Use |
 |---|---|---|
+| `sunken` | `#060E1A` | The nav rail — one step *below* the page, so it recedes |
 | `bg` | `#0A1628` | Page background |
 | `surface` | `#11243D` | Cards, panels |
 | `surface-raised` | `#1E293B` | Modals, popovers, hovered rows |
@@ -85,6 +86,7 @@ Dark theme only. There is no light theme in the MVP — don't build one.
 
 | Role | Font | Size / Line | Weight |
 |---|---|---|---|
+| Display (landing hero **only**) | Inter | 56 / 58 | 600 |
 | Page title | Inter | 28 / 34 | 700 |
 | Section heading | Inter | 20 / 28 | 600 |
 | Card title | Inter | 16 / 24 | 600 |

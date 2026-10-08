@@ -40,7 +40,7 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
     // destinations ever outgrow the screen.
     <nav
       aria-label="Primary"
-      className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-4 md:sticky md:top-0 md:h-screen md:w-[224px] md:overflow-y-auto md:border-b-0 md:border-r"
+      className="flex shrink-0 flex-col gap-1 border-b border-border bg-sunken px-3 py-4 md:sticky md:top-0 md:h-screen md:w-[224px] md:overflow-y-auto md:border-b-0 md:border-r"
     >
       <div className="mb-4 px-2">
         <Link href="/" aria-label="CreditScout — go to the queue" className="block">

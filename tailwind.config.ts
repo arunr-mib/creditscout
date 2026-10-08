@@ -39,6 +39,10 @@ export default {
 
     extend: {
       colors: {
+        // One step BELOW the page, for the nav rail. Going lighter would have
+        // put the rail on `surface`, the card colour, and the rail would read
+        // as a very tall card sitting next to the real ones.
+        sunken: "#060E1A",
         bg: "#0A1628",
         surface: "#11243D",
         "surface-raised": "#1E293B",
