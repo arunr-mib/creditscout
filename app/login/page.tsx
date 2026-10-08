@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
+import { Logo } from "@/components/Logo";
 import { demoCredentials } from "@/lib/auth/gate";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="w-full max-w-content">
         <div className="mx-auto flex max-w-sm flex-col gap-6">
           <div className="space-y-1">
-            <p className="text-label text-text-muted">CreditScout</p>
+            <Logo className="h-8 w-auto" />
             <h1 className="text-title text-text">Sign in</h1>
             <p className="text-body text-text-secondary">Enter the demo credentials to open the analyst workspace.</p>
           </div>

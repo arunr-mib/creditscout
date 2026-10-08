@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
       <div className="mx-auto max-w-content px-6 py-8 md:py-12">
         {/* ------------------------------------------------------------ nav */}
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
-          <span className="text-card text-text">CreditScout</span>
+          <Logo className="h-12 w-auto" />
           <nav aria-label="Landing" className="flex flex-wrap items-center gap-6">
             <a href="#how-it-works" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
               How it works
@@ -149,8 +150,8 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
 
         {/* --------------------------------------------------------- footer */}
         <footer className="mt-16 space-y-1 border-t border-border pt-6">
-          <p className="text-body text-text">CreditScout</p>
-          <p className="text-label text-text-muted">Decision support for commercial credit analysts.</p>
+          <Logo className="h-8 w-auto" />
+          <p className="pt-1 text-label text-text-muted">Decision support for commercial credit analysts.</p>
           <p className="text-label text-text-muted">
             CreditScout supports covenant investigation. It does not make credit decisions.
           </p>

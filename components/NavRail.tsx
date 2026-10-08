@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./CommandPalette";
+import { Logo } from "./Logo";
 import { signOut } from "@/app/login/actions";
 import type { SearchItem } from "./searchModel";
 
@@ -42,7 +43,9 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
       className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-4 md:sticky md:top-0 md:h-screen md:w-56 md:overflow-y-auto md:border-b-0 md:border-r"
     >
       <div className="mb-4 px-2">
-        <Link href="/" className="text-card text-text">CreditScout</Link>
+        <Link href="/" aria-label="CreditScout — go to the queue" className="block">
+          <Logo className="h-8 w-auto" />
+        </Link>
         <p className="mt-1 text-badge text-text-muted">recommends — a human decides</p>
       </div>
 

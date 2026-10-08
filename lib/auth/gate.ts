@@ -57,5 +57,10 @@ export async function expectedToken(env: Record<string, string | undefined> = pr
 export function isPublicPath(pathname: string): boolean {
   if (pathname === LANDING_PATH || pathname === LOGIN_PATH) return true;
   if (pathname.startsWith("/api/")) return true;
+  // The tab icon. `app/icon.svg` is served from the app route tree, not from
+  // _next/static, so the matcher's asset exemptions miss it and the gate
+  // answered the browser's icon request with a redirect to the landing page —
+  // leaving the landing page and sign-in screen with no favicon at all.
+  if (pathname === "/icon.svg") return true;
   return false;
 }
