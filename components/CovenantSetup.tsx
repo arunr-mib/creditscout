@@ -338,9 +338,11 @@ export function CovenantSetup(props: {
 
   const onFile = (
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2" aria-label="What is on file">
-        <div className="rounded-md border border-border bg-surface p-3">
+        {/* min-w-0: a grid child defaults to min-width:auto, so the wide
+            table below forced the whole track — and the page — wider. */}
+        <div className="min-w-0 rounded-md border border-border bg-surface p-3">
           <h2 className="text-card text-text">Documents on file</h2>
-          <table className="mt-2 w-full text-left text-body">
+          <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
             <thead>
               <tr className="text-label uppercase tracking-wide text-text-muted">
                 <th className="pb-1 font-medium">Title</th>
@@ -372,14 +374,14 @@ export function CovenantSetup(props: {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
-        <div className="rounded-md border border-border bg-surface p-3">
+        <div className="min-w-0 rounded-md border border-border bg-surface p-3">
           <h2 className="text-card text-text">Versions</h2>
           {shownHistory.length === 0 ? (
             <p className="mt-2 text-body text-text-secondary">No covenant terms exist for this loan yet. No test can run until a person approves some.</p>
           ) : (
-            <table className="mt-2 w-full text-left text-body">
+            <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
               <thead>
                 <tr className="text-label uppercase tracking-wide text-text-muted">
                   <th className="pb-1 font-medium">Version</th>
@@ -398,7 +400,7 @@ export function CovenantSetup(props: {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
           {governing && (
             <p className="mt-2 text-label text-text-muted">
