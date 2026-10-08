@@ -72,7 +72,13 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
    - `figure_traceable` abstains on the borrower's own reported DSCR (see §0.6).
    - Known leftover: an aborted first attempt left one casefile `investigating`
      under `eval-20261008T031237Z-cold`. Ignore it; do not delete it.
-2. **Groundedness** — upload `foundry-*.jsonl` to Azure AI Foundry Evaluations (judge `gpt-4.1-mini` deployed; `gpt-4.1` is parking-lot 4.8, billable, owner's call). Optional for the pitch.
+2. ~~**Groundedness**~~ — ✅ **run 2026-10-08** via `npm run eval:groundedness`
+   (`scripts/foundry-groundedness.mjs`: uploads each pass's `foundry-*.jsonl` as
+   a Foundry dataset, then runs the built-in groundedness evaluator). **Warm
+   scored 5.0/5 with 100% passed; cold is undefined** because its F3 row is the
+   step-cap non-answer with empty context — full detail and the API gotchas in
+   §0.6. Re-run after the next live eval, when F3-cold should be a real answer.
+   Upgrading the judge to full `gpt-4.1` is parking-lot 4.8, billable, owner's call.
 3. Parking-lot §4 in restore order (4.9 agentic extraction brainstorm, 4.10 trace beats, 4.11 onboard Vantage into the eval, 4.12 citation column).
 4. Owner-only items in §11.
 
@@ -93,6 +99,7 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | Tests | `npm test` (971) · `npx tsc --noEmit` |
 | Deterministic eval | `npm run eval` (free) · `npm run eval -- --write` (records the row) |
 | Live eval | `npm run dev` (background) then `npm run eval -- --live` (billable; see 0.3) |
+| Groundedness | `npm run eval:groundedness` (billable; `--dry-run` is free, `--mode cold\|warm` for one pass). Needs a completed `--live` run first. |
 | Regenerate synthetic docs | `npm run generate:data` — safe: will not touch the signed oracle |
 | Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
@@ -107,7 +114,7 @@ scoreboard shows cold beside warm. Report in `evals/out/report.md`.
 |---|---|---|---|---|
 | Honest | Calculation accuracy | 100% | **100%** (12/12) | **100%** |
 | Honest | Citation hit rate | ≥ 90% | — | — |
-| Honest | Groundedness (judge) | reported | — | — |
+| Honest | Groundedness (judge) | reported | **unstable — see below** | **5.0 / 5, 100% passed** |
 | Harmless | Zero false resolves | 0 | **0** | **0** |
 | Harmless | Correct abstain / request | ≥ 90% | — | — |
 | Helpful | Outcome accuracy | ≥ 85% | **60%** | **40%** |
@@ -141,6 +148,28 @@ failure; parking-lot 4.11 covers onboarding Vantage into the eval.
 | F3-2026Q2 | warm | `abstain` | Guardrail `figure_traceable`: unverified figure **1.31** — the borrower's reported DSCR. Its reasoning was otherwise exactly right (no add-backs permitted, the $530k "Owner compensation normalization" disallowed, waiver unexecuted). See the gap below. |
 | F5-2026Q2 | cold | `resolve` ✓ | Correct, with a real `calc_id` for the remapped 1.30 and terms-drift flagged. |
 | F5-2026Q2 | warm | `abstain` | Policy `step_cap` at 8 steps. It had the right answer and three logged calcs; it ran out of budget before emitting the final answer. |
+
+**Groundedness — run 2026-10-08** (`npm run eval:groundedness`, judge
+`gpt-4.1-mini`, built-in Foundry evaluator over `evals/out/foundry-*.jsonl`):
+
+- **Warm: 5.0 / 5, `groundedness_passed` 1.0** across all three rows. Clean and
+  internally consistent — every claim in all three explanations was judged
+  supported by its retrieved context. This is the number to quote.
+- **Cold: do not quote a number.** Two runs over *identical* data with an
+  *identical* config returned mean 3.67 with 2/3 passed, then mean 5.0 with a
+  0.67 binary aggregate and no `groundedness_passed` key at all. A mean of 5
+  alongside a 0.67 pass rate is self-contradictory, so a row is being dropped
+  from the mean but counted in the aggregate.
+- **The cause is F3-cold, and it is our data, not the judge.** That row is the
+  step-cap non-answer ("The investigation reached its step cap…") with an
+  **empty context array** — there is nothing for groundedness to be measured
+  against, so the evaluator has no defined answer and the aggregation differs
+  run to run. The raised step cap should turn that row into a real answer; once
+  it does, cold becomes measurable. Until then cold groundedness is undefined,
+  not low.
+- Per-row `instance_results.jsonl` is not reachable through the REST API
+  (`/credential` and `/listSecrets` both 404) — read it in the Foundry portal
+  under Evaluations.
 
 **Fixes applied 2026-10-08, after the run and therefore NOT reflected in the
 numbers above:**

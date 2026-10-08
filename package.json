@@ -16,7 +16,8 @@
     "generate:pdf": "node data/generate.mjs --pdf",
     "ingest:demo": "node --env-file=.env data/ingest-demo.mjs",
     "test:calc": "node --test \"calc/*.test.js\"",
-    "eval": "node --env-file-if-exists=.env --conditions=react-server evals/run.mjs"
+    "eval": "node --env-file-if-exists=.env --conditions=react-server evals/run.mjs",
+    "eval:groundedness": "node --env-file=.env scripts/foundry-groundedness.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",
