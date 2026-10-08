@@ -186,27 +186,40 @@ the demo open on the same sentence.
 |---|---|---|---|---|
 | Honest | Calculation accuracy | 100% | **100%** (12/12) | **100%** |
 | Harmless | **Zero false resolves** | 0 | **0** | **0** |
-| Helpful | Outcome accuracy | ≥85% | **60%** | **60%** |
-| Helpful | Avg steps / case | — | 7.0 | 8.0 |
+| Helpful | Outcome accuracy | ≥85% | **60–100%** across 3 runs | **60–80%** |
+| Helpful | Avg steps / case | — | 6.7 | 6.7 |
 | Honest | Citation hit rate | ≥90% | not measured | not measured |
 | Harmless | Correct abstain / request | ≥90% | not measured | not measured |
 
-> Two live runs, 2026-10-08. **Outcome accuracy is 60% against an 85% target —
-> it misses.** Every miss is *conservative*: it abstained or requested documents
-> where we wanted resolve or escalate. No false resolve in any of four passes.
-> In a credit product, failing safe is the right direction to fail — but 60% is
-> not a shippable number and I am not going to present it as one.
+> Three live runs, 2026-10-08. **Outcome accuracy does not reliably meet the 85%
+> target** — cold read 60%, then 100%, then 60% while fixes were only ever added.
+> Five gradeable cases means one case is worth 20 points, so the metric is coarse
+> and the model is nondeterministic. I am quoting the range, not the best run.
+>
+> Two things hold in every pass ever run: **zero false resolves** and **100%
+> calculation accuracy**. Every miss is conservative — it abstained where we
+> wanted resolve or escalate. In a credit product, failing safe is the right
+> direction to fail. It is still not a shippable number.
 
-**Next Steps — the memory result is negative, and that is the finding**
-> The mentor's suggestion was to make memory the centerpiece: *show the second
-> case resolving faster because of what was learned from the first.* **Two runs
-> measured the opposite.** Average steps went **up**, 7.0 → 8.0, with zero cap
-> deaths in run 2, so the comparison is clean. On one case warm memory was
-> actively worse (cold reached `request`, warm degraded to `abstain`).
+**Next Steps — what the last day of debugging actually taught me**
+
+> The eval number moved less than the *reasons* did. Two findings worth more than
+> the score:
+>
+> **1. A rejection the model cannot act on is a step tax.** The calculator refused
+> a mis-filed citation with a 400 naming exactly where it belonged. `gpt-4.1-mini`
+> still could not produce the nested shape — it burnt 7 of 12 steps cycling
+> through three wrong forms and abstained, three runs running, on the demo's
+> centrepiece case. A worked example in the prompt did not fix it. Accepting the
+> shapes the model actually sends did: 4 of 4 runs now resolve. **Where intent is
+> unambiguous, the tool should adapt to the model, not the other way round** —
+> and only for shape, never for verification.
+>
+> **2. The memory result is not the one I wanted.** The mentor review suggested
+> making memory the centerpiece — *the second case resolving faster than the
+> first.* Measured across three runs it went 8.0 → 9.0 → 6.7 steps warm against
+> 7.0 → 7.0 → 6.7 cold. At best neutral, never a reduction.
 > **"Memory shortens investigations" is not supported and I will not claim it.**
-> Top blocker is identified: the guardrail abstains on figures that are facts but
-> not calculations — the borrower's own reported ratio has a provenance (the
-> compliance certificate) and must be made traceable rather than the check relaxed.
 
 ---
 

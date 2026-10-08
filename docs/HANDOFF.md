@@ -114,6 +114,47 @@ Preview and nothing else.
 | Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
+### 0.6a Live eval — THREE runs, and the number is noisy (2026-10-08)
+
+Read this before quoting an outcome-accuracy figure. §0.6 below is runs 1–2 and
+is kept for the fix-verdict evidence; this is the current picture.
+
+| Run | What changed | Cold | Warm | Avg steps |
+|---|---|---|---|---|
+| 2 | baseline | 60% | 60% | 7.0 / 8.0 |
+| 3 | + prompt rule 9 (the brief is not a citation) | **100%** | 80% | 7.0 / 9.0 |
+| 4 | + citation example, + `normaliseCitations` fold | 60% | 80% | **6.7 / 6.7** |
+
+**Do not quote 100%.** Cold went 60 → 100 → 60 while fixes were only ever added.
+Five gradeable cases means one case is 20 points, so the metric is coarse and the
+model is nondeterministic. The defensible statement is **"60–100% across three
+runs, against an 85% target — it does not reliably meet it."**
+
+**What IS stable, and is the real result of run 4:**
+
+- **F5 Coastal Marine resolves every time.** 4 of 4 since the fold fix (two
+  standalone runs at 10 and 5 steps, then cold and warm at 6 each). Before it,
+  it hit the step cap and abstained three runs running. This is the demo path.
+- **Avg steps 6.7 / 6.7** — the lowest recorded, and the memory effect is
+  **neutral** for the first time rather than negative. Still not a reduction, so
+  "memory shortens investigations" remains unsupported.
+- **Zero false resolves** in every pass of every run, without exception.
+- Calculation accuracy 100% (12/12) in every run.
+
+**Run 4's two cold misses, from `guardrail_notes`:**
+
+| Case | Pass | Got | Why |
+|---|---|---|---|
+| F1 | cold | `abstain` | **No guardrail note at all** — the agent's own judgement (7.10) |
+| F3 | cold | `abstain` | `figure_traceable` on **1.31** in `confidence_basis` — rule 9 did not take this run |
+| F1 | warm | `abstain` | `figure_traceable` on **620000**, paraphrased not quoted |
+
+Rule 9 reduces the 1.31 abstain but does not eliminate it: the agent sometimes
+cites the compliance certificate and sometimes does not. Making the reported
+figure traceable in CODE — injecting it with its certificate citation rather than
+as a bare number in the brief — is the next fix, and is the one that would
+actually close 7.9.
+
 ### 0.6 Live eval results — two runs, 2026-10-08 — read this before quoting any number
 
 `npm run eval -- --live`, exit code 0 both times (the false-resolve gate passed

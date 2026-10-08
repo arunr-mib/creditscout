@@ -140,6 +140,61 @@ const CITATION_KEYS_TEXT = `${FINANCIAL_FIELDS.join(", ")} and addback_amounts`;
  * the add-back's citation one level up, was told the add-back had no citation,
  * read that as missing evidence, and stopped with three of eight steps unspent.
  */
+/**
+ * Fold the citation shapes the model actually sends into the one shape the
+ * validator wants, BEFORE validating.
+ *
+ * `gpt-4.1-mini` cannot reliably produce the nested
+ * `financial_citations.addback_amounts["<name>"]`. Measured 2026-10-08 on
+ * Coastal Marine, the facility with two named add-backs: it burnt 7 of 12
+ * steps cycling through `financial_citations["<name>"]`,
+ * `financial_citations["addback_amounts.<name>"]` and a non-object
+ * `addback_amounts`, hit the step cap and abstained — three times running, and
+ * on the demo's centrepiece case. A worked example in the prompt did not fix
+ * it; the model had the example on the live agent object and failed the same
+ * way. So the tool accepts what the model sends instead.
+ *
+ * This forgives SHAPE only, and only where the intent is unambiguous: a key
+ * that names an add-back present in `financials.addback_amounts` can mean one
+ * thing. Nothing about verification moves — the citation must still name a real
+ * chunk, and `verifiedCitations` still checks the figure appears in it. A key
+ * naming nothing recognisable still falls through to the 400 below.
+ */
+function normaliseCitations(citations: unknown, financials: unknown): unknown {
+  // Runs BEFORE the shape checks, so neither argument can be assumed valid.
+  if (!isObject(citations) || !isObject(financials)) return citations;
+  const amounts = own(financials, "addback_amounts");
+  const addbackNames = isObject(amounts) ? Object.keys(amounts) : [];
+  if (addbackNames.length === 0) return citations;
+  const named = (key: string): string | undefined =>
+    addbackNames.find((n) => normaliseLabel(n) === normaliseLabel(key));
+
+  const out: Record<string, unknown> = {};
+  const folded: Record<string, unknown> = {};
+  const existing = own(citations, "addback_amounts");
+
+  // A single string under `addback_amounts` means "this label is where I read
+  // every add-back", which is true whenever they share a financials chunk.
+  if (typeof existing === "string") {
+    for (const n of addbackNames) folded[n] = existing;
+  } else if (isObject(existing)) {
+    for (const [k, v] of Object.entries(existing)) folded[named(k) ?? k] = v;
+  }
+
+  for (const [key, value] of Object.entries(citations)) {
+    if (key === "addback_amounts") continue;
+    // "addback_amounts.<name>" — the nesting flattened into one dotted key.
+    const dotted = key.startsWith("addback_amounts.") ? named(key.slice("addback_amounts.".length)) : undefined;
+    const direct = dotted === undefined ? named(key) : undefined;
+    const target = dotted ?? direct;
+    if (target !== undefined && folded[target] === undefined) folded[target] = value;
+    else if (target === undefined) out[key] = value;
+  }
+
+  if (Object.keys(folded).length > 0 || existing !== undefined) out.addback_amounts = folded;
+  return out;
+}
+
 function malformedCitations(citations: unknown, financials: Record<string, unknown>): string | null {
   if (!isObject(citations)) return "financial_citations is required and must be an object";
 
@@ -347,7 +402,8 @@ export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}
     return bad("period_end is required and must be a quarter-end date (YYYY-MM-DD)");
   }
 
-  const problem = malformedField(terms, financials) ?? malformedCitations(financial_citations, financials as Record<string, unknown>);
+  const citations = normaliseCitations(financial_citations, financials);
+  const problem = malformedField(terms, financials) ?? malformedCitations(citations, financials as Record<string, unknown>);
   if (problem) return bad(problem);
 
   if (casefile_id !== undefined && casefile_id !== null) {
@@ -359,7 +415,7 @@ export async function runDscrCalculator(body: unknown, deps: CalculatorDeps = {}
   // Provenance BEFORE any calculation. A refused figure is missing evidence the
   // agent reasons about (200), and nothing is calculated, minted or logged:
   // there is no number to trace.
-  const inputs = financialInputs(financials as Record<string, unknown>, financial_citations as Record<string, unknown>);
+  const inputs = financialInputs(financials as Record<string, unknown>, citations as Record<string, unknown>);
   let chunks: FacilityChunk[] = [];
   if (inputs.some((i) => i.citation !== "")) {
     try {

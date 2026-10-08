@@ -2,7 +2,7 @@
   "api_version": "2025-05-01",
   "orchestrator_model": "gpt-4.1-mini",
   "specialist_model": "gpt-5-mini",
-  "updated_at": "2026-10-08T03:48:43.946Z",
+  "updated_at": "2026-10-08T14:01:55.574Z",
   "agents": {
     "creditscout_orchestrator": "asst_bDZGauLoNw8ZzBSg75zj4jKe"
   }
