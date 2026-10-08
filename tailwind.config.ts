@@ -21,6 +21,10 @@ export default {
       6: "24px", 8: "32px", 12: "48px", 16: "64px",
     },
     fontSize: {
+      // Landing hero only. Added rather than reached for as an arbitrary value,
+      // so it stays one decision in one place: nothing inside the workspace
+      // should ever be this size.
+      display: ["64px", { lineHeight: "66px", fontWeight: "600" }],
       title:   ["28px", { lineHeight: "34px", fontWeight: "700" }],
       section: ["20px", { lineHeight: "28px", fontWeight: "600" }],
       card:    ["16px", { lineHeight: "24px", fontWeight: "600" }],

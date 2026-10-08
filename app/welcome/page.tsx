@@ -12,29 +12,46 @@ function nextParam(next: string | string[] | undefined): string {
  * The public landing page (the only page, with /login, reachable without the
  * demo credential).
  *
- * Copy is the review's (§8). Its warm-light surface is NOT: the app behind this
- * page is dark, there is no light token set to build on, and a light landing
- * cutting to a dark workspace is a jarring transition. Staying on the existing
- * dark tokens keeps the two continuous.
+ * Owner direction: the workspace design system is deliberately NOT applied
+ * here. A landing page is allowed atmosphere, display type and pill controls
+ * that would all be wrong inside an analyst's tool. It stays on the app's navy
+ * and teal rather than borrowing the reference's indigo, so clicking through
+ * to the workspace is continuous rather than a jump cut.
  *
- * No casefile preview graphic. The review asks for one and also forbids
- * "floating dashboard collages" — a mocked-up preview is the thing it warns
- * against, and a real one belongs in the product, a click away.
+ * The preview under the hero is the headline's argument, not decoration: it is
+ * Coastal Marine's actual seeded case — 1.12 against a 1.25 floor on the
+ * approved terms, 1.30 once an amendment already on file is applied. That is
+ * precisely "or did they?".
  *
- * Every nav item points at a section that exists on this page, and both CTAs
- * resolve: "Explore the demo" enters through the real sign-in route (carrying
- * ?next= so a deep link survives), "See how it works" scrolls to the workflow.
+ * Every nav item points at a section on this page, and both CTAs resolve:
+ * "Explore the demo" enters through the real sign-in route (carrying ?next= so
+ * a deep link survives), "See how it works" scrolls to the workflow.
  */
 export default async function WelcomePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   const signInHref = `/login${nextParam(next)}`;
 
   return (
-    <main className="min-h-screen bg-bg">
-      <div className="mx-auto max-w-content px-6 py-8 md:py-12">
+    <main className="relative min-h-screen overflow-hidden bg-bg">
+      {/* The atmosphere. Decorative only, so it is hidden from assistive tech
+          and never intercepts a click. design.md bans shadows for ELEVATION;
+          this is a background field, not a raised surface. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[1200px]"
+        style={{
+          background: [
+            "radial-gradient(1100px 620px at 18% -8%, rgba(45,212,191,0.15), transparent 62%)",
+            "radial-gradient(980px 680px at 88% -4%, rgba(99,102,241,0.20), transparent 60%)",
+            "radial-gradient(1200px 700px at 55% 22%, rgba(30,41,59,0.55), transparent 72%)",
+          ].join(","),
+        }}
+      />
+
+      <div className="relative mx-auto max-w-content px-6">
         {/* ------------------------------------------------------------ nav */}
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
-          <Logo className="h-12 w-auto" />
+        <header className="flex flex-wrap items-center justify-between gap-4 pt-8">
+          <Logo className="h-8 w-auto" />
           <nav aria-label="Landing" className="flex flex-wrap items-center gap-6">
             <a href="#how-it-works" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
               How it works
@@ -44,7 +61,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             </a>
             <Link
               href={signInHref}
-              className="rounded-md border border-border-strong px-3 py-2 text-body text-text transition-colors duration-fast hover:border-model"
+              className="rounded-full border border-border-strong bg-surface/60 px-4 py-2 text-body text-text backdrop-blur transition-colors duration-fast hover:border-model"
             >
               Sign in
             </Link>
@@ -52,36 +69,44 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         </header>
 
         {/* ----------------------------------------------------------- hero */}
-        <section className="mt-12 md:mt-16">
-          <p className="text-label uppercase tracking-wide text-model-bright">Commercial credit intelligence</p>
-          <h1 className="mt-3 max-w-prose text-title text-text">
-            Investigate covenant exceptions.
-            <br />
-            See the evidence behind every recommendation.
+        {/* Arbitrary paddings on purpose: the spacing scale tops out at 64px
+            (`pt-16`), which is not enough air for a hero. This page is the one
+            place the system is waived. */}
+        <section className="pt-[104px] pb-[40px] md:pt-[148px]">
+          <p className="text-label uppercase tracking-[0.18em] text-model-bright">Commercial credit intelligence</p>
+          <h1 className="mt-6 max-w-[22ch] text-[40px] font-semibold leading-[1.05] tracking-tight text-text sm:text-display">
+            A borrower just missed a loan covenant.{" "}
+            {/* Its own line, always. The question is the whole pitch; letting it
+                wrap up beside "covenant." buries it. */}
+            <span className="mt-2 block text-model-bright">Or did they?</span>
           </h1>
-          <p className="mt-4 max-w-prose text-body text-text-secondary">
+          <p className="mt-6 max-w-[62ch] text-[17px] leading-relaxed text-text-secondary">
             CreditScout helps commercial credit analysts investigate DSCR exceptions across loan agreements,
             amendments, and borrower reporting — with independent calculations, cited findings, and a recommendation
             for human review.
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href={signInHref}
-              className="rounded-md bg-model px-4 py-2 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+              className="rounded-full bg-model px-6 py-3 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
             >
               Explore the demo
             </Link>
             <a
               href="#how-it-works"
-              className="rounded-md border border-border-strong px-4 py-2 text-body text-text transition-colors duration-fast hover:border-model"
+              className="inline-flex items-center gap-2 rounded-full border border-border-strong bg-surface/50 px-6 py-3 text-body text-text backdrop-blur transition-colors duration-fast hover:border-model"
             >
+              <span aria-hidden="true" className="text-model-bright">↓</span>
               See how it works
             </a>
           </div>
-          <p className="mt-4 text-label text-text-muted">
+          <p className="mt-6 text-label text-text-muted">
             Built around DSCR covenant monitoring. Demo uses synthetic documents and fictional borrowers.
           </p>
         </section>
+
+        {/* -------------------------------------------------------- preview */}
+        <CasefilePreview />
 
         {/* ------------------------------------------------------- workflow */}
         <section id="how-it-works" aria-labelledby="how-heading" className="mt-16 scroll-mt-8 border-t border-border pt-12">
@@ -118,10 +143,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <section id="oversight" aria-labelledby="oversight-heading" className="mt-16 scroll-mt-8 border-t border-border pt-12">
           <h2 id="oversight-heading" className="text-section text-text">A recommendation you can inspect.</h2>
           <dl className="mt-8 grid gap-6 md:grid-cols-2">
-            <Point
-              head="Open the source"
-              body="Move from a finding to the exact clause and quoted passage behind it."
-            />
+            <Point head="Open the source" body="Move from a finding to the exact clause and quoted passage behind it." />
             <Point head="Follow the calculation" body="Review the inputs and calculation supporting the tested ratio." />
             <Point
               head="See what remains unresolved"
@@ -142,14 +164,14 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           </p>
           <Link
             href={signInHref}
-            className="mt-6 inline-block rounded-md bg-model px-4 py-2 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+            className="mt-6 inline-block rounded-full bg-model px-6 py-3 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
           >
             Explore the demo
           </Link>
         </section>
 
         {/* --------------------------------------------------------- footer */}
-        <footer className="mt-16 space-y-1 border-t border-border pt-6">
+        <footer className="mt-16 space-y-1 border-t border-border pb-16 pt-6">
           <Logo className="h-8 w-auto" />
           <p className="pt-1 text-label text-text-muted">Decision support for commercial credit analysts.</p>
           <p className="text-label text-text-muted">
@@ -162,6 +184,71 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         </footer>
       </div>
     </main>
+  );
+}
+
+/**
+ * The headline's argument, in the product's own shapes.
+ *
+ * Coastal Marine's seeded case, told straight: the approved terms produce a
+ * breach, an amendment already on file produces a pass, and a person decides
+ * which governs. The figures are the ones the app computes for that borrower,
+ * so this page and the demo behind it cannot contradict each other.
+ *
+ * A still, not a live read — it is the public page, so it must never touch the
+ * database. It will drift if that case changes.
+ */
+function CasefilePreview() {
+  return (
+    <div className="mt-8 overflow-hidden rounded-lg border border-border-strong bg-surface/80 backdrop-blur">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
+        <div>
+          <p className="text-label text-text-muted">Casefile review</p>
+          <p className="text-card text-text">
+            Coastal Marine <span className="font-normal text-text-secondary">· Q2 2026</span>
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-2 rounded-full border border-success bg-success-bg px-3 py-1 text-label text-success">
+          <span aria-hidden="true">✓</span> Recommends resolve · awaiting your approval
+        </span>
+      </div>
+
+      <div className="grid gap-px bg-border sm:grid-cols-3">
+        <Figure label="Computed on approved terms" value="1.12" note="below the 1.25 floor" tone="text-danger" />
+        <Figure label="With the amendment on file" value="1.30" note="clears the floor" tone="text-success" />
+        <Figure label="Borrower reported" value="1.30" note="evidence, not the trigger" tone="text-text-secondary" />
+      </div>
+
+      <div className="space-y-3 border-t border-border px-6 py-5">
+        <p className="max-w-prose text-body text-text-secondary">
+          Amendment No. 2 permits a fuel-hedging add-back capped at $800,000. It is on file and effective for this
+          period — but the approved terms do not yet reflect it. A person decides which governs.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Chip>CA §7.11(a)</Chip>
+          <Chip>Amd 2 §3</Chip>
+          <Chip>Fin Q2 2026 §1</Chip>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Figure({ label, value, note, tone }: { label: string; value: string; note: string; tone: string }) {
+  return (
+    <div className="bg-surface px-6 py-5">
+      <p className="text-label text-text-muted">{label}</p>
+      <p className={`mt-1 font-mono text-title tabular-nums ${tone}`}>{value}</p>
+      <p className="mt-1 text-label text-text-muted">{note}</p>
+    </div>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-sm border border-model bg-model-bg px-2 py-px font-mono text-label text-model-bright">
+      {children}
+    </span>
   );
 }
 
