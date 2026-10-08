@@ -40,12 +40,13 @@ function fakeClient() {
 
 const NOW = "2026-10-05T00:00:00.000Z";
 
-test("seed inserts 3 facilities, 16 documents and only the 3 boarded terms rows", async () => {
+test("seed inserts 6 facilities, 25 documents and only the 6 boarded terms rows", async () => {
   const client = fakeClient();
   const created = await seedFacilities(client, { now: NOW });
-  assert.deepEqual(created, { facilities: 3, documents: 16, covenant_terms: 3 });
+  assert.deepEqual(created, { facilities: 6, documents: 25, covenant_terms: 6 });
   assert.deepEqual(client.tables.facilities.map((r) => r.borrower_name), [
     "Harbor Logistics", "Northgate Foods", "Coastal Marine",
+    "Dokusign Inc", "Peat's Coffee Company", "Costko Wholesale",
   ]);
 });
 
@@ -53,7 +54,7 @@ test("seed never boards an amendment: every covenant_terms row is v1, approved, 
   const client = fakeClient();
   await seedFacilities(client, { now: NOW });
   const rows = client.tables.covenant_terms;
-  assert.equal(rows.length, 3);
+  assert.equal(rows.length, 6);
   for (const r of rows) {
     assert.equal(r.version, 1);
     assert.equal(r.status, "approved");
@@ -61,7 +62,9 @@ test("seed never boards an amendment: every covenant_terms row is v1, approved, 
     assert.equal(r.approved_at, NOW);
     assert.deepEqual(r.terms.effective_amendments, [], "a boarded v1 mentions no amendment");
   }
-  assert.deepEqual(rows.map((r) => r.effective_from), ["2024-03-15", "2023-09-20", "2024-08-01"]);
+  assert.deepEqual(rows.map((r) => r.effective_from), [
+    "2024-03-15", "2023-09-20", "2024-08-01", "2024-05-09", "2023-11-02", "2025-02-21",
+  ]);
   // The amendment documents are on file even though their terms are not.
   assert.equal(client.tables.documents.filter((d) => d.doc_type === "amendment").length, 2);
 });
@@ -82,9 +85,9 @@ test("seed is idempotent: a second run creates nothing", async () => {
   await seedFacilities(client, { now: NOW });
   const again = await seedFacilities(client, { now: NOW });
   assert.deepEqual(again, { facilities: 0, documents: 0, covenant_terms: 0 });
-  assert.equal(client.tables.facilities.length, 3);
-  assert.equal(client.tables.documents.length, 16);
-  assert.equal(client.tables.covenant_terms.length, 3);
+  assert.equal(client.tables.facilities.length, 6);
+  assert.equal(client.tables.documents.length, 25);
+  assert.equal(client.tables.covenant_terms.length, 6);
 });
 
 test("seed surfaces a database error instead of swallowing it", async () => {

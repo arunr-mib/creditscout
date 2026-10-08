@@ -112,10 +112,15 @@ const AMD2 = (effective) => ({
   citation: "Amd 2 §1",
 });
 
-/** Citations every version shares: threshold, denominator, deductions. */
-function baseCitations() {
+/**
+ * Citations every version shares: threshold, denominator, deductions.
+ *
+ * `min` is a parameter because the quote must match the agreement the generator
+ * prints, and not every facility is boarded at 1.25.
+ */
+function baseCitations(min = THRESHOLD) {
   return [
-    { field: "threshold.min_dscr", citation: "CA §7.11", file: AGREEMENT, quote: clauses.threshold(THRESHOLD) },
+    { field: "threshold.min_dscr", citation: "CA §7.11", file: AGREEMENT, quote: clauses.threshold(min) },
     { field: "denominator.components", citation: "CA §1.01", file: AGREEMENT, quote: clauses.debtService },
     { field: "numerator.deductions", citation: "CA §1.01", file: AGREEMENT, quote: clauses.coverageRatio },
   ];
@@ -379,7 +384,101 @@ const F5 = {
   ],
 };
 
-export const FACILITIES = [F1, F3, F5];
+/**
+ * The performing book (F7, F8, F9).
+ *
+ * F1/F3/F5 each carry a twist, which left every seeded loan either breaching or
+ * flagged — a portfolio made entirely of problems, and every one of them boarded
+ * at 1.25. These three are deliberately dull: one boarded version, no add-back,
+ * no amendment, reported equals computed, nothing to investigate. They exist so
+ * the minimum reads as a term that is negotiated per loan rather than a constant,
+ * and so the queue shows what a passing loan looks like.
+ *
+ * Ids skip F2/F4/F6: those are reserved for the period-mismatch and missing-waiver
+ * cases that would exercise `abstain` and `request` (parking-lot 4.1), and they
+ * should not be spent on scenery.
+ *
+ * None of these appears in the signed oracle, so none is evaluated: the eval
+ * harness iterates the CSV, not this list.
+ */
+const PERFORMING = [
+  {
+    id: "F7", name: "Dokusign Inc", industry: "Technology services", domain: "dokusign.example",
+    min: 1.4, agreed: "2024-05-09",
+    fin: [5100000, 380000, 290000, 1900000, 980000], dscr: 1.54,
+  },
+  {
+    id: "F8", name: "Peat's Coffee Company", industry: "Coffee roasting and retail", domain: "peatscoffee.example",
+    min: 1.1, agreed: "2023-11-02",
+    fin: [2450000, 150000, 100000, 1200000, 650000], dscr: 1.19,
+  },
+  {
+    id: "F9", name: "Costko Wholesale", industry: "Wholesale distribution", domain: "costko.example",
+    min: 1.35, agreed: "2025-02-21",
+    fin: [7200000, 500000, 420000, 2600000, 1350000], dscr: 1.59,
+  },
+].map((b) => {
+  const [ebitda, unfinanced_capex, cash_taxes, scheduled_principal, cash_interest] = b.fin;
+  const periodEnd = "2026-06-30";
+  return {
+    id: b.id,
+    borrower_name: b.name,
+    industry: b.industry,
+    sender_domain: b.domain,
+    twist: `None. A performing loan, boarded at ${fmtRatio(b.min)}x, carried so the book is not made only of exceptions.`,
+    pattern_tag: "none",
+    expected_outcome: "compliant",
+    terms_versions: [
+      {
+        version: 1,
+        effective_from: b.agreed,
+        boarded: true,
+        terms: buildTerms({ addbacks: [], amendments: [], threshold: b.min }),
+        source_citations: baseCitations(b.min),
+      },
+    ],
+    quarters: [
+      {
+        period_end: periodEnd,
+        // The borrower's own figure agrees with ours: nothing to reconcile.
+        reported_dscr: b.dscr,
+        financials: {
+          ebitda,
+          addback_amounts: {},
+          unfinanced_capex,
+          cash_taxes,
+          scheduled_principal,
+          cash_interest,
+        },
+        certificate_addbacks: {},
+        expected: {
+          computed_dscr: b.dscr,
+          passed: true,
+          remapped_dscr: null,
+          variance_flagged: false,
+          raises_exception: false,
+        },
+      },
+    ],
+    documents: [
+      { doc_type: "agreement", title: "Credit Agreement", effective_date: b.agreed, file: AGREEMENT },
+      { doc_type: "financials", title: `Financials — ${quarterLabel(periodEnd)}`, effective_date: periodEnd, period_end: periodEnd, file: `financials-${periodEnd}.txt` },
+      { doc_type: "compliance_certificate", title: `Compliance Certificate — ${quarterLabel(periodEnd)}`, effective_date: periodEnd, period_end: periodEnd, file: `compliance-certificate-${periodEnd}.txt` },
+    ],
+  };
+});
+
+export const FACILITIES = [F1, F3, F5, ...PERFORMING];
+
+/**
+ * The facilities that carry an evaluated case — the ones with a twist.
+ *
+ * The oracle grades investigations, and a performing loan never produces one:
+ * it passes, raises no exception and is never investigated. Emitting CSV rows
+ * for the three would inflate the denominator of every eval metric with cases
+ * no agent ever ran, so the generator writes rows only for these.
+ */
+export const EVALUATED_FACILITIES = FACILITIES.filter((f) => f.pattern_tag !== "none");
 
 /**
  * Onboarding-demo borrowers. Deliberately NOT in FACILITIES: seed.mjs,

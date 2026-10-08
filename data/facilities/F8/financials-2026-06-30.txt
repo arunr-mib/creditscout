@@ -1,0 +1,17 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+PEAT'S COFFEE COMPANY — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+
+Period ended: June 30, 2026
+Basis: trailing twelve months
+
+§1 Debt Service Coverage Inputs
+Consolidated EBITDA: 2,450,000
+Unfinanced Capital Expenditures: 150,000
+Cash Taxes Paid: 100,000
+Scheduled Principal Payments: 1,200,000
+Cash Interest Paid: 650,000
+
+§2 Add-Back Items
+Amounts incurred during the period, before any limit under the Credit Agreement.
+No add-back items were incurred during the period.

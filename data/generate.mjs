@@ -17,6 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import {
+  EVALUATED_FACILITIES,
   FACILITIES,
   LENDER_NAME,
   ONBOARDING_DEMO_FACILITIES,
@@ -372,7 +373,7 @@ function addbackCell(f, q) {
  * the owner fills the two expected columns in a spreadsheet, so the oracle never
  * grades the calculator against itself. The only ratios present are inputs.
  */
-export function renderCsv(facilities = FACILITIES) {
+export function renderCsv(facilities = EVALUATED_FACILITIES) {
   const rows = [CSV_COLUMNS.join(",")];
   for (const f of facilities) {
     for (const q of f.quarters) {
@@ -489,7 +490,7 @@ export function generate({ outDir = OUT_DIR, csvPath = CSV_PATH } = {}) {
     return { documents: docs.length, facilities: FACILITIES.length, csvRows: 0, csvKept: true };
   }
   writeFileSync(csvPath, renderCsv());
-  return { documents: docs.length, facilities: FACILITIES.length, csvRows: FACILITIES.flatMap((f) => f.quarters).length };
+  return { documents: docs.length, facilities: FACILITIES.length, csvRows: EVALUATED_FACILITIES.flatMap((f) => f.quarters).length };
 }
 
 /**

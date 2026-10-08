@@ -67,7 +67,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 
 | # | Item | Why it was safe to cut |
 |---|---|---|
-| 4.1 | 🟡 **Facilities F2, F4, F6** | F1/F3/F5 already cover resolve, escalate and the memory effect. F2 (period mismatch) and F4 (missing waiver) are the two that exercise `abstain`/`request` — restore these first, they carry a headline metric. |
+| 4.1 | 🟡 **Facilities F2, F4, F6** (ids still reserved; F7/F8/F9 were added 2026-10-08 as performing loans and deliberately did **not** take these ids) | F1/F3/F5 already cover resolve, escalate and the memory effect. F2 (period mismatch) and F4 (missing waiver) are the two that exercise `abstain`/`request` — restore these first, they carry a headline metric. |
 | 4.2 | 🟡 **Eval set 10 → 24 cases** | 10 signed cases (5 quarterly tests + 5 onboarding loans) are enough to measure and catch regressions. We report 10 as 10 and never claim 24. F2/F4 would add the `abstain`/`request` cases the current set cannot measure. |
 | 4.3 | ✅ **Covenant setup approval screen** | **Resolved 2026-10-05: being built, not pre-seeded.** The four-eyes control is a headline of the design and the owner chose to show it. |
 | 4.4 | 🟡 **Governance & evals page** (4th screen, editable) | A static read-only panel carries the governance story. |

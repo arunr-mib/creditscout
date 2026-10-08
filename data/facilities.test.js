@@ -50,36 +50,56 @@ function borrowerRun(f, q) {
 
 // ------------------------------------------------------------------ shape
 
-test("exactly three facilities: F1, F3, F5, with the owner's borrower names", () => {
-  assert.deepEqual(FACILITIES.map((f) => f.id), ["F1", "F3", "F5"]);
+test("six facilities: the three with a twist, then the three performing, with the owner's names", () => {
+  assert.deepEqual(FACILITIES.map((f) => f.id), ["F1", "F3", "F5", "F7", "F8", "F9"]);
   assert.deepEqual(FACILITIES.map((f) => f.borrower_name), [
     "Harbor Logistics",
     "Northgate Foods",
     "Coastal Marine",
+    "Dokusign Inc",
+    "Peat's Coffee Company",
+    "Costko Wholesale",
   ]);
 });
 
+// F2/F4/F6 are reserved for the abstain/request cases (parking-lot 4.1). The
+// performing loans must not consume those ids.
+test("no facility claims a reserved id", () => {
+  for (const id of ["F2", "F4", "F6"]) {
+    assert.equal(FACILITIES.find((f) => f.id === id), undefined, `${id} is reserved`);
+  }
+});
+
 test("every facility carries the metadata, tag and outcome the product needs", () => {
-  const outcomes = ["resolve", "request", "escalate", "abstain"];
+  const outcomes = ["resolve", "request", "escalate", "abstain", "compliant"];
   for (const f of FACILITIES) {
     assert.ok(f.industry, `${f.id} industry`);
     assert.match(f.sender_domain, /\.example$/, `${f.id} sender_domain is a reserved .example domain`);
     assert.ok(f.twist.length > 20, `${f.id} twist`);
-    assert.ok(PATTERN_TAGS.includes(f.pattern_tag), `${f.id} pattern_tag ${f.pattern_tag}`);
+    // "none" is not a PATTERN_TAG and must never become one: PATTERN_TAGS is the
+    // enum the agent may emit, and a performing loan produces no casefile at all.
+    const tagged = f.pattern_tag === "none" || PATTERN_TAGS.includes(f.pattern_tag);
+    assert.ok(tagged, `${f.id} pattern_tag ${f.pattern_tag}`);
+    assert.equal(f.pattern_tag === "none", f.expected_outcome === "compliant", `${f.id} tag and outcome agree`);
     assert.ok(outcomes.includes(f.expected_outcome), `${f.id} expected_outcome`);
     assert.ok(f.terms_versions.length >= 1, `${f.id} terms_versions`);
     assert.ok(f.quarters.length >= 1, `${f.id} quarters`);
-    assert.ok(f.documents.length >= 4, `${f.id} documents`);
+    // A performing loan has no amendment and one quarter, so three documents
+    // is its floor; a facility with a twist carries at least four.
+    assert.ok(f.documents.length >= 3, `${f.id} documents`);
   }
   assert.deepEqual(FACILITIES.map((f) => [f.pattern_tag, f.expected_outcome]), [
     ["amendment_addback", "resolve"],
     ["true_breach", "escalate"],
     ["amendment_addback", "resolve"],
+    ["none", "compliant"],
+    ["none", "compliant"],
+    ["none", "compliant"],
   ]);
 });
 
-test("document counts: 4 for F1, 4 for F3, 8 for F5", () => {
-  assert.deepEqual(FACILITIES.map((f) => f.documents.length), [4, 4, 8]);
+test("document counts: 4 for F1, 4 for F3, 8 for F5, 3 for each performing loan", () => {
+  assert.deepEqual(FACILITIES.map((f) => f.documents.length), [4, 4, 8, 3, 3, 3]);
 });
 
 test("doc_type values are ones the schema accepts", () => {
@@ -89,7 +109,10 @@ test("doc_type values are ones the schema accepts", () => {
   }
 });
 
-test("terms use the §4.2 schema, threshold 1.25, TTM, standard deductions and denominator", () => {
+test("terms use the §4.2 schema, a per-loan threshold, TTM, standard deductions and denominator", () => {
+  // The minimum is negotiated per loan. It is NOT a constant, and a test that
+  // pinned it to 1.25 would quietly forbid ever boarding another number.
+  const thresholds = new Map([["F1", 1.25], ["F3", 1.25], ["F5", 1.25], ["F7", 1.4], ["F8", 1.1], ["F9", 1.35]]);
   for (const f of FACILITIES) {
     for (const v of f.terms_versions) {
       const t = termsFor(v, f.quarters[0]);
@@ -97,7 +120,7 @@ test("terms use the §4.2 schema, threshold 1.25, TTM, standard deductions and d
         "test_period", "threshold", "numerator", "denominator", "effective_amendments",
       ]);
       assert.equal(t.test_period.basis, "TTM");
-      assert.equal(t.threshold.min_dscr, 1.25);
+      assert.equal(t.threshold.min_dscr, thresholds.get(f.id), `${f.id} min_dscr`);
       assert.deepEqual(t.numerator.deductions, ["unfinanced_capex", "cash_taxes"]);
       assert.deepEqual(t.denominator.components, ["scheduled_principal", "cash_interest"]);
     }
@@ -106,9 +129,9 @@ test("terms use the §4.2 schema, threshold 1.25, TTM, standard deductions and d
 
 // ----------------------------------------------------------- boarding lag
 
-test("F3 is the only facility with every terms version boarded; F1 and F5 each have exactly one unboarded", () => {
+test("F1 and F5 are the only facilities with an unboarded version; the rest are fully boarded", () => {
   const fullyBoarded = FACILITIES.filter((f) => f.terms_versions.every((v) => v.boarded));
-  assert.deepEqual(fullyBoarded.map((f) => f.id), ["F3"]);
+  assert.deepEqual(fullyBoarded.map((f) => f.id), ["F3", "F7", "F8", "F9"]);
   for (const id of ["F1", "F5"]) {
     const unboarded = byId(id).terms_versions.filter((v) => !v.boarded);
     assert.deepEqual(unboarded.map((v) => v.version), [2], `${id} unboarded versions`);

@@ -31,7 +31,7 @@ function sectionText(text, citation) {
 test("every document starts with the literal synthetic marker on line 1", () => {
   assert.equal(MARKER, "SYNTHETIC — FOR DEMONSTRATION");
   const docs = renderAll();
-  assert.equal(docs.length, 16);
+  assert.equal(docs.length, 25);
   for (const d of docs) assert.equal(lines(d.text)[0], MARKER, `${d.facility}/${d.file}`);
 });
 
@@ -62,10 +62,14 @@ test("the agreement has the article and §-section structure the stage-4 chunker
   }
 });
 
-test("each agreement states the 1.25 threshold under §7.11; only F5's lists a cap there", () => {
+test("each agreement states its own boarded threshold under §7.11; only F5's lists a cap there", () => {
   for (const f of FACILITIES) {
+    // The printed minimum must be the facility's own, not a shared constant:
+    // an agreement that says 1.25 while the terms say 1.40 is the exact
+    // contradiction the product exists to catch.
+    const min = termsFor(f.terms_versions[0], f.quarters[0]).threshold.min_dscr;
     const s711 = sectionText(docText(f, "agreement.txt"), "CA §7.11");
-    assert.match(s711, /to be less than 1\.25 to 1\.00\./);
+    assert.match(s711, new RegExp(`to be less than ${min.toFixed(2)} to 1\\.00\\.`), f.id);
   }
   assert.match(sectionText(docText(byId("F5"), "agreement.txt"), "CA §7.11(b)(i)"), /not to exceed \$500,000 for any test period/);
   assert.doesNotMatch(docText(byId("F1"), "agreement.txt"), /restructuring/i);
@@ -308,11 +312,12 @@ test("CSV contains no DSCR this code computed: the only ratios in a row are the 
 
 // --------------------------------------------------------- on disk / drift
 
-test("generate() writes the file layout: 4 for F1, 4 for F3, 8 for F5, plus the CSV", () => {
+test("generate() writes the file layout: 4 for F1, 4 for F3, 8 for F5, 3 each for F7–F9, plus the CSV", () => {
   const dir = mkdtempSync(join(tmpdir(), "creditscout-gen-"));
   const r = generate({ outDir: join(dir, "facilities"), csvPath: join(dir, "template.csv") });
-  assert.deepEqual(r, { documents: 16, facilities: 3, csvRows: 5 });
-  for (const [id, n] of [["F1", 4], ["F3", 4], ["F5", 8]]) {
+  // csvRows stays 5: the performing loans are seeded but never evaluated.
+  assert.deepEqual(r, { documents: 25, facilities: 6, csvRows: 5 });
+  for (const [id, n] of [["F1", 4], ["F3", 4], ["F5", 8], ["F7", 3], ["F8", 3], ["F9", 3]]) {
     assert.equal(readdirSync(join(dir, "facilities", id)).length, n, id);
   }
   assert.equal(readFileSync(join(dir, "template.csv"), "utf8"), renderCsv());
