@@ -1,6 +1,5 @@
 import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
-import { CasefileEvidence } from "./CasefileEvidence";
 import { CasefileFindings } from "./CasefileFindings";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
@@ -130,7 +129,22 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           aria-label="Agent recommendation"
           className={`rounded-lg border border-border-strong border-l-2 ${accent} bg-surface p-4`}
         >
-          <p className="text-label text-model-bright">CreditScout Agent recommendation</p>
+          {/* The reasoning sits on the RIGHT of the card's first line, so it
+              costs no vertical space at all. */}
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <p className="text-label text-model-bright">CreditScout Agent recommendation</p>
+            {view.explanation && (
+              <details className="group min-w-0 shrink-0">
+                <summary className="cursor-pointer list-none text-label text-model-bright underline-offset-2 hover:underline marker:content-['']">
+                  {overridden ? "Read the agent draft that was not accepted" : "Read the agent’s reasoning"}
+                  <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
+                </summary>
+                <p className="mt-2 max-w-prose border-l-2 border-border-strong pl-3 text-body text-text-secondary">
+                  {view.explanation}
+                </p>
+              </details>
+            )}
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <h2 className="text-section text-text">{RECOMMENDATION_HEADLINE[rec]}</h2>
             {view.humanReviewRequired && (
@@ -139,33 +153,11 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
               </span>
             )}
           </div>
-          {/* Assembled from the calculation log, never a second model summary. */}
-          {summary.steps.length > 0 && (
-            <p className="mt-2 max-w-prose text-body text-text-secondary">{summary.steps[summary.steps.length - 1].detail}</p>
-          )}
+          {summary.headline && <p className="mt-2 max-w-prose text-body text-text-secondary">{summary.headline}</p>}
           {onAmendedTerms && (
             <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-code bg-code-bg px-3 py-1 text-label text-code-bright">
               <span aria-hidden="true">⚠</span> Provisional · amendment not reflected in approved terms
             </p>
-          )}
-
-          {/* The agent's own account is secondary and no longer takes a section
-              of its own. It is one click away, labelled for what it is. */}
-          {view.explanation && (
-            <details className="group mt-3">
-              <summary className="cursor-pointer list-none text-label text-model-bright underline-offset-2 hover:underline marker:content-['']">
-                {overridden ? "Read the agent draft that was not accepted" : "Read the agent’s reasoning"}
-                <span aria-hidden="true" className="ml-1 inline-block transition-transform group-open:rotate-90">›</span>
-              </summary>
-              <div className="mt-2 border-l-2 border-border-strong pl-3">
-                <p className="max-w-prose text-body text-text-secondary">{view.explanation}</p>
-                <p className="mt-2 max-w-prose text-label text-text-muted">
-                  {overridden
-                    ? "Enforcement rejected this draft and replaced its recommendation with the result above. It is kept for the record, not as the supported conclusion."
-                    : "The agent’s account, not the decision. Where it and the figures above disagree, the enforced result and the validation notices govern. The code decides the number, not the narrative."}
-                </p>
-              </div>
-            </details>
           )}
         </section>
       )}
@@ -205,6 +197,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           sections={view.sections}
           amendments={view.amendments}
           notes={view.notes}
+          claims={view.claims}
+          clauses={view.clauses}
+          trace={view.trace}
           termsVersion={view.termsVersion}
           facilityId={view.facilityId}
           missingEvidence={view.missingEvidence}
@@ -213,8 +208,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
 
       {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
       {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
-
-      {mode !== "not_ready" && <CasefileEvidence sections={view.sections} claims={view.claims} clauses={view.clauses} trace={view.trace} showCalculation={false} />}
 
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} />

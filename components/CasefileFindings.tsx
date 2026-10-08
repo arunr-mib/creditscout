@@ -3,8 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CalcTable } from "./CalcTable";
+import { ClaimList } from "./ClaimList";
 import { GuardrailNotice } from "./GuardrailNotice";
-import type { AmendmentStatus, CalcSection, InvestigationSummary, Notice } from "./casefileModel";
+import { TraceArc } from "./TraceArc";
+import { TraceStep } from "./TraceStep";
+import type { Clause } from "./termsReview";
+import type { LiveTraceView } from "./traceModel";
+import type { AmendmentStatus, CalcSection, ClaimView, InvestigationSummary, Notice } from "./casefileModel";
 
 /**
  * What the investigation found, and what the analyst still has to check.
@@ -23,6 +28,9 @@ export function CasefileFindings({
   sections,
   amendments,
   notes,
+  claims,
+  clauses,
+  trace,
   termsVersion,
   facilityId,
   missingEvidence,
@@ -31,12 +39,17 @@ export function CasefileFindings({
   sections: CalcSection[];
   amendments: AmendmentStatus[];
   notes: Notice[];
+  claims: ClaimView[];
+  clauses: Record<string, Clause | null>;
+  trace: LiveTraceView;
   termsVersion: number | null;
   facilityId: string;
   missingEvidence: string[];
 }) {
   const [openStep, setOpenStep] = useState<number | null>(null);
+  const [showCitations, setShowCitations] = useState(false);
   const [showNotices, setShowNotices] = useState(false);
+  const [evidenceTab, setEvidenceTab] = useState<"evidence" | "activity">("evidence");
 
   const sectionFor = (calcId: string | null) => (calcId ? (sections.find((s) => s.calcId === calcId) ?? null) : null);
   const linkLabel = (kind: string) =>
@@ -98,6 +111,28 @@ export function CasefileFindings({
                         {termsNote.detail}
                       </p>
                     )}
+
+                    {/* Citations open in the same place, on the same gesture as
+                        the evidence above them — the clause a claim rests on is
+                        no use three sections away from the claim. */}
+                    {step.kind === "addback" && claims.length > 0 && (
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowCitations((v) => !v)}
+                          aria-expanded={showCitations}
+                          className="text-label text-model-bright underline-offset-2 hover:underline"
+                        >
+                          {showCitations ? "Hide citations" : `View citations · ${claims.length}`}{" "}
+                          <span aria-hidden="true">{showCitations ? "⌃" : "›"}</span>
+                        </button>
+                        {showCitations && (
+                          <div className="mt-3">
+                            <ClaimList claims={claims} selectedKey={null} onSelect={() => {}} />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>
@@ -140,7 +175,42 @@ export function CasefileFindings({
       <div className="min-w-0 space-y-4">
         {amendments.length > 0 && (
           <section aria-label="Supporting evidence" className="rounded-lg border border-border-strong bg-surface">
-            <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Supporting evidence</h2>
+            <div role="tablist" className="flex border-b border-border-strong">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={evidenceTab === "evidence"}
+                onClick={() => setEvidenceTab("evidence")}
+                className={`px-4 py-3 text-card transition-colors ${evidenceTab === "evidence" ? "border-b-2 border-model text-text" : "text-text-muted hover:text-text-secondary"}`}
+              >
+                Supporting evidence
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={evidenceTab === "activity"}
+                onClick={() => setEvidenceTab("activity")}
+                className={`px-4 py-3 text-card transition-colors ${evidenceTab === "activity" ? "border-b-2 border-model text-text" : "text-text-muted hover:text-text-secondary"}`}
+              >
+                Agent activity{trace.steps.length > 0 ? ` · ${trace.steps.length}` : ""}
+              </button>
+            </div>
+            {evidenceTab === "activity" ? (
+              <div className="space-y-4 p-4">
+                {trace.steps.length === 0 ? (
+                  <p className="text-body text-text-muted">No activity was recorded for this investigation.</p>
+                ) : (
+                  <>
+                    <TraceArc steps={trace.steps} />
+                    <ol className="space-y-4">
+                      {trace.steps.map((st) => (
+                        <TraceStep key={st.n} step={st} />
+                      ))}
+                    </ol>
+                  </>
+                )}
+              </div>
+            ) : (
             <ul className="space-y-4 p-4">
               {amendments.map((a) => (
                 <li key={a.title}>
@@ -163,6 +233,7 @@ export function CasefileFindings({
                 </li>
               ))}
             </ul>
+            )}
           </section>
         )}
 

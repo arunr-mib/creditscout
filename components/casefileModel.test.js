@@ -481,3 +481,18 @@ test("a missing figure is never read as a pass", () => {
   assert.equal(s.comparison[0].status, "unknown");
   assert.match(s.steps[0].detail, /—/);
 });
+
+test("the recommendation headline is composed from branches, never generated", () => {
+  const above = investigationSummary([sec("c1", 1.12, false, 1.25), sec("c2", 1.3, true, 1.25)], [TERMS_NOTE]);
+  assert.equal(
+    above.headline,
+    "The agent identified an additional permitted add-back and recalculated the DSCR above the minimum.",
+  );
+  // The same shape that does NOT clear the floor must not claim it did.
+  const below = investigationSummary([sec("c1", 1.02, false, 1.25), sec("c2", 1.18, true, 1.25)], [TERMS_NOTE]);
+  assert.match(below.headline, /still below the minimum/);
+  // No add-back: it falls back to the last finding rather than inventing one.
+  const plain = investigationSummary([sec("c1", 1.4, true, 1.25)], []);
+  assert.equal(plain.headline, plain.steps[0].detail);
+  assert.equal(investigationSummary([], []).headline, null);
+});

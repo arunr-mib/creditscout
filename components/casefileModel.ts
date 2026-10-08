@@ -562,6 +562,8 @@ export interface InvestigationSummary {
   addback: { name: string; cap: number | null } | null;
   steps: FoundStep[];
   comparison: ComparisonRow[];
+  /** One plain sentence for the recommendation card. Composed, never written. */
+  headline: string | null;
 }
 
 /**
@@ -670,5 +672,20 @@ export function investigationSummary(
     });
   }
 
-  return { initial, governing, required, onAmendedTerms, addback, steps, comparison };
+  // A sentence an analyst would say, assembled from the same facts as the
+  // steps. It is composed from branches, not generated, so it cannot assert
+  // anything the calculation log does not already support.
+  const movedAbove =
+    governing?.dscr != null && required != null && governing.dscr >= required;
+  const movedAtAll = governing != null && initial != null && governing.dscr !== initial.dscr;
+  let headline: string | null = null;
+  if (addback && movedAtAll) {
+    headline = movedAbove
+      ? "The agent identified an additional permitted add-back and recalculated the DSCR above the minimum."
+      : "The agent identified an additional permitted add-back, and the recalculated DSCR is still below the minimum.";
+  } else if (steps.length > 0) {
+    headline = steps[steps.length - 1].detail;
+  }
+
+  return { initial, governing, required, onAmendedTerms, addback, steps, comparison, headline };
 }
