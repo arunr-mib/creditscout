@@ -111,13 +111,13 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full border-collapse text-left">
-          <thead>
+          <thead className="bg-model-bg/50">
             <tr className="border-b border-border">
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Borrower</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document type</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Effective date</th>
-              <th className="whitespace-nowrap px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Document</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Borrower</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Document type</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Effective date</th>
+              <th className="whitespace-nowrap px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">
                 Covenant terms
               </th>
             </tr>

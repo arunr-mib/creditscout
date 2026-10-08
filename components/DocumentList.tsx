@@ -29,7 +29,7 @@ export function DocumentList({ documents, approvedTerms }: { documents: Document
   return (
     <table className="w-full border-collapse text-body">
       <thead>
-        <tr className="border-b border-border text-left text-label uppercase tracking-wide text-text-muted">
+        <tr className="border-b border-border text-left text-label uppercase tracking-wide text-model-bright">
           <th className="py-2 pr-4 font-medium">Document</th>
           <th className="py-2 pr-4 font-medium">Type</th>
           <th className="py-2 pr-4 font-medium">Effective</th>

@@ -151,8 +151,8 @@ export function CasefileFindings({
             <div className="px-4 pb-4">
             <div className="overflow-x-auto rounded-md border border-border">
               <table className="w-full border-collapse text-left">
-                <thead className="bg-surface-raised">
-                  <tr className="text-label uppercase tracking-wide text-text-muted">
+                <thead className="bg-model-bg/50">
+                  <tr className="text-label uppercase tracking-wide text-model-bright">
                     <th className="px-3 py-2 font-medium">Basis</th>
                     <th className="px-3 py-2 text-right font-medium">DSCR</th>
                     <th className="px-3 py-2 font-medium">Status</th>

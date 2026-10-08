@@ -121,8 +121,8 @@ function Card({ card }: { card: TermsCard }) {
           <h3 className="mb-2 text-label text-text-muted">Terms history</h3>
           <div className="overflow-x-auto rounded-md border border-border">
             <table className="w-full border-collapse text-left">
-              <thead className="bg-surface-raised">
-                <tr className="text-label text-text-muted">
+              <thead className="bg-model-bg/50">
+                <tr className="text-label text-model-bright">
                   <th className="px-3 py-2 font-medium">Version</th>
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 font-medium">Effective from</th>

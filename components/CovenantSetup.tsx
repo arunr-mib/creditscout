@@ -344,7 +344,7 @@ export function CovenantSetup(props: {
           <h2 className="text-card text-text">Documents on file</h2>
           <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
             <thead>
-              <tr className="text-label uppercase tracking-wide text-text-muted">
+              <tr className="text-label uppercase tracking-wide text-model-bright">
                 <th className="pb-1 font-medium">Title</th>
                 <th className="pb-1 font-medium">Type</th>
                 <th className="pb-1 font-medium">Effective</th>
@@ -383,7 +383,7 @@ export function CovenantSetup(props: {
           ) : (
             <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
               <thead>
-                <tr className="text-label uppercase tracking-wide text-text-muted">
+                <tr className="text-label uppercase tracking-wide text-model-bright">
                   <th className="pb-1 font-medium">Version</th>
                   <th className="pb-1 font-medium">Status</th>
                   <th className="pb-1 font-medium">Effective from</th>

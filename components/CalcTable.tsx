@@ -36,9 +36,9 @@ export function CalcTable(props: {
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-border-strong">
-            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-text-muted">Component</th>
-            <th scope="col" className="px-3 py-2 text-right text-label uppercase tracking-wide text-text-muted">Value</th>
-            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-text-muted">Source</th>
+            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-model-bright">Component</th>
+            <th scope="col" className="px-3 py-2 text-right text-label uppercase tracking-wide text-model-bright">Value</th>
+            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-model-bright">Source</th>
           </tr>
         </thead>
         {sections.map((s) => (

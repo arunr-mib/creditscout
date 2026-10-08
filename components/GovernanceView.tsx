@@ -203,8 +203,8 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
-                  <thead className="bg-surface-raised">
-                    <tr className="text-label uppercase tracking-wide text-text-muted">
+                  <thead className="bg-model-bg/50">
+                    <tr className="text-label uppercase tracking-wide text-model-bright">
                       <th className="px-4 py-2 font-medium">Case</th>
                       <th className="px-4 py-2 font-medium">Expected</th>
                       <th className="px-4 py-2 font-medium">Recommended</th>

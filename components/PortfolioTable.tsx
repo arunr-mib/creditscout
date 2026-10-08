@@ -103,8 +103,8 @@ export function PortfolioTable({
 
       <div className="overflow-x-auto rounded-lg border border-border-strong bg-surface">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-surface-raised">
-            <tr className="text-label text-text-muted">
+          <thead className="bg-model-bg/50">
+            <tr className="text-label text-model-bright">
               <th className="whitespace-nowrap px-4 py-3 font-medium">Borrower</th>
               <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Computed DSCR</th>
               <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Reported DSCR</th>
