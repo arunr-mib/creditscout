@@ -180,37 +180,37 @@ export function PortfolioTable({
  * covenant is the work.
  */
 function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targetPeriod: string; targetLabel: string }) {
-  // One width for every row action so the column reads as a column. Without it
-  // "Review" sat visibly narrower than "View decision" and "Review terms".
-  const base =
-    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong px-3 py-2 text-body leading-5 transition-colors duration-fast";
-  const primary = `${base} bg-human font-medium text-bg hover:bg-text`;
-  const secondary = `${base} text-text hover:bg-surface-raised`;
+  // TWO BUTTON COLOURS ON THIS SCREEN, NO MORE. Beige carries every action that
+  // opens a record — review it, view the decision, review the terms. Indigo is
+  // reserved for the two that SPEND something: running a test and starting an
+  // investigation. The colour tells you whether a click costs anything.
+  const open =
+    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong bg-human px-3 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text";
 
   switch (row.status) {
     case "breach_investigate":
       return <InvestigateButton exceptionId={row.exceptionId!} status={row.exceptionStatus ?? "new"} hasCasefile={false} />;
     case "in_review":
       return (
-        <Link href={`/casefiles/${row.casefileId}`} className={primary}>
+        <Link href={`/casefiles/${row.casefileId}`} className={open}>
           Review
         </Link>
       );
     case "investigating":
       return (
-        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
+        <Link href={`/casefiles/${row.casefileId}`} className={open}>
           Watch live
         </Link>
       );
     case "awaiting_docs":
       return (
-        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
+        <Link href={`/casefiles/${row.casefileId}`} className={open}>
           Open casefile
         </Link>
       );
     case "decided":
       return (
-        <Link href={`/casefiles/${row.casefileId}`} className={secondary}>
+        <Link href={`/casefiles/${row.casefileId}`} className={open}>
           View decision
         </Link>
       );
@@ -218,7 +218,7 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
       // compliant / not_tested
       if (!row.hasApprovedTerms) {
         return (
-          <Link href={`/facilities/${row.facilityId}/covenant-setup`} className={secondary}>
+          <Link href={`/facilities/${row.facilityId}/covenant-setup`} className={open}>
             Review terms
           </Link>
         );
