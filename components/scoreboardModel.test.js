@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import {
   METRICS,
   RUN_EVAL_HARNESS,
+  caseCount,
   evalScoreboardState,
+  runProvenance,
   scoreboardRows,
 } from "./scoreboardModel.ts";
 
@@ -100,4 +102,26 @@ test("a run present in only one mode still renders (the other stays null)", () =
   const s = evalScoreboardState([{ mode: "cold", metrics: {}, created_at: "2026-10-05T00:00:00Z" }]);
   assert.equal(s.state, "present");
   assert.equal(s.warm, null);
+});
+
+// -------------------------------------------------------- run provenance
+
+test("the run's date and sample size are read from the row, not omitted", () => {
+  // A scoreboard with no date and no n invites the reader to treat it as a
+  // standing property of the product. Both facts are already in the row.
+  const runs = [
+    { mode: "warm", created_at: "2026-10-08T04:17:02Z", metrics: { cases: [{ counted: true }, { counted: true }, { counted: false }] } },
+    { mode: "cold", created_at: "2026-10-08T04:11:42Z", metrics: { cases: [{ counted: true }] } },
+  ];
+  // THE DENOMINATOR, not the array length. The oracle lists cases a run skipped
+  // — counting those would make the sample look larger than it was scored over.
+  assert.deepEqual(runProvenance(runs), { recordedAt: "2026-10-08T04:17:02Z", cases: 2 });
+});
+
+test("provenance of nothing is nulls, never a zero that reads as a measurement", () => {
+  assert.deepEqual(runProvenance([]), { recordedAt: null, cases: null });
+  assert.deepEqual(runProvenance(null), { recordedAt: null, cases: null });
+  assert.equal(caseCount({ cases: "not an array" }), null);
+  assert.equal(caseCount({ cases: [{ counted: false }, { counted: false }] }), 0, "listed but never scored");
+  assert.equal(caseCount(null), null);
 });

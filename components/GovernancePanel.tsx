@@ -11,15 +11,18 @@ import { type PolicyRow, type PolicyTableRow, lockedBoolean, policyRows } from "
  * `require_human_review`, routes to `LockedPolicyValue` and renders as
  * structurally impossible to change.
  */
-export function GovernancePanel({ rows }: { rows: PolicyTableRow[] }) {
+/** `bare` drops the heading and intro: on Governance the card already supplies them. */
+export function GovernancePanel({ rows, bare = false }: { rows: PolicyTableRow[]; bare?: boolean }) {
   const policy = policyRows(rows);
 
   return (
     <section aria-label="Policy" className="space-y-3">
-      <h2 className="text-section text-text">Policy</h2>
-      <p className="text-body text-text-secondary">
-        Set by the Credit Risk Officer. The agent recommends within these bounds; it never changes them.
-      </p>
+      {!bare && <h2 className="text-section text-text">Policy</h2>}
+      {!bare && (
+        <p className="text-body text-text-secondary">
+          Set by the Credit Risk Officer. The agent recommends within these bounds; it never changes them.
+        </p>
+      )}
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
         <table className="w-full border-collapse">
           <thead>

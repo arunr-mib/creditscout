@@ -1,5 +1,4 @@
-import { GovernancePanel } from "@/components/GovernancePanel";
-import { Scoreboard } from "@/components/Scoreboard";
+import { GovernanceView } from "@/components/GovernanceView";
 import type { PolicyTableRow } from "@/components/governanceModel";
 import type { EvalRunLike } from "@/components/scoreboardModel";
 import { anonReader } from "@/lib/supabase/anon";
@@ -32,17 +31,14 @@ export default async function GovernancePage() {
   const runs = (must(evalRes, "select eval_runs") ?? []) as EvalRunLike[];
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       <header className="max-w-prose space-y-1">
-        <p className="text-label text-text-muted">Policy &amp; evaluation</p>
+        <p className="text-label text-text-muted">Policy &amp; performance</p>
         <h1 className="text-title text-text">Governance</h1>
-        <p className="pt-1 text-body text-text-secondary">
-          The policy that constrains every investigation, and how the agent scores against it — cold memory versus warm.
-        </p>
+        <p className="pt-1 text-body text-text-secondary">Review investigation controls and evaluation results.</p>
       </header>
 
-      <GovernancePanel rows={policy} />
-      <Scoreboard runs={runs} />
+      <GovernanceView policy={policy} runs={runs} />
     </div>
   );
 }

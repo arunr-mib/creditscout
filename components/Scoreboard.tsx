@@ -18,12 +18,13 @@ import {
  * runs the harness, so the honest primary state is an empty state that names the
  * next action — a metric never reported renders an em dash, never a measured 0.
  */
-export function Scoreboard({ runs }: { runs: EvalRunLike[] }) {
+/** `bare` drops the heading: on Governance the card already supplies it. */
+export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?: boolean }) {
   const { state, cold, warm } = evalScoreboardState(runs);
 
   return (
     <section aria-label="Eval scoreboard" className="space-y-3">
-      <h2 className="text-section text-text">Eval scoreboard</h2>
+      {!bare && <h2 className="text-section text-text">Eval scoreboard</h2>}
 
       {state === "awaiting" ? (
         <div className="space-y-2 rounded-lg border border-border bg-surface p-6">

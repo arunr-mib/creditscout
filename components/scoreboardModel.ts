@@ -48,13 +48,14 @@ export interface MetricSpec {
  * object the eval wrote.
  */
 export const METRICS: readonly MetricSpec[] = [
-  { key: "false_resolves", label: "Zero false resolves", target: "0", kind: "gate" },
+  // Labels are what a risk officer reads, not what the harness calls them.
+  { key: "false_resolves", label: "Incorrect resolutions", target: "0", kind: "gate" },
   { key: "calc_accuracy", label: "Calculation accuracy", target: "100%", kind: "ratio", threshold: 1 },
   { key: "outcome_accuracy", label: "Outcome accuracy", target: "≥ 85%", kind: "ratio", threshold: 0.85 },
-  { key: "abstain_accuracy", label: "Correct abstain / request", target: "≥ 90%", kind: "ratio", threshold: 0.9 },
+  { key: "abstain_accuracy", label: "Correct abstention or document request", target: "≥ 90%", kind: "ratio", threshold: 0.9 },
   { key: "citation_hit_rate", label: "Citation hit rate", target: "≥ 90%", kind: "ratio", threshold: 0.9 },
-  { key: "groundedness", label: "Groundedness (Foundry judge)", target: "reported", kind: "reported" },
-  { key: "avg_steps", label: "Avg steps / case (memory effect)", target: "visible reduction", kind: "reduction" },
+  { key: "groundedness", label: "Groundedness", target: "Report only", kind: "reported" },
+  { key: "avg_steps", label: "Avg. steps per case", target: "Lower with lessons", kind: "reduction" },
 ] as const;
 
 export interface MetricCell {
@@ -144,4 +145,44 @@ export function evalScoreboardState(runs: readonly EvalRunLike[] | null | undefi
   const cold = latest("cold");
   const warm = latest("warm");
   return { state: cold || warm ? "present" : "awaiting", cold, warm };
+}
+
+
+// ------------------------------------------------- what the run actually was
+
+/**
+ * How many cases a run actually SCORED.
+ *
+ * Not the length of the array. The oracle lists every labelled case, including
+ * ones the run skipped — the five onboarding borrowers are never seeded, so
+ * they are listed and not investigated. `outcome_accuracy` is matched over
+ * `counted`, so `counted` is the denominator behind the percentages and the
+ * only number that belongs beside them. Reporting the array length would make
+ * the sample look twice the size it is.
+ */
+export function caseCount(metrics: unknown): number | null {
+  if (typeof metrics !== "object" || metrics === null) return null;
+  const cases = (metrics as Record<string, unknown>).cases;
+  if (!Array.isArray(cases)) return null;
+  return cases.filter((c) => typeof c === "object" && c !== null && (c as Record<string, unknown>).counted === true).length;
+}
+
+/**
+ * The run's own provenance: when it ran and over how many cases.
+ *
+ * Shown rather than omitted. A scoreboard with no date and no sample size
+ * invites the reader to treat it as a standing property of the product; both
+ * facts are in the row the harness wrote, so there is no reason to withhold
+ * them — and at n=6 the sample size is the first thing an honest reader wants.
+ */
+export function runProvenance(runs: readonly EvalRunLike[] | null | undefined): { recordedAt: string | null; cases: number | null } {
+  const list = Array.isArray(runs) ? runs : [];
+  let recordedAt: string | null = null;
+  let cases: number | null = null;
+  for (const r of list) {
+    const at = typeof r.created_at === "string" ? r.created_at : null;
+    if (at && (recordedAt === null || at > recordedAt)) recordedAt = at;
+    if (cases === null) cases = caseCount(r.metrics);
+  }
+  return { recordedAt, cases };
 }
