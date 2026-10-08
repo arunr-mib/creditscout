@@ -4,12 +4,6 @@ import type { Refusal } from "./termsReview";
 export interface OmissionCounts {
   /** Notes the server raised about the terms (not counting a check that did not run). */
   notes: number;
-  /** Clauses no term cites. */
-  uncited: number;
-  /** Of those, how many the model was never shown; null when that was not recorded. */
-  neverShown: number | null;
-  /** Of those, how many the analyst has opened on this screen. */
-  opened: number;
   /** Cited clauses that hold a paragraph no term rests on, and how many such paragraphs. */
   looseClauses: number;
   looseParagraphs: number;
@@ -56,7 +50,7 @@ export function ApproveBar(props: {
 
   if (state.kind === "approved") {
     return (
-      <footer className="sticky bottom-0 mt-6 rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
+      <footer className="sticky bottom-0 -mx-6 mt-6 border-t-2 border-border-strong bg-bg px-6 py-4 md:-mx-8 md:px-8">
         <p role="status" className="text-card text-human">
           Approved as version {state.version}, effective from <span className="font-mono">{state.effectiveFrom}</span>, by{" "}
           {state.by}.
@@ -71,7 +65,12 @@ export function ApproveBar(props: {
   const disabled = blockers.length > 0 || sending;
 
   return (
-    <footer className="sticky bottom-0 z-10 mt-6 rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
+    /* A bar, not a card. It was `bg-surface-raised` — the same tone as the term
+       cards it floats over — with rounded corners, so it read as a panel dumped
+       on top of the page. Full-bleed to the page gutter on the page's own
+       background, separated by one strong rule: dark-native chrome, no shadow
+       (design.md §4). */
+    <footer className="sticky bottom-0 z-10 -mx-6 mt-6 border-t-2 border-border-strong bg-bg px-6 py-4 md:-mx-8 md:px-8">
       {state.kind === "refused" && <Refused refusal={state.refusal} />}
       {state.kind === "conflict" && (
         <div role="alert" className="mb-4 rounded-md border-2 border-danger bg-danger-bg p-3">
@@ -167,14 +166,13 @@ function Open({ omission: o, uncheckedLists }: { omission: OmissionCounts; unche
   if (uncheckedLists.length > 0) items.push(`no completeness check ran for ${uncheckedLists.join(", ")}`);
   if (o.unboarded > 0) items.push(`${o.unboarded} amendment${o.unboarded === 1 ? "" : "s"} on file not boarded`);
   if (o.notes > 0) items.push(`${o.notes} note${o.notes === 1 ? "" : "s"} from automated checks`);
-  items.push(
-    `${o.uncited} clause${o.uncited === 1 ? "" : "s"} no term cites` +
-      (o.neverShown !== null && o.uncited > 0 ? `, ${o.neverShown} never shown to the model` : "") +
-      `, ${o.opened} opened by you`,
-  );
   if (o.looseParagraphs > 0) {
     items.push(`${o.looseParagraphs} paragraph${o.looseParagraphs === 1 ? "" : "s"} in ${o.looseWhere.join(", ")} that no term rests on`);
   }
+  // The uncited-clause count used to be pushed unconditionally, so this line
+  // always had something after the colon. Now every item is conditional and a
+  // clean proposal leaves none — a trailing colon over nothing reads broken.
+  if (items.length === 0) return null;
   return (
     <p className="mt-3 border-t border-border-strong pt-3 font-mono text-label text-code">
       <span aria-hidden="true">⟡ </span>counted by code, open for you to read (none of it blocks approval): {items.join(" · ")}

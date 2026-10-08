@@ -330,9 +330,6 @@ export function CovenantSetup(props: {
   const boarding = approved || !proposal ? [] : unboarded.map((d) => ({ title: d.title, effectiveDate: d.effective_date, inTerms: proposedDocs.has(d.title) }));
   const omission: OmissionCounts = {
     notes: proposal?.warnings ? splitWarnings(proposal.warnings).notes.length : 0,
-    uncited: uncited.length,
-    neverShown: shownKnown ? uncited.filter((c) => c.shown === false).length : null,
-    opened: uncited.filter((c) => opened.has(clauseKeyOf(c))).length,
     looseClauses: loose.clauses,
     looseParagraphs: loose.paragraphs,
     looseWhere: loose.where,
@@ -418,7 +415,9 @@ export function CovenantSetup(props: {
   );
 
   return (
-    <div className="space-y-6">
+    // pb-16 so the last section can scroll clear of the sticky approve bar
+    // rather than sitting permanently underneath it.
+    <div className="space-y-6 pb-16">
       <header className="space-y-2">
         <h1 className="text-title text-text">Covenant setup · {facility.borrower_name}</h1>
         <p className="text-body text-text-secondary">
@@ -427,7 +426,12 @@ export function CovenantSetup(props: {
         </p>
       </header>
 
-      {!approved && (
+      {/* Hidden once a proposal exists: re-proposing is a recovery action, not
+          something to offer beside terms waiting to be read. It still shows as
+          "Extract covenant terms" before the first proposal (the onboarding
+          path) and stays available when extraction found nothing or failed,
+          which are the states it is the only way out of. Parking lot 7.12. */}
+      {!approved && (!proposal || phase.kind === "not_found" || proposeError) && (
         <div className="flex flex-wrap items-center gap-4">
           <button
             type="button"
@@ -493,6 +497,7 @@ export function CovenantSetup(props: {
               />
             </div>
             <div className="col-span-2">
+              <h2 className="mb-3 text-section text-text">Source clause</h2>
               <ClausePanel clause={panel.clause} reason={panel.reason} />
             </div>
           </div>
@@ -574,17 +579,13 @@ export function CovenantSetup(props: {
                 </ul>
               </section>
 
-              <UncitedClauses
-                uncited={uncited}
-                totalOnFile={totalOnFile}
-                shownKnown={shownKnown}
-                warnings={proposal.warnings ?? []}
-                opened={opened}
-                selectedKey={sel?.kind === "clause" ? clauseKeyOf(sel.clause) : null}
-                onOpen={openClause}
-              />
             </div>
+            {/* The heading sits OUTSIDE the panel so it shares a baseline with
+                "Proposed terms" opposite. With the left heading bare and the
+                right one inside its card, the two columns started at different
+                heights and did not read as a pair. */}
             <div className="col-span-2">
+              <h2 id="source-title" className="mb-3 text-section text-text">Source clause</h2>
               <ClausePanel clause={panel.clause} quote={panel.quote} quotes={panel.quotes} reason={panel.reason} unresolved={panel.unresolved} />
             </div>
           </div>

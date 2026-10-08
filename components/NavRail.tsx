@@ -27,12 +27,20 @@ const DESTS: { href: string; label: string; countKey?: keyof NavCounts }[] = [
   { href: "/governance", label: "Governance" },
 ];
 
-export function NavRail({ counts, search }: { counts: NavCounts; search: SearchItem[] }) {
+export function NavRail({ counts, search, user }: { counts: NavCounts; search: SearchItem[]; user: string }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/casefiles") : pathname.startsWith(href));
 
   return (
-    <nav aria-label="Primary" className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-4 md:h-screen md:w-56 md:border-b-0 md:border-r">
+    // `md:h-screen` alone sized the rail to one viewport but let it scroll away
+    // with the page, so `mt-auto` parked Sign out one screen down — mid-page the
+    // moment anything scrolled. Sticky pins the rail, so the bottom of the rail
+    // is the bottom of the viewport. `overflow-y-auto` keeps it usable if the
+    // destinations ever outgrow the screen.
+    <nav
+      aria-label="Primary"
+      className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-4 md:sticky md:top-0 md:h-screen md:w-56 md:overflow-y-auto md:border-b-0 md:border-r"
+    >
       <div className="mb-4 px-2">
         <Link href="/" className="text-card text-text">CreditScout</Link>
         <p className="mt-1 text-badge text-text-muted">recommends — a human decides</p>
@@ -65,7 +73,16 @@ export function NavRail({ counts, search }: { counts: NavCounts; search: SearchI
         })}
       </ul>
 
-      <form action={signOut} className="px-1 md:mt-auto md:pt-4">
+      {/* The signed-in analyst, then the way out. `mt-auto` moves to this pair
+          so both sit at the foot of the rail. */}
+      <div className="mt-6 border-t border-border px-3 pt-4 md:mt-auto">
+        <p className="text-badge uppercase tracking-wide text-text-muted">Signed in</p>
+        <p className="mt-1 truncate text-body text-text" title={user}>
+          {user}
+        </p>
+      </div>
+
+      <form action={signOut} className="px-1 pt-1">
         <button
           type="submit"
           className="w-full rounded-md px-3 py-2 text-left text-body text-text-muted transition-colors duration-fast hover:bg-surface hover:text-text"
