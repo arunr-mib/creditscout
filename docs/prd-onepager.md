@@ -1,6 +1,6 @@
 # CreditScout — One-Pager
 
-**Author:** Arun Rajendiran · **Date:** 2026-10-05 · **Status:** Draft — Solution Review
+**Author:** Arun Rajendiran · **Date:** 2026-10-07 (revised from 2026-10-05) · **Status:** Built and deployed — `https://credit-scout.vercel.app`
 
 > The companion to `docs/prd.md`. That document is the full nine-section cohort
 > PRD. **This is the version for someone who will not read it** — leadership, a
@@ -72,17 +72,19 @@ specific memory that compounds per account.
 
 ## Solution
 
-Two flows. Diagram: `docs/diagrams/creditscout-user-flow.svg`
+Two flows. Diagrams and the screen inventory: `docs/mental-model.md`.
 
-**A — Covenant setup** *(once per facility, re-runs on amendment)*
-Agent reads the agreement and amendments → proposes executable terms, each with
-a citation and verbatim quote → **analyst approves beside the source clause** →
-terms are versioned and effective-dated → reused every quarter.
+**A — Loan onboarding** *(once per loan, re-runs on amendment)* — a four-step
+wizard from **"+ New borrower"**: create the loan → upload **all** its documents
+in one place → *"The Credit-scout Agent is extracting the covenant terms from
+your loan agreement"* — every term with a citation and verbatim quote, every
+quote code-verified → **analyst approves beside the source clause** → terms are
+versioned and effective-dated → reused every quarter.
 
 *Four-eyes control, because a setup error silently corrupts every future test.*
 
-**B — Quarterly monitoring** *(every borrower, every quarter)*
-Upload package → load the approved terms in force → **code computes our DSCR** →
+**B — Quarterly monitoring** *(every loan, every quarter)*
+Upload package → "Run Q{N}" → load the approved terms in force → **code computes our DSCR** →
 
 | Our number | Borrower's | Result |
 |---|---|---|
@@ -90,10 +92,12 @@ Upload package → load the approved terms in force → **code computes our DSCR
 | Passes | Differs beyond tolerance | Log the variance, no investigation |
 | **Fails** | Anything | **Exception → agent investigation** |
 
-Investigation → orchestrator delegates to three specialist agents, calls the
-deterministic calculator, searches past cases → **code guardrail** forces
-`abstain` on any untraceable number → **analyst approves or overrides** → the
-override becomes a lesson the next case retrieves.
+Investigation → the **Credit-scout Agent** (one Foundry orchestrator, six
+tools) decides what to read next, delegates to three specialists, calls the
+deterministic calculator, searches past cases — the trace reads as its
+orchestration plan, each step annotated → **code guardrail** forces `abstain`
+on any untraceable number → **analyst approves or overrides** → the override
+becomes a lesson the next case retrieves.
 
 **The architecture in one line:** the model decides what to look at and never
 produces a number; code produces every number and never decides; a human always
@@ -121,9 +125,11 @@ headline honest) · cost per investigation ≤ $1 · steps ≤ 8.
 
 ## Rollout & rollback
 
-**Rollout:** Internal measurement (3 facilities, 6 eval cases) → Beta (full eval,
-cold + warm) → design-partner pilot on real documents. Each gate requires **0
-false resolves**, not a low rate.
+**Rollout:** Internal measurement — 3 seeded loans + 5 onboarding loans, **10
+owner-signed eval cases**; **calculation accuracy 100% measured** (12/12
+figures), the live cold + warm agent passes next → Beta (full eval, cold + warm)
+→ design-partner pilot on real documents. Each gate requires **0 false
+resolves**, not a low rate. Scoreboard is grouped Honest / Harmless / Helpful.
 
 **Rollback:** Prompts, policy thresholds and model choice are all config, revertible
 in minutes without a deploy. **Kill switch:** stop creating investigations —
@@ -152,8 +158,9 @@ TAM (loan compliance monitoring) ~$2.87B in 2026.
 
 | Question | Owner | By |
 |---|---|---|
-| Validate the three facility twists | Owner | Before doc generation |
-| Compute + sign off 3 expected DSCR values | Owner | Before the eval runs |
-| Does Foundry Connected Agents (preview) work reliably? | Claude | **First hour of build** |
+| ~~Validate the three facility twists~~ | Owner | **Done 2026-10-05** |
+| ~~Verify + sign off the expected DSCR values~~ | Owner | **Done 2026-10-07** — 10 rows signed |
+| ~~Does Foundry Connected Agents (preview) work reliably?~~ | Claude | **Resolved** — works, but a specialist cannot carry a tool; specialists run as in-process function tools instead |
+| Run the live cold + warm eval passes (billable) | Owner's go | Before the pitch |
 | 5 analyst interviews + 3 customer quotes | Owner | Launch gate |
 | Loaded analyst cost/hr; hours per contested exception | Owner | Before the pitch |

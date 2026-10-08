@@ -23,7 +23,7 @@ CreditScout computes **every** quarterly test itself from human-approved terms. 
 
 ## Stack
 
-Azure AI Foundry Agent Service orchestrates with Connected Agents (orchestrator `gpt-4.1-mini` — forced by the platform, `gpt-5-mini` cannot carry `connected_agent` tools; specialists `gpt-5-mini`). Next.js App Router on Vercel serves the analyst UI, the analyst API and the OpenAPI tool routes the agent calls. Supabase Postgres + pgvector for data, vectors and memory. Azure AI Foundry Evaluations for groundedness. Node 24; no test framework — `node:test` only.
+Azure AI Foundry Agent Service runs one orchestrator — the **Credit-scout Agent** (`gpt-4.1-mini`, forced by the platform: `gpt-5-mini` cannot carry its tool set) — with six function tools: three HTTP routes (search_documents, dscr_calculator, search_past_cases) and three specialists (`definition_agent`, `research_agent`, `document_agent`, `gpt-5-mini`) serviced **in-process** by `lib/agent/specialists.ts`. Connected Agents was tried and dropped 2026-10-06 (a connected agent cannot carry a function tool — parking-lot 7.4). Next.js App Router on Vercel serves the analyst UI, the analyst API and the OpenAPI tool routes the agent calls. Supabase Postgres + pgvector for data, vectors and memory. Azure AI Foundry Evaluations for groundedness. Node 24; no test framework — `node:test` only.
 
 ## Hard constraints
 

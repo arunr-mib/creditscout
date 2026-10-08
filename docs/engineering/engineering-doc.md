@@ -6,7 +6,7 @@
 **Owner:** Arun Rajendiran (product, credit domain, all sign-offs)
 
 **Input:** `docs/superpowers/specs/2026-10-01-creditscout-design.md` (the spec — owner-owned, source of truth)
-**Output:** this document, then `docs/spec.md` (LLD)
+**Output:** this document, then `docs/engineering/implementation-specs.md` (LLD). Revised 2026-10-07 to reflect the built product (§1, §4.1, §9, §11, §13, §15–16).
 **Method:** spec-driven development, Week 5 Cohort 10 lab workflow —
 PRD → Design → **HLD → Review** → Frontend Setup → LLD → Review → Implement → Deploy → Maintain
 
@@ -36,20 +36,23 @@ agent loop.** Model choice is open to anything available on Azure.
                  │
    ┌─────────────▼──────────────────────────┐
    │  Next.js app on Vercel                 │
-   │  4 analyst screens + API routes        │
+   │  Portfolio · Onboarding wizard ·       │
+   │  Casefile · Governance · Documents/    │
+   │  Terms/Lessons · API routes            │
    └──┬──────────────────────────────┬──────┘
-      │ start investigation          │ tool calls come back in
-      ▼                              │
+      │ start investigation          │ tool calls serviced by our code
+      ▼                              │ (poll → service → resume)
    ┌─────────────────────────────────┴──────┐
    │  Azure AI Foundry Agent Service        │   ← the loop runs HERE
    │                                         │
-   │   CreditScout Orchestrator (main)       │
-   │     ├─ connected agent: document_agent  │
-   │     ├─ connected agent: definition_agent│
-   │     ├─ connected agent: research_agent  │
-   │     ├─ tool: dscr_calculator      ──────┼──┐
-   │     ├─ tool: search_documents     ──────┼──┤ OpenAPI calls
-   │     └─ tool: search_past_cases    ──────┼──┘ back to Vercel
+   │   Credit-scout Agent (the orchestrator, │
+   │   gpt-4.1-mini — the ONLY agent object) │
+   │     ├─ fn tool: document_agent    ──────┼──┐ specialists serviced
+   │     ├─ fn tool: definition_agent  ──────┼──┤ IN-PROCESS by us
+   │     ├─ fn tool: research_agent    ──────┼──┘ (gpt-5-mini, retrieve
+   │     ├─ fn tool: dscr_calculator   ──────┼──┐  for themselves)
+   │     ├─ fn tool: search_documents  ──────┼──┤ HTTP routes on
+   │     └─ fn tool: search_past_cases ──────┼──┘ Vercel (code)
    └─────────────────┬───────────────────────┘
                      │ run completes
                      ▼
@@ -70,11 +73,23 @@ creates `covenant_terms` v2, and re-running the test then produces a **new**
 `tests` row.
 
 **Why this satisfies both goals.** Foundry runs the loop, so the owner sees the
-orchestrator delegate to three specialist agents and can replay every step in
-the Foundry portal — that is the learning goal, met natively. But the calculator
-and the guardrails stay in our own code, called as tools and run after the
-agent respectively, so the model still never produces a number and code still
-has the last word before a human sees anything. The thesis survives intact.
+orchestrator decide, delegate to a named specialist, and choose what to do next
+— in the Foundry portal and, more usefully, in the app's own trace, which reads
+as the Credit-scout Agent's orchestration plan with every step annotated and
+every specialist step marked "delegated by the Credit-scout Agent". That is the
+learning goal, met. The calculator and the guardrails stay in our own code,
+called as tools and run after the agent respectively, so the model still never
+produces a number and code still has the last word before a human sees
+anything. The thesis survives intact.
+
+**Revision 2026-10-06 — Connected Agents dropped, specialists demoted to
+in-process function tools.** Not because the preview failed: a connected agent's
+inner run cannot carry a function tool, so a specialist could not retrieve for
+itself and every delegation was a step spent buying an opinion on text the
+orchestrator already held (2–4 of 8 steps per run; F3 hit the cap four times).
+As function tools serviced by `lib/agent/specialists.ts`, each specialist
+retrieves for itself. §4.1 below is the revised wiring; parking-lot 7.4 has the
+decision record.
 
 ---
 
@@ -87,7 +102,7 @@ has the last word before a human sees anything. The thesis survives intact.
 | **AI** | Azure OpenAI models (see §3) | Orchestrator + 3 specialist agents + eval judge |
 | **Deployment** | **Vercel** | Owner already has an account and projects |
 | **Build tool** | Next.js built-in (Turbopack) | Replaces Vite; no separate build tool |
-| **AI Agent Platform** | **Azure AI Foundry Agent Service** | Runs the loop, Connected Agents, traces |
+| **AI Agent Platform** | **Azure AI Foundry Agent Service** | Runs the loop; one orchestrator with six function tools; run-step traces |
 | Language / runtime | TypeScript, Node 24 | |
 | Testing | `node:test` + `node:assert/strict` | No test framework, per project constraints |
 | Deterministic core | Plain JavaScript, zero dependencies | `calc/dscr.js`, `guardrails/*.js` |
@@ -144,29 +159,36 @@ never generate.
 
 ## 4. How the agents are wired
 
-### 4.1 Connected Agents — the multi-agent pattern
+### 4.1 One orchestrator, six function tools — the multi-agent pattern (revised 2026-10-06)
 
-Foundry's **Connected Agents** lets a main agent delegate to specialist agents in
-natural language, with no router to hand-write. That maps onto spec §4.2 exactly:
+The original design used Foundry's **Connected Agents** for the three
+specialists. It was spiked, worked, and was then dropped for the documented
+fallback (spec §12): a connected agent's inner run cannot carry a function tool,
+so a specialist could not retrieve for itself. The built wiring is one agent
+object — the **Credit-scout Agent** (`lib/agent/foundry.ts`,
+`orchestratorDefinition`) — carrying six function tools:
 
-| Spec §4.2 tool | Becomes | Job |
-|---|---|---|
-| `document_agent` | Connected agent | Retrieve clauses and facts; return `{citation, quote}` |
-| `definition_agent` | Connected agent | Map the DSCR definition + amendments into the `terms` JSON |
-| `research_agent` | Connected agent | Investigate a gap: amendment, period mismatch, add-back, borrower error, our mapping error |
-| `dscr_calculator` | OpenAPI tool → Vercel | Deterministic calculation. **Never a model.** |
-| `search_past_cases` | OpenAPI tool → Vercel | Memory search over past lessons |
+| Spec §4.2 tool | Built as | Serviced by | Job |
+|---|---|---|---|
+| `document_agent` | Function tool | **In-process** (`lib/agent/specialists.ts`, `gpt-5-mini`) | Retrieve clauses and facts for itself; return `{citation, quote}` |
+| `definition_agent` | Function tool, no parameters | **In-process** — the same `proposeTerms` onboarding uses | Map the DSCR definition + amendments into the `terms` JSON |
+| `research_agent` | Function tool | **In-process** (`gpt-5-mini`) | Investigate a gap: amendment, period mismatch, add-back, borrower error, our mapping error |
+| `dscr_calculator` | Function tool from the OpenAPI document | HTTP route on Vercel (code) | Deterministic calculation. **Never a model.** |
+| `search_documents` | Function tool from the OpenAPI document | HTTP route on Vercel (code) | Loan-filtered vector search over `doc_chunks` |
+| `search_past_cases` | Function tool from the OpenAPI document | HTTP route on Vercel (memory) | Lessons from prior casefiles, scoped by `run_id` |
 
-Plus one tool the sub-agents need:
+Two properties worth knowing: the `facility_id` is **never a tool parameter** —
+it comes from the casefile, so the model cannot point a specialist at another
+borrower — and the specialists are serviced by our polling layer
+(`syncRun` → `serviceToolCalls`) in the same process that enforces the
+guardrail, so a specialist's output is never trusted further than the
+orchestrator's.
 
-| Tool | Type | Job |
-|---|---|---|
-| `search_documents` | OpenAPI tool → Vercel | Facility-filtered vector search over `doc_chunks` in Supabase |
-
-**This is the learning payoff.** The Foundry portal shows the orchestrator
+**This is the learning payoff.** The app's trace shows the orchestrator
 deciding, delegating to a named specialist, receiving its answer, and choosing
-what to do next — the thing the owner wants to watch. It is genuinely a
-multi-agent system, not a pipeline with a model in it.
+what to do next — each step annotated with what it was for. It is genuinely a
+multi-agent system, not a pipeline with a model in it; it is simply one whose
+specialists live in our process rather than in Foundry's.
 
 ### 4.2 How tools reach our code
 
@@ -569,15 +591,22 @@ of whether the sequence is right.
 | **7** | Flow B part 1 — `/api/tests/run`, code-only | All three facilities tested quarterly; F1 and F3 raise exceptions. **No agent involved — pure code.** | 1, 6 |
 | **8** | Flow B part 2 — investigation, guardrail, policy | F1 resolves, F3 escalates, with cited casefiles | 5, 7 |
 | **9** | UI screens + review + memory | F1 → override → F5 resolves in fewer steps | 8 |
-| **10** | Deploy to Vercel + eval run | Public URL; scoreboard with 6 cases, cold and warm | 9 |
+| **10** | Deploy to Vercel + eval run | Public URL; scoreboard with the signed cases, cold and warm | 9 |
+| **11** | Loan onboarding wizard (Flow A as a product flow) | "+ New borrower" → upload → extract → approve, live on the deploy with the five synthetic onboarding packages | 6, 9 |
+
+**Status 2026-10-07:** stages 0–11 are built and deployed
+(`https://credit-scout.vercel.app`). Stage 10's deterministic eval has run and
+is recorded (calculation accuracy 100% against the 10 signed cases); the live
+cold/warm passes are built and wait on the owner's go, being billable. Stage 11
+is specified in `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md`.
 
 **Two sequencing notes that matter:**
 
-- **Stage 5 is the real risk and is ordered by dependency, not by priority.** In
-  wall-clock terms it is spiked first, with a throwaway agent, before stages 6–8
-  are built on the assumption that Connected Agents works. If it fights back, the
-  fallback — demoting the three specialists to plain OpenAPI tools — changes
-  stage 8 only.
+- **Stage 5 was the real risk and was ordered by dependency, not by priority.**
+  It was spiked first, with a throwaway agent, before stages 6–8 were built. The
+  spike passed; the first working runs then showed a connected agent cannot
+  carry a function tool, and the documented fallback — specialists as function
+  tools on the orchestrator, serviced in-process — was taken at stage 8 (§4.1).
 - **Stage 7 produces a working product without any agent at all.** Ingest,
   approved terms, deterministic calculation, exception detection. If everything
   downstream collapses, that is still a demonstrable system, and it is the same
@@ -612,21 +641,28 @@ reused thread inherits the context that failed and tends to fail the same way.
 
 ## 11. Evaluation
 
-**Unchanged from spec §8.** `evals/run.mjs` POSTs to `/api/investigate` on the
-deployed app instead of an n8n webhook — a base-URL change. Two passes, cold and
-warm. The 6-case development subset stays the default; all 24 cases run twice
-only for reportable numbers. Outputs stay `results.csv`, `report.md`,
-`foundry.jsonl`, and an `eval_runs` row for the in-app scoreboard.
+**Built 2026-10-07** — `evals/run.mjs` (CLI) + `evals/grade.mjs` (pure grading,
+`node:test`-covered). Spec §8.2, with these specifics:
 
-Azure AI Foundry Evaluations keeps its §8.2 role for groundedness with an LLM
-judge. Handoff §4.4's point stands: upgrade the judge from `gpt-4.1-mini` to full
-`gpt-4.1` before reporting final numbers, because a judge's credibility matters
-when the score is the evidence. Deploying it is billable and is the owner's call.
+| | |
+|---|---|
+| Oracle | `data/expected-values-template.csv` — **10 cases**, every row owner-signed. The runner throws on any unsigned row. `generate()` refuses to overwrite a signed oracle. |
+| `npm run eval` | Deterministic, free: grades the calculator against every signed figure (as-tested on the boarded terms, remapped under the unboarded amendment where the oracle expects one) and the code path the quarterly test must take. Writes `evals/out/results.csv` + `report.md`. |
+| `--write` | Also inserts an `eval_runs` row (`mode: cold`, `pass: "deterministic"`) so the Governance scoreboard shows calculation accuracy; every agent-level metric stays `null` → rendered "—". |
+| `--live` | **Billable.** Imports `lib/tests/run.ts`, `lib/agent/orchestrator.ts`, `lib/review.ts` directly (hence `--conditions=react-server`, which resolves the libs' `server-only` guard to its empty build outside Next). Two passes, each a fresh `eval-<stamp>-<mode>` run_id so nothing lands in `demo`: **cold** — no reviews; **warm** — the script reviews each investigated case before the next runs (approve on a match, override to the oracle's outcome otherwise), so later cases retrieve earlier lessons. Writes `foundry-<mode>.jsonl` and an `eval_runs` row per pass. |
+| Skips | A loan the oracle names that is not in the database (the onboarding packages until someone onboards them) is skipped and reported, never scored. |
+| Unmeasured | `abstain_accuracy` (no incomplete-evidence case in the set) and `citation_hit_rate` (no key-citation column) are `null` by design. |
+| Grouping | The report and the Governance page group metrics **Honest / Harmless / Helpful**. |
 
-The owner still computes the expected DSCR values independently, and the runner
-must still refuse to run while any row says `NO`. Reason unchanged: if the thing
-grading the calculator shares an author with the calculator, the tests only prove
-it agrees with itself.
+The grading is deterministic code against a human-signed key; no model judges
+the safety numbers. Azure AI Foundry Evaluations keeps its §8.2 role for
+groundedness only, over the exported JSONL. Handoff §4.4's point stands: upgrade
+the judge from `gpt-4.1-mini` to full `gpt-4.1` before reporting final numbers
+(billable, owner's call — parking-lot 4.8).
+
+Why the oracle is the owner's and not the code's, unchanged: if the thing
+grading the calculator shares an author with the calculator, the tests only
+prove it agrees with itself.
 
 ---
 
@@ -648,9 +684,9 @@ network beyond the schema migration, and now no platform dependency either.
 | Risk | Mitigation |
 |---|---|
 | ~~**Connected Agents may not work**~~ | **RETIRED 2026-10-05 — spiked and verified live.** An orchestrator on `gpt-4.1-mini` delegated to a `gpt-5-mini` specialist via a `connected_agent` tool, and the delegation appears as a discrete step in the run-steps API — which is also the trace the UI renders. A separate spike confirmed a function-tool round trip: the agent called `dscr_calculator`, did **not** compute the ratio itself, and reported back exactly the number the tool returned. |
-| **Connected Agents is a preview feature.** Preview features change and can be flaky — and this one is load-bearing for the learning goal. | Fallback: demote the three specialists from connected agents to plain OpenAPI tools on the orchestrator. Same behaviour, less elegant, no preview dependency. Decide after the first working run, not before. |
+| ~~**Connected Agents is a preview feature.**~~ | **RESOLVED 2026-10-06 — fallback taken after the first working runs.** Not for flakiness: a connected agent cannot carry a function tool, so specialists could not retrieve for themselves. Demoted to function tools serviced in-process (§4.1, parking-lot 7.4). No preview dependency remains. |
 | Foundry Agent Service adds platform-specific learning time | That is the point of the exercise, and the course taught it in Week 5 |
-| Agent path too uniform, looks like a pipeline | Unchanged from spec §12: the six facility twists force different paths; the F1 vs F5 trace comparison is in the demo |
+| Agent path too uniform, looks like a pipeline | The three seeded twists (boarding lag ×2, unpermitted add-back) plus the Vantage breach force different paths; the trace reads as an orchestration plan with per-step purpose, and the F1 vs F5 comparison is in the demo |
 | Model hallucinated figures or quotes | Unchanged: code guardrails force abstain, tested against fabricated outputs |
 | Step cap enforcement differs from an n8n node setting | Enforced by our polling layer against `policy.max_steps`; see §12 open item 4 |
 | Supabase free-plan database sleeps after ~1 week idle | Daily use avoids it; Pro removes it for ~$25 — owner's call |
@@ -713,21 +749,22 @@ rules (§9), and the demo structure (§10).
 2. **§14.1 — do the six borrower twists ring true?** Unaffected by the platform
    decision, still gates plan 1 Task 6, still the item most worth the owner's
    credit experience. Draft-then-react is fine.
-3. **Expected DSCR values** — owner-computed in a spreadsheet, signed off per row.
-4. **`max_steps: 8`** — still a `policy` row; confirm how it maps onto a Foundry
-   run once the first run exists.
-5. **§14.2 — the 24 eval labels**, once drafted.
+3. ~~**Expected DSCR values**~~ **Resolved 2026-10-07:** 10 rows verified and
+   signed by the owner; the deterministic eval matches all 12 figures.
+4. **`max_steps: 8`** — a `policy` row, enforced by the polling layer; F1 resolves
+   within it, F3 under the old delegation hit it. Revisit after the live eval.
+5. ~~**§14.2 — the eval labels**~~ **Resolved 2026-10-07:** outcome labels are
+   in the same 10 signed rows. The 24-case set is backlog (parking-lot 4.2).
 6. **Whether full `gpt-4.1` gets deployed for the judge.** Billable, owner's call.
-7. ~~**Confirm the orchestrator model.**~~ **Resolved 2026-10-05:** `gpt-5-mini`
-   everywhere for the MVP. No new model deployment, no new billable resource.
+7. ~~**Confirm the orchestrator model.**~~ **Resolved:** `gpt-4.1-mini` as
+   orchestrator (platform-forced), `gpt-5-mini` specialists. No new deployment.
+8. **Run the live cold/warm eval passes.** Built; billable; owner's go.
 
 ---
 
 ## 16. Recommended next step
 
-If §11 is approved, write the LLD (`docs/spec.md`) feature by feature in the Week
-5 blueprint format — Product & UX, Data & Backend, Frontend & QA.
-
-Plan 1 Tasks 1–5 can start in parallel with LLD review: the schema, calculator,
-casefile validator, guardrail and policy engine contain no platform decision and
-are identical under every option considered.
+*(Historical — the build is complete.)* The LLD was written as
+`docs/engineering/implementation-specs.md` and stages 0–11 were built against
+it. What remains is listed in `docs/parking-lot.md` §4, in restore order; the
+next billable step is the live eval (§11).

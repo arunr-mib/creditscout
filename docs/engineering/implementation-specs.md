@@ -23,8 +23,8 @@ Where two features touch. These are where silent breakage happens.
 | I-6 | F8 ↔ F9 | `casefiles.trace` append shape `{n, tool, input_summary, output_summary, ts}` | The live trace renders blank |
 | I-7 | F9 ↔ F10 | `reviews.lesson_embedding` written on override, read by `search-past-cases` | The memory effect — the demo centrepiece — silently does nothing |
 | I-8 | F3 ↔ F9 | Tailwind token names from `docs/design.md` | Screens drift; amber stops meaning "code" |
-| I-9 | F5 ↔ F8 | **Orchestrator model must support `connected_agent`** | `gpt-5-mini` is rejected at agent-creation time. Changing the orchestrator model to a non-compatible one breaks the whole multi-agent design at startup, not at runtime. |
-| I-10 | F7 ↔ F10 | **`tests` has no `run_id`** | Eval runs and demo data share the `tests` table. Without separation an eval pass pollutes the demo portfolio. **See Ambiguity A-2 — needs a decision.** |
+| I-9 | F5 ↔ F8 | **Orchestrator model must carry the six-function-tool set** — `gpt-4.1-mini`; `gpt-5-mini` is rejected at agent-creation time. *(Revised 2026-10-06: specialists are now function tools serviced in-process, not `connected_agent` entries — the constraint moved with them.)* | Changing the orchestrator model to a non-compatible one breaks the whole multi-agent design at startup, not at runtime. |
+| I-10 | F7 ↔ F10 | ~~**`tests` has no `run_id`**~~ **Resolved:** `tests.run_id` and `casefiles.run_id` exist (default `demo`); the eval harness uses `eval-<stamp>-<mode>` run_ids, and lessons are retrieved per run_id. | An eval pass never pollutes the demo portfolio; a cold pass never sees warm lessons. |
 | I-11 | F8 ↔ F1 | The guardrail needs the cited chunks to verify quotes | `applyGuardrail(casefile, calcLogEntries, citedChunks)` — the **sync route** must fetch chunks for every citation the agent returned before calling it. If it passes an empty array, every claim fails verification and everything abstains. |
 
 ---
@@ -280,10 +280,18 @@ JavaScript run by `node --test` and must not be type-checked as app code.
 | Run steps are usable as the UI trace | ✅ `GET /threads/{tid}/runs/{rid}/steps` returns `tool_calls` with the tool name |
 
 **Platform constraint found — this is binding.** `gpt-5-mini` **cannot** carry
-`connected_agent` tools: the Assistants API rejects agent creation with
+the orchestrator's tool set: the Assistants API rejects agent creation with
 *"This model only supports Responses API compatible tools."* The orchestrator
-must therefore run **`gpt-4.1-mini`**. Specialists hold no `connected_agent`
-tool, so they stay on `gpt-5-mini`. Both already deployed.
+must therefore run **`gpt-4.1-mini`**. Specialists stay on `gpt-5-mini`. Both
+already deployed.
+
+**Revised 2026-10-06 — specialists are in-process function tools.** The
+`connected_agent` delegation verified above was dropped after the first working
+runs: a connected agent's inner run cannot carry a function tool, so a
+specialist could not retrieve for itself. `lib/agent/foundry.ts`
+`specialistTools()` declares `definition_agent` / `research_agent` /
+`document_agent` as plain function tools, and `lib/agent/specialists.ts`
+services them in our polling layer. Decision record: parking-lot 7.4.
 
 **API surface confirmed:** base `${AZURE_AI_PROJECT_ENDPOINT}`,
 `api-version=2025-05-01`, bearer token from
@@ -511,37 +519,38 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 ---
 
-# F10 — Deploy and evaluate
+# F10 — Deploy and evaluate ✅ DEPLOYED 2026-10-06 · HARNESS BUILT 2026-10-07
 
-*Stage 10 · depends on F9*
+*Stage 10 · depends on F9 · live at `https://credit-scout.vercel.app` (project `creditscout-nrb7`, deploys `main`; runbook: `deploy-runbook.md`)*
 
 ### Product & UX
-- **Description:** Public Vercel deployment and the eval scoreboard.
-- **User flow:** Governance page shows the latest cold/warm scoreboard.
+- **Description:** Public Vercel deployment behind a shared-credential demo gate, and the eval scoreboard.
+- **User flow:** Governance page shows the latest cold/warm scoreboard, grouped Honest / Harmless / Helpful.
 - **Placement:** `app/governance/page.tsx`.
-- **Design:** `Scoreboard` — metric rows with target vs actual; failures rose, passes green.
+- **Design:** `Scoreboard` — metric rows with target vs actual; the false-resolve row is a gate (0 = success, anything else danger); an unreported metric is an em dash, never 0.
 
 ### Data & Backend
-- **Database schema:** Writes `eval_runs`.
-- **Database tasks:** One row per run with the metrics jsonb.
-- **Helper functions:** `evals/run.mjs` — per case: seed documents → approve terms → run test → investigate → poll → score. Two passes, cold and warm.
-- **API routes:** Uses the existing routes against the deployed base URL.
+- **Database schema:** Writes `eval_runs` (`mode` cold|warm, `metrics` jsonb).
+- **Database tasks:** One row per pass; `metrics` carries the scoreboard keys (`components/scoreboardModel.ts` is the contract) plus `pass`, `run_id` and per-case detail.
+- **Helper functions:** `evals/grade.mjs` — pure grading (`loadOracle`, `gradeCalculation`, `gradeLive`, `summariseCalculation`, `summariseLive`, renderers). `evals/run.mjs` — the CLI: `npm run eval` (deterministic), `--write` (record the row), `--live` (cold + warm through the real agent; billable), `--only A,B`.
+- **Live pass mechanics:** imports `runTest` → `startInvestigation` → `syncRun` loop → `submitReview` (warm only) directly from `lib/`, passing an explicit service-role client; run under `--conditions=react-server` so `server-only` resolves to its empty build. Each pass has its own `eval-<stamp>-<mode>` run_id.
 
 ### Frontend & QA
 - **State management:** Server Component read.
 - **Components:** `Scoreboard`.
 - **Edge cases:**
-  - **The runner refuses to start while any `owner_signed_off` is `NO`** — non-negotiable
-  - A case that fails mid-run is retried once, then recorded as failed rather than skipped
-  - Cold pass must clear lessons for that `run_id` only, never globally
+  - **The runner refuses to start while any `owner_signed_off` is `NO`** — non-negotiable; and `generate()` refuses to overwrite a signed oracle
+  - A loan the oracle names that is not in the database is **skipped and reported**, never scored
+  - A casefile that ends `failed` is an outcome miss, not a false resolve; a case still `investigating` after 15 minutes aborts the run with the casefile id
+  - Cold and warm are **separate run_ids** — lessons are retrieved per run_id, so cold never sees warm's reviews and nothing clears globally
 - **Testing checklist:**
-  - [ ] Runner aborts with a clear message on an unsigned expected-values row
-  - [ ] 6 cases run cold and warm
-  - [ ] Outputs `results.csv`, `report.md`, `foundry.jsonl`, and an `eval_runs` row
-  - [ ] **False-resolve count is 0**
-  - [ ] Calculation accuracy is 100% against the owner's values
+  - [x] Runner aborts with a clear message on an unsigned expected-values row (`evals/grade.test.js`)
+  - [x] Calculation accuracy is 100% against the owner's values — 12/12 figures, recorded in `eval_runs`
+  - [x] Outputs `results.csv`, `report.md`, and an `eval_runs` row (`foundry-<mode>.jsonl` on a live pass)
+  - [x] Deployed URL serves all screens; no service-role key in the client bundle
+  - [ ] Live cold and warm passes run (billable — owner's go)
+  - [ ] **False-resolve count is 0** on the live passes
   - [ ] Warm pass shows fewer mean steps than cold
-  - [ ] Deployed URL serves all screens; no service-role key in the client bundle
 
 ---
 
@@ -562,17 +571,21 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 
 ## Build order checklist
 
-- [ ] **F0** Schema + RLS — `supabase db push` green
-- [ ] **F1** Deterministic core — `npm test` green, no model, no network
-- [ ] **F2** Synthetic facilities + expected-values template *(gated on owner validating the twists)*
+- [x] **F0** Schema + RLS — `supabase db push` green
+- [x] **F1** Deterministic core — `npm test` green, no model, no network
+- [x] **F2** Synthetic facilities + expected-values template — oracle signed 2026-10-07 (10 cases)
 - [x] **F3** App shell + design tokens — build passes, no key leaks, tokens only
-- [ ] **F4** Ingest — chunks land in the database
-- [~] **F5** Agent tools — **spike passed**; route handlers still to build
-- [ ] **F6** Covenant setup — terms proposed, cited, approved, versioned
-- [ ] **F7** Quarterly test — all three facilities tested; F1 and F3 raise exceptions
-- [ ] **F8** Investigation — F1 resolves, F3 escalates
-- [ ] **F9** Review + memory + screens — F1 override makes F5 faster
-- [ ] **F10** Deploy + eval — public URL, scoreboard, 0 false resolves
+- [x] **F4** Ingest — chunks land in the database
+- [x] **F5** Agent tools — spike passed; routes built; specialists revised to in-process function tools
+- [x] **F6** Covenant setup — terms proposed, cited, approved, versioned
+- [x] **F7** Quarterly test — all three facilities tested; F1 and F3 raise exceptions
+- [x] **F8** Investigation — F1 resolves, F3 escalates; guardrail downgrade verified live
+- [x] **F9** Review + memory + screens — F1 override makes F5 faster ("seen similar" verified live)
+- [~] **F10** Deploy + eval — public URL ✓, scoreboard ✓, calc accuracy 100% recorded ✓; **live cold/warm passes pending (billable)**
+- [x] **F11** Loan onboarding wizard — spec `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md`; verified live with the five synthetic packages
+
+**Status 2026-10-07:** F0–F11 built and deployed. The remaining open box is the
+billable live eval. Backlog in `docs/parking-lot.md` §4.
 
 **F7 is the floor.** If everything after it collapses, F0–F7 is still a working
 product: ingest, human-approved covenant terms, deterministic quarterly testing,

@@ -3,7 +3,7 @@
 **Everything deferred, in one place.** Nothing here is dropped; it is parked with
 a reason and a trigger for picking it back up.
 
-**Opened:** 2026-10-05 · **Last updated:** 2026-10-05
+**Opened:** 2026-10-05 · **Last updated:** 2026-10-07
 
 | Status key | |
 |---|---|
@@ -53,8 +53,9 @@ an estimate in the document.
 
 | # | Item | Owner | When |
 |---|---|---|---|
-| 3.1 | 🔴 **Validate the three facility twists** (F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine) for credit realism | **Owner** | Before synthetic document generation |
-| 3.2 | 🔴 **Compute and sign off 3 expected DSCR values** in a spreadsheet. The eval runner refuses to run while any row says `NO`. | **Owner** | Before the eval runs — *not* before the build starts |
+| 3.1 | ✅ **Validate the three facility twists** (F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine) for credit realism. **Resolved 2026-10-05.** | **Owner** | Done |
+| 3.2 | ✅ **Verify and sign off the expected DSCR values.** **Resolved 2026-10-07** — 10 rows signed (F1/F3/F5 + the five onboarding loans); the deterministic eval matches all 12 figures and is recorded in `eval_runs`. The runner still refuses to run on any unsigned row, and `generate()` refuses to overwrite a signed oracle. | **Owner** | Done |
+| 3.5 | 🟠 **Run the live cold + warm eval passes** (`npm run eval -- --live`). Billable Azure usage; fills in false resolves, outcome accuracy and the memory effect on the Governance scoreboard and writes `foundry.jsonl` for the groundedness judge. Needs a local dev server (or `PUBLIC_BASE_URL` + matching tool key) for the agent's tool self-calls. | **Owner's go**, Claude runs it | Before the pitch |
 | 3.3 | ✅ **Does Foundry Connected Agents work here?** **Resolved 2026-10-05 — yes, spiked live.** Orchestrator must be `gpt-4.1-mini`; `gpt-5-mini` is rejected for `connected_agent` tools. Delegation shows as a discrete run step, which is the trace the UI needs. Fallback not required. | Claude | Done |
 | 3.4 | 🟠 Copy the cohort HHH evaluation spreadsheet and link it into PRD §6.1 | Owner | Before submission |
 
@@ -67,7 +68,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | # | Item | Why it was safe to cut |
 |---|---|---|
 | 4.1 | 🟡 **Facilities F2, F4, F6** | F1/F3/F5 already cover resolve, escalate and the memory effect. F2 (period mismatch) and F4 (missing waiver) are the two that exercise `abstain`/`request` — restore these first, they carry a headline metric. |
-| 4.2 | 🟡 **Eval set 6 → 24 cases** | 6 is enough to measure and catch regressions. We report 6 as 6 and never claim 24. |
+| 4.2 | 🟡 **Eval set 10 → 24 cases** | 10 signed cases (5 quarterly tests + 5 onboarding loans) are enough to measure and catch regressions. We report 10 as 10 and never claim 24. F2/F4 would add the `abstain`/`request` cases the current set cannot measure. |
 | 4.3 | ✅ **Covenant setup approval screen** | **Resolved 2026-10-05: being built, not pre-seeded.** The four-eyes control is a headline of the design and the owner chose to show it. |
 | 4.4 | 🟡 **Governance & evals page** (4th screen, editable) | A static read-only panel carries the governance story. |
 | 4.5 | 🟡 **Foundry groundedness judge** | Local metrics carry the trust claim. Independent scoring is stronger but not load-bearing. |
@@ -75,6 +76,9 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 4.7 | 🟡 **Policy editing in the UI** | Defaults live in the `policy` table; editing it is a DB update for now. |
 | 4.8 | ⚪ Upgrade eval judge `gpt-4.1-mini` → full `gpt-4.1` | Billable, owner's call. A judge's credibility matters when the score is the evidence. |
 | 4.9 | 🟡 **Make covenant-term extraction agentic (brainstorm first)** | Today onboarding's extraction (`proposeTerms` / the definition tool) is **single-shot RAG** over a fixed query set, backstopped by deterministic provenance checks + human approval — defensible, but not agentic. Brainstorm converting it to an **agent-driven retrieval loop** (decide what to read next: base definition → the amendment that restates it → re-extract), i.e. true agentic RAG *for setup*. Safe to cut for MVP: the verified single-shot extraction holds, and the orchestrator already demonstrates agentic RAG in the *investigation*. **At minimum, do the brainstorming** before building. |
+| 4.10 | 🟡 **Memory and guardrail trace beats** (C and B) as first-class trace annotations — the "seen similar" lesson and the guardrail downgrade shown *inside* the orchestration arc, not only on the casefile. | Beat A (orchestration) was the pitch priority and is built; memory and the guardrail are already visible on the casefile and the review screen. |
+| 4.11 | 🟡 **Onboard the five synthetic borrowers into the eval** — the harness skips a loan that is not in the database; onboarding Vantage Print Works live turns its breach into a fifth investigated case. | Deliberate: the packages stay un-seeded so onboarding genuinely creates the loan in the demo. |
+| 4.12 | ⚪ **Citation hit rate** — add an `expected_key_citation` column to the oracle (owner-signed) so the metric can be measured; today it reads "—". | Not load-bearing for the gate; needs the owner to name the clause per case. |
 
 ---
 
@@ -85,7 +89,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 5.1 | ⚪ **Is $5/borrower/month under-priced?** | At ~6× ROI there's clear headroom; $8–12 would still land at 2.5–4×. Flat $5 is a deliberate land-and-expand choice. | After measured usage with a design partner |
 | 5.2 | ⚪ **Volume tiering and a platform minimum** | Parked — premature before anyone has used the product. | With 5.1 |
 | 5.3 | ⚪ **`max_steps: 8`** | Reasoned from 2–6 step expected paths. Now a `policy` row, so changing it is an update, not a redeploy. | After the first real investigations |
-| 5.4 | ✅ **Orchestrator model** | **Resolved 2026-10-05: `gpt-5-mini` everywhere.** No new deployment, no new billable resource. | Post-demo — see 6.1 |
+| 5.4 | ✅ **Orchestrator model** | **Resolved: `gpt-4.1-mini` as orchestrator (platform-forced — `gpt-5-mini` cannot carry the tool set), `gpt-5-mini` specialists.** No new deployment, no new billable resource. | Post-demo — see 6.1 |
 | 5.5 | ⚪ **Does a chat interface belong in CreditScout?** | No. The unit of work is an investigation, not a conversation. Raised and set aside. | If analysts ask for follow-up Q&A on a casefile |
 
 ---
@@ -104,7 +108,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 
 | # | Item | Status |
 |---|---|---|
-| 7.1 | 🔴 **Plan 1 Task 2 cannot pass as written** — `calc/dscr.js` uses a guarded CommonJS export while the test imports it as ESM under `"type": "module"`. | Fix during build: plain ESM `export`. Files stay zero-dependency and import-free. |
+| 7.1 | ✅ **Plan 1 Task 2 cannot pass as written** — `calc/dscr.js` used a guarded CommonJS export while the test imports it as ESM. | **Resolved during the build:** plain ESM `export`. Files stay zero-dependency and import-free. |
 | 7.2 | ✅ **Spec §3 and §4 still describe n8n.** **Resolved 2026-10-06** — the amendments were applied and the last factual leftovers swept. |
 | 7.3 | ✅ **Spec §8.3 sync check is obsolete** (byte-identical n8n copy). **Resolved** — removed with 7.2. |
 | 7.4 | ✅ **Connected Agents is a preview feature** carrying the learning goal. | **Decided 2026-10-06 after the first working runs: take the fallback.** Not because the preview failed — `connected_agent` behaved exactly as the spike showed — but because **a connected agent cannot carry a function tool** (the parent run hangs). Specialists therefore cannot retrieve, so the orchestrator fetches evidence and pastes it, and each delegation spends a step asking for an opinion on text the orchestrator already holds. `gpt-4.1-mini` burnt 2–4 of its 8 steps that way and F3 hit the cap in all four attempts. Specialists demoted to plain tools on the orchestrator. |
