@@ -74,6 +74,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 4.6 | 🟡 **Email intake** (US-011) | Workflow convenience; proves nothing about reasoning. |
 | 4.7 | 🟡 **Policy editing in the UI** | Defaults live in the `policy` table; editing it is a DB update for now. |
 | 4.8 | ⚪ Upgrade eval judge `gpt-4.1-mini` → full `gpt-4.1` | Billable, owner's call. A judge's credibility matters when the score is the evidence. |
+| 4.9 | 🟡 **Make covenant-term extraction agentic (brainstorm first)** | Today onboarding's extraction (`proposeTerms` / the definition tool) is **single-shot RAG** over a fixed query set, backstopped by deterministic provenance checks + human approval — defensible, but not agentic. Brainstorm converting it to an **agent-driven retrieval loop** (decide what to read next: base definition → the amendment that restates it → re-extract), i.e. true agentic RAG *for setup*. Safe to cut for MVP: the verified single-shot extraction holds, and the orchestrator already demonstrates agentic RAG in the *investigation*. **At minimum, do the brainstorming** before building. |
 
 ---
 
