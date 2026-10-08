@@ -73,6 +73,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // Enforcement overruled the agent: its prose argues a conclusion that was
   // rejected, so it is labelled a draft rather than left reading as the answer.
   const overridden = recommendationOverridden(view.notes);
+  // The governing calculation used terms the approved version does not carry.
+  // The guardrail already flags it below; the header must not contradict it.
+  const onAmendedTerms = view.notes.some((n) => n.check === "terms_differ_from_approved");
   const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
   const headline = headlineFor(view.sections);
   const accent =
@@ -122,13 +125,27 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             {view.testPeriodEnd && (
               <Figure label="Test period" value={`ending ${view.testPeriodEnd}`} tag={view.testBasis ?? undefined} muted />
             )}
-            <Figure label="Computed DSCR" value={fmt(headline.dscr)} tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
-              tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined} />
+            {/* When the governing calculation ran on terms the approved version
+                does not carry, the label SAYS SO. Without it this strip reads
+                "Computed DSCR 1.30" beside "Approved terms v1" — and v1 does
+                not produce 1.30, it produces the breach. That is the summary
+                contradicting the evidence under it. */}
+            <Figure
+              label={onAmendedTerms ? "Computed DSCR · amended terms" : "Computed DSCR"}
+              value={fmt(headline.dscr)}
+              tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
+              tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined}
+            />
             <Figure label="Required" value={fmt(headline.required)} />
             <Figure label="Margin" value={fmtSigned(headline.margin)} tone={headline.margin != null && headline.margin < 0 ? "danger" : undefined} />
             <Figure label="Calculation" value={`calc_${headline.calcId.slice(0, 8)}`} muted />
             {view.termsVersion != null && (
-              <Figure label="Approved terms used for this test" value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`} muted />
+              <Figure
+                label="Approved terms used for this test"
+                value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`}
+                tag={onAmendedTerms ? "amendment not included" : undefined}
+                muted
+              />
             )}
             {view.humanReviewRequired && (
               <div className="ml-auto inline-flex items-center gap-2 self-center text-label text-text-muted">
