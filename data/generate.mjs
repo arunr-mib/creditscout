@@ -19,6 +19,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import {
   FACILITIES,
   LENDER_NAME,
+  ONBOARDING_DEMO_FACILITIES,
   MARKER,
   boardedVersionFor,
   clauses,
@@ -120,7 +121,37 @@ function renderAgreement(f) {
 
 // ----------------------------------------------------------- the amendment
 
+function renderNoticeAmendment(f) {
+  const agreement = doc(f, "agreement");
+  const amendment = doc(f, "amendment");
+  return [
+    MARKER,
+    "",
+    "AMENDMENT NO. 1 TO CREDIT AGREEMENT",
+    "",
+    `dated as of ${longDate(amendment.effective_date)}`,
+    "",
+    `between ${legalName(f).toUpperCase()}, as Borrower, and ${LENDER_NAME.toUpperCase()}, as Lender.`,
+    "",
+    "§1 Effective Date and Scope.",
+    `This Amendment No. 1 is effective as of ${longDate(amendment.effective_date)} and amends the Credit Agreement dated as of ${longDate(agreement.effective_date)} (the "Credit Agreement").`,
+    "",
+    "§2 Definitions.",
+    "Capitalized terms used and not defined in this Amendment No. 1 have the meanings given to them in the Credit Agreement.",
+    "",
+    "§3 Amendment to Section 9.01.",
+    `(a) Section 9.01 of the Credit Agreement is amended so that notices to the Borrower shall be sent to the attention of the Chief Financial Officer at ${f.amendment_notice_email}. This change is administrative only.`,
+    "",
+    "§4 Continuing Effect.",
+    "Except as expressly amended by this Amendment No. 1, every term of the Credit Agreement, including Section 7.11, remains in full force and effect.",
+    "",
+    "Executed by the Borrower and the Lender.",
+    "",
+  ].join("\n");
+}
+
 function renderAmendment(f) {
+  if (f.amendment_notice_email) return renderNoticeAmendment(f);
   const agreement = doc(f, "agreement");
   const amendment = doc(f, "amendment");
   const unboarded = f.terms_versions.find((v) => !v.boarded);
@@ -183,9 +214,11 @@ function renderFinancials(f, q) {
     "",
     "§2 Add-Back Items",
     "Amounts incurred during the period, before any limit under the Credit Agreement.",
-    ...Object.entries(q.financials.addback_amounts).map(
-      ([name, amount]) => `${sentenceCase(name)}: ${fmtAmount(amount)}`,
-    ),
+    ...(Object.keys(q.financials.addback_amounts).length === 0
+      ? ["No add-back items were incurred during the period."]
+      : Object.entries(q.financials.addback_amounts).map(
+          ([name, amount]) => `${sentenceCase(name)}: ${fmtAmount(amount)}`,
+        )),
     "",
   ].join("\n");
 }
@@ -437,6 +470,30 @@ export function generate({ outDir = OUT_DIR, csvPath = CSV_PATH } = {}) {
   return { documents: docs.length, facilities: FACILITIES.length, csvRows: FACILITIES.flatMap((f) => f.quarters).length };
 }
 
+/**
+ * Onboarding-demo borrowers (ONBOARDING_DEMO_FACILITIES): documents only, no CSV
+ * rows, never seeded. Kept apart from generate() so the F1/F3/F5 outputs and
+ * their tests are unaffected.
+ */
+export function generateOnboardingDemo({ outDir = OUT_DIR, pdf = false } = {}) {
+  const docs = ONBOARDING_DEMO_FACILITIES.flatMap((f) =>
+    f.documents.map((d) => ({ facility: f.id, file: d.file, text: renderDocument(f, d) })),
+  );
+  const pdfJobs = [];
+  for (const d of docs) {
+    mkdirSync(join(outDir, d.facility), { recursive: true });
+    writeFileSync(join(outDir, d.facility, d.file), d.text);
+    if (pdf) {
+      pdfJobs.push(
+        renderPdf(d.text).then((bytes) =>
+          writeFileSync(join(outDir, d.facility, d.file.replace(/\.txt$/, ".pdf")), bytes),
+        ),
+      );
+    }
+  }
+  return Promise.all(pdfJobs).then(() => docs.length);
+}
+
 /** `--pdf`: a PDF beside each .txt (same stem). Separate from generate() because PDF layout is async. */
 export async function generatePdfs({ outDir = OUT_DIR } = {}) {
   const docs = renderAll();
@@ -449,6 +506,8 @@ export async function generatePdfs({ outDir = OUT_DIR } = {}) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const r = generate();
   const pdfs = process.argv.includes("--pdf") ? await generatePdfs() : 0;
+  const demo = await generateOnboardingDemo({ pdf: process.argv.includes("--pdf") });
+  console.log(`Wrote ${demo} onboarding-demo documents (SUMMIT) to data/facilities/SUMMIT/`);
   console.log(
     `Wrote ${r.documents} documents${pdfs ? ` and ${pdfs} PDFs` : ""} across ${r.facilities} facilities to data/facilities/ and ${r.csvRows} rows to data/expected-values-template.csv`,
   );

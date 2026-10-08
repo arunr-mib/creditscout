@@ -381,6 +381,68 @@ const F5 = {
 
 export const FACILITIES = [F1, F3, F5];
 
+/**
+ * Onboarding-demo borrowers. Deliberately NOT in FACILITIES: seed.mjs,
+ * ingest-demo.mjs, the CSV and the evaluation set all read FACILITIES, and this
+ * borrower must stay un-seeded so the onboarding flow genuinely creates it.
+ * Only `node data/generate.mjs` renders these documents.
+ *
+ * Summit Freight Co.: a clean, boardable agreement (1.25x minimum, no add-backs,
+ * calculator vocabulary only), one non-financial amendment, one passing quarter.
+ * Test: (4,250,000 - 260,000 - 160,000) / (1,800,000 + 1,000,000) = 1.37.
+ */
+const SUMMIT_AMENDMENT_NOTICE = "finance@summitfreight.example";
+
+export const ONBOARDING_DEMO_FACILITIES = [
+  {
+    id: "SUMMIT",
+    borrower_name: "Summit Freight Co.",
+    industry: "Logistics",
+    sender_domain: "summitfreight.example",
+    twist: "None. A clean borrower for exercising the onboarding flow end to end.",
+    pattern_tag: "none",
+    expected_outcome: "compliant",
+    amendment_notice_email: SUMMIT_AMENDMENT_NOTICE,
+    terms_versions: [
+      {
+        version: 1,
+        effective_from: "2025-02-14",
+        boarded: false,
+        terms: buildTerms({ addbacks: [], amendments: [] }),
+        source_citations: [],
+      },
+    ],
+    quarters: [
+      {
+        period_end: "2026-09-30",
+        reported_dscr: 1.37,
+        financials: {
+          ebitda: 4250000,
+          addback_amounts: {},
+          unfinanced_capex: 260000,
+          cash_taxes: 160000,
+          scheduled_principal: 1800000,
+          cash_interest: 1000000,
+        },
+        certificate_addbacks: {},
+        expected: {
+          computed_dscr: 1.37,
+          passed: true,
+          remapped_dscr: null,
+          variance_flagged: false,
+          raises_exception: false,
+        },
+      },
+    ],
+    documents: [
+      { doc_type: "agreement", title: "Credit Agreement", effective_date: "2025-02-14", file: "credit-agreement.txt" },
+      { doc_type: "amendment", title: "Amendment No. 1", effective_date: "2026-03-01", file: "amendment-1.txt" },
+      { doc_type: "financials", title: "Financials — Q3 2026", effective_date: "2026-09-30", period_end: "2026-09-30", file: "financials-2026-09-30.txt" },
+      { doc_type: "compliance_certificate", title: "Compliance Certificate — Q3 2026", effective_date: "2026-09-30", period_end: "2026-09-30", file: "compliance-certificate-2026-09-30.txt" },
+    ],
+  },
+];
+
 // -------------------------------------------------------------------- helpers
 
 /** Terms for one specific test: the version's terms with that quarter's period_end. */
