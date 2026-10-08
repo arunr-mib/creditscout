@@ -507,7 +507,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const r = generate();
   const pdfs = process.argv.includes("--pdf") ? await generatePdfs() : 0;
   const demo = await generateOnboardingDemo({ pdf: process.argv.includes("--pdf") });
-  console.log(`Wrote ${demo} onboarding-demo documents (SUMMIT) to data/facilities/SUMMIT/`);
+  console.log(`Wrote ${demo} onboarding-demo documents (${ONBOARDING_DEMO_FACILITIES.map((f) => f.id).join(", ")}) to data/facilities/<ID>/`);
   console.log(
     `Wrote ${r.documents} documents${pdfs ? ` and ${pdfs} PDFs` : ""} across ${r.facilities} facilities to data/facilities/ and ${r.csvRows} rows to data/expected-values-template.csv`,
   );

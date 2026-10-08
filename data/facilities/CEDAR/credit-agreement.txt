@@ -1,0 +1,51 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+CREDIT AGREEMENT
+
+dated as of April 7, 2025
+
+between CEDAR RIDGE BUILDERS, INC., as Borrower, and FAIRHAVEN COMMERCIAL BANK, as Lender.
+
+ARTICLE I — DEFINITIONS
+
+§1.01 Defined Terms.
+As used in this Agreement, the following terms have the meanings set out below.
+"Consolidated EBITDA" means, for any period, the consolidated net income of the Borrower for that period plus interest expense, income tax expense, depreciation and amortization, in each case to the extent deducted in determining net income.
+"Debt Service" means, for any period, the sum of (i) scheduled principal payments on Indebtedness and (ii) cash interest paid on Indebtedness, in each case during that period.
+"Debt Service Coverage Ratio" means, for any period, the ratio of (i) Consolidated EBITDA for that period, plus any add-back permitted by Section 7.11, minus Unfinanced Capital Expenditures and cash taxes paid during that period, to (ii) Debt Service for that period.
+"Indebtedness" means all obligations of the Borrower for borrowed money, including obligations under the Facility.
+"Unfinanced Capital Expenditures" means capital expenditures of the Borrower not financed with Indebtedness.
+
+§1.02 Accounting Terms.
+Accounting terms not defined in this Agreement have the meanings given to them under generally accepted accounting principles consistently applied.
+
+ARTICLE VI — AFFIRMATIVE COVENANTS
+
+§6.01 Financial Statements and Compliance Certificates.
+The Borrower shall deliver to the Lender, promptly after the end of each fiscal quarter, financial statements for the trailing four quarters and a Compliance Certificate stating the Debt Service Coverage Ratio calculated in accordance with Section 7.11 and the amount of any add-back applied.
+
+ARTICLE VII — FINANCIAL COVENANTS
+
+§7.10 Limitation on Liens.
+The Borrower shall not create or permit any lien on its assets other than liens permitted by the Lender in writing.
+
+§7.11 Debt Service Coverage Ratio.
+(a) Minimum Ratio. The Borrower shall not permit the Debt Service Coverage Ratio, tested as of the last day of each fiscal quarter on a trailing four-quarter basis, to be less than 1.25 to 1.00.
+(b) Adjustments. No add-back or other adjustment shall be made to Consolidated EBITDA for purposes of this Section 7.11, except as expressly provided in this Agreement as amended in writing.
+(c) Verification. The Debt Service Coverage Ratio stated in a Compliance Certificate is subject to verification by the Lender against the financial statements delivered under Section 6.01.
+
+ARTICLE VIII — EVENTS OF DEFAULT
+
+§8.01 Events of Default.
+Each of the following is an Event of Default: (a) the Borrower fails to pay any amount when due; (b) the Borrower fails to comply with Section 7.11; (c) any Compliance Certificate is materially incorrect when delivered.
+
+§8.02 Waivers and Amendments.
+No waiver of any covenant or Event of Default, and no amendment of this Agreement, is effective unless it is in writing and signed by the Lender. A request for a waiver is not a waiver.
+
+ARTICLE IX — MISCELLANEOUS
+
+§9.01 Notices.
+Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Cedar Ridge Builders, Inc., at cfo@cedarridgebuilders.example. Notices to the Lender shall be sent to the attention of the Portfolio Manager, Fairhaven Commercial Bank.
+
+§9.02 Governing Law.
+This Agreement is governed by the laws of the State of New York.

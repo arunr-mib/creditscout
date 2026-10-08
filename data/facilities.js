@@ -92,10 +92,10 @@ function addback(name, cap, citation) {
  * The §4.2 terms schema. `period_end` is only a default here: a versioned terms
  * row governs many quarters, so use `termsFor` to get the one for a given test.
  */
-function buildTerms({ addbacks, amendments }) {
+function buildTerms({ addbacks, amendments, threshold = THRESHOLD }) {
   return {
     test_period: { basis: "TTM", period_end: "2026-06-30" },
-    threshold: { min_dscr: THRESHOLD, citation: "CA §7.11" },
+    threshold: { min_dscr: threshold, citation: "CA §7.11" },
     numerator: {
       base: "Consolidated EBITDA",
       addbacks,
@@ -441,6 +441,80 @@ export const ONBOARDING_DEMO_FACILITIES = [
       { doc_type: "compliance_certificate", title: "Compliance Certificate — Q3 2026", effective_date: "2026-09-30", period_end: "2026-09-30", file: "compliance-certificate-2026-09-30.txt" },
     ],
   },
+  ...[
+    {
+      id: "HARPER", name: "Harper Dairy Cooperative", industry: "Food & Beverage", domain: "harperdairy.example",
+      min: 1.15, agreed: "2024-06-03", amended: "2025-09-15",
+      fin: [3900000, 210000, 140000, 1500000, 1000000], dscr: 1.42,
+    },
+    {
+      id: "ORION", name: "Orion Medical Supply", industry: "Healthcare Distribution", domain: "orionmedsupply.example",
+      min: 1.2, agreed: "2024-11-18", amended: "2026-01-12",
+      fin: [5600000, 300000, 200000, 2200000, 1300000], dscr: 1.46,
+    },
+    {
+      id: "CEDAR", name: "Cedar Ridge Builders", industry: "Construction", domain: "cedarridgebuilders.example",
+      min: 1.25, agreed: "2025-04-07", amended: "2026-02-20",
+      fin: [3600000, 180000, 90000, 1500000, 900000], dscr: 1.39,
+    },
+    {
+      id: "VANTAGE", name: "Vantage Print Works", industry: "Commercial Printing", domain: "vantageprint.example",
+      min: 1.3, agreed: "2025-01-27", amended: "2026-04-06",
+      fin: [3900000, 350000, 150000, 1700000, 1300000], dscr: 1.13,
+    },
+  ].map((b) => {
+    const [ebitda, unfinanced_capex, cash_taxes, scheduled_principal, cash_interest] = b.fin;
+    const passed = b.dscr >= b.min;
+    return {
+      id: b.id,
+      borrower_name: b.name,
+      industry: b.industry,
+      sender_domain: b.domain,
+      twist: passed
+        ? "None. A clean borrower for exercising the onboarding flow end to end."
+        : "None. A clean borrower whose covenant test breaches, for exercising onboarding then a breach.",
+      pattern_tag: "none",
+      expected_outcome: passed ? "compliant" : "breach",
+      amendment_notice_email: `finance@${b.domain}`,
+      terms_versions: [
+        {
+          version: 1,
+          effective_from: b.agreed,
+          boarded: false,
+          terms: buildTerms({ addbacks: [], amendments: [], threshold: b.min }),
+          source_citations: [],
+        },
+      ],
+      quarters: [
+        {
+          period_end: "2026-09-30",
+          reported_dscr: b.dscr,
+          financials: {
+            ebitda,
+            addback_amounts: {},
+            unfinanced_capex,
+            cash_taxes,
+            scheduled_principal,
+            cash_interest,
+          },
+          certificate_addbacks: {},
+          expected: {
+            computed_dscr: b.dscr,
+            passed,
+            remapped_dscr: null,
+            variance_flagged: false,
+            raises_exception: !passed,
+          },
+        },
+      ],
+      documents: [
+        { doc_type: "agreement", title: "Credit Agreement", effective_date: b.agreed, file: "credit-agreement.txt" },
+        { doc_type: "amendment", title: "Amendment No. 1", effective_date: b.amended, file: "amendment-1.txt" },
+        { doc_type: "financials", title: "Financials — Q3 2026", effective_date: "2026-09-30", period_end: "2026-09-30", file: "financials-2026-09-30.txt" },
+        { doc_type: "compliance_certificate", title: "Compliance Certificate — Q3 2026", effective_date: "2026-09-30", period_end: "2026-09-30", file: "compliance-certificate-2026-09-30.txt" },
+      ],
+    };
+  }),
 ];
 
 // -------------------------------------------------------------------- helpers

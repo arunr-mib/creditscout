@@ -1,0 +1,17 @@
+SYNTHETIC — FOR DEMONSTRATION
+
+VANTAGE PRINT WORKS — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+
+Period ended: September 30, 2026
+Basis: trailing twelve months
+
+§1 Debt Service Coverage Inputs
+Consolidated EBITDA: 3,900,000
+Unfinanced Capital Expenditures: 350,000
+Cash Taxes Paid: 150,000
+Scheduled Principal Payments: 1,700,000
+Cash Interest Paid: 1,300,000
+
+§2 Add-Back Items
+Amounts incurred during the period, before any limit under the Credit Agreement.
+No add-back items were incurred during the period.
