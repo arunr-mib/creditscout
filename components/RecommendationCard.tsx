@@ -15,7 +15,6 @@ export function RecommendationCard({
   headline,
   summary,
   humanReviewRequired,
-  onAmendedTerms,
   explanation,
   overridden,
 }: {
@@ -23,7 +22,6 @@ export function RecommendationCard({
   headline: string;
   summary: string | null;
   humanReviewRequired: boolean | null;
-  onAmendedTerms: boolean;
   explanation: string | null;
   overridden: boolean;
 }) {
@@ -58,13 +56,7 @@ export function RecommendationCard({
         )}
       </div>
 
-      {summary && <p className="mt-2 max-w-prose text-body text-text-secondary">{summary}</p>}
-
-      {onAmendedTerms && (
-        <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-code bg-code-bg px-3 py-1 text-label text-code-bright">
-          <span aria-hidden="true">⚠</span> Provisional · amendment not reflected in approved terms
-        </p>
-      )}
+      {summary && <p className="mt-2 text-body text-text-secondary">{summary}</p>}
 
       {open && explanation && (
         <p className="mt-3 max-w-prose border-t border-border pt-3 text-body text-text-secondary">{explanation}</p>

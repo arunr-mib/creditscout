@@ -125,7 +125,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           headline={RECOMMENDATION_HEADLINE[rec]}
           summary={summary.headline}
           humanReviewRequired={view.humanReviewRequired}
-          onAmendedTerms={onAmendedTerms}
           explanation={view.explanation}
           overridden={overridden}
         />
