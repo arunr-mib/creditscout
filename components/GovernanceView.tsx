@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GovernancePanel } from "./GovernancePanel";
 import { Scoreboard } from "./Scoreboard";
+import { ENFORCEMENT_ACTION_LABEL, ENFORCEMENT_RULES } from "./enforcementModel";
 import type { PolicyTableRow } from "./governanceModel";
 import { evalScoreboardState, runProvenance, scoreboardRows, type EvalRunLike } from "./scoreboardModel";
 
@@ -63,14 +64,53 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
           <div className="grid gap-4 lg:grid-cols-2">
             <section aria-label="Investigation controls" className="rounded-lg border border-border-strong bg-surface">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
-                <h2 className="text-section text-model-bright">Investigation controls</h2>
+                <h2 className="text-section text-model-bright">Investigation limits</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">Read-only</span>
               </div>
               <div className="p-4">
                 <p className="mb-3 text-body text-text-secondary">
-                  The agent operates within these limits and cannot change them.
+                  Set by the Risk Officer. The agent operates within these limits and cannot change them.
                 </p>
                 <GovernancePanel rows={policy} bare />
+              </div>
+            </section>
+
+            {/* The other half of the control set. The limits above are the Risk
+                Officer's and can be changed; these cannot be changed by anyone
+                without a code change, and they are what the product's claim
+                actually rests on. */}
+            <section aria-label="Enforcement rules" className="rounded-lg border border-border-strong bg-surface lg:col-span-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
+                <h2 className="text-section text-model-bright">Enforcement rules (always applied)</h2>
+                <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">
+                  Not configurable
+                </span>
+              </div>
+              <div className="p-4">
+                <p className="mb-3 max-w-prose text-body text-text-secondary">
+                  These run on every investigation regardless of the limits above. Nobody can switch them off — each one
+                  appears on the casefile as a validation notice when it fires.
+                </p>
+                <ul className="grid gap-3 sm:grid-cols-2">
+                  {ENFORCEMENT_RULES.map((r) => (
+                    <li key={r.check} className="rounded-md border border-border bg-surface-raised p-3">
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-body text-text">{r.title}</p>
+                        <span
+                          className={`shrink-0 rounded-full border px-2 py-px text-label ${
+                            r.action === "abstain" || r.action === "escalate"
+                              ? "border-danger/40 text-danger"
+                              : "border-code/40 text-code-bright"
+                          }`}
+                        >
+                          {ENFORCEMENT_ACTION_LABEL[r.action]}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-label text-text-muted">{r.detail}</p>
+                      <p className="mt-2 font-mono text-badge text-text-muted">{r.check}</p>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
 

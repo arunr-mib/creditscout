@@ -140,7 +140,7 @@ export default async function Home() {
             </Link>
             {/* The period this runs is in the eyebrow above, so the button names
                 the action rather than repeating the quarter. */}
-            <RunTestButton label="Run Covenant Tests" endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
+            <RunTestButton label="Run Covenant Tests" endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} showPlay />
           </div>
         </div>
         <p className="max-w-prose text-body text-text-secondary">

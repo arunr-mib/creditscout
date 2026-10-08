@@ -18,8 +18,10 @@ export function RunTestButton(props: {
   endpoint: string;
   body: Record<string, unknown>;
   disabledReason?: string | null;
+  /** The play mark. Off by default: in a table cell the label wraps around it. */
+  showPlay?: boolean;
 }) {
-  const { label, endpoint, body, disabledReason } = props;
+  const { label, endpoint, body, disabledReason, showPlay = false } = props;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function RunTestButton(props: {
         {/* The mark says this one RUNS something, which is the distinction the
             colour already carries — a click here spends work, the beige ones
             only open a record. Hidden from assistive tech: the label says it. */}
-        <span aria-hidden="true">{busy ? "⟳" : "▶"}</span>
+        {showPlay && <span aria-hidden="true">{busy ? "⟳" : "▶"}</span>}
         {busy ? "Running…" : label}
       </button>
       {disabled && (
