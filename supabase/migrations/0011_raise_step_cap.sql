@@ -1,0 +1,17 @@
+-- Raise the orchestrator's step cap from 8 to 12.
+--
+-- The 2026-10-08 live eval: three of six investigations ended at the cap, and
+-- two of those already held the right answer — F3-warm had the full correct
+-- reasoning (no add-backs permitted, the borrower's add-back disallowed, the
+-- waiver unexecuted) and F5-warm had three logged calculations and a correct
+-- confidence basis. Both were recorded as `abstain` purely because the budget
+-- ran out before they could emit. We were failing cases we had already solved.
+--
+-- 12 rather than something larger: the prompt's own plan is four or five steps,
+-- the observed spread was 5-8, and a cap is a cost ceiling as much as a safety
+-- one. 12 leaves room for a retry and a re-run of the governing calculation
+-- (which rule 8 now asks for) without licensing an open-ended loop.
+--
+-- `on conflict do nothing` in 0003 means that seed no longer fires, so this is
+-- an explicit update rather than a re-seed.
+update policy set value = '12'::jsonb where key = 'max_steps';

@@ -15,7 +15,7 @@ const passing = [{ calc_id: "c1", outputs: { dscr: 1.31, threshold: 1.25, pass: 
 test("exposes the spec's defaults", () => {
   assert.equal(DEFAULT_POLICY.variance_tolerance, 0.05);
   assert.equal(DEFAULT_POLICY.escalate_if_breach_margin_over, 0.15);
-  assert.equal(DEFAULT_POLICY.max_steps, 8);
+  assert.equal(DEFAULT_POLICY.max_steps, 12);
   assert.equal(DEFAULT_POLICY.require_human_review, true);
 });
 
@@ -57,9 +57,20 @@ test("a shallow breach is left to the agent's judgement", () => {
 });
 
 test("reaching the step cap abstains rather than resolving", () => {
-  const { casefile, notes } = applyPolicy(cf({ steps_count: 8 }), DEFAULT_POLICY, passing);
+  // Reads the cap off the policy rather than hardcoding it: the number is a
+  // tuning decision (raised 8 -> 12 on 2026-10-08) and this rule is about the
+  // behaviour at the boundary, not about any particular value.
+  const { casefile, notes } = applyPolicy(cf({ steps_count: DEFAULT_POLICY.max_steps }), DEFAULT_POLICY, passing);
   assert.equal(casefile.recommendation, "abstain");
   assert.ok(notes.some((n) => n.check === "step_cap"));
+});
+
+test("a run comfortably under the cap is not abstained by it", () => {
+  // The 8 -> 12 raise has to actually buy steps: at 8 of 12 a passing
+  // investigation must still be allowed to resolve.
+  const { casefile, notes } = applyPolicy(cf({ steps_count: 8 }), DEFAULT_POLICY, passing);
+  assert.equal(casefile.recommendation, "resolve");
+  assert.ok(!notes.some((n) => n.check === "step_cap" && n.action === "abstain"));
 });
 
 test("policy values override the defaults", () => {

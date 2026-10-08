@@ -12,7 +12,7 @@ export const DEFAULT_POLICY = {
   variance_tolerance: 0.05,
   escalate_if_breach_margin_over: 0.15,
   prohibited_actions: ["waive covenant", "amend terms", "contact borrower"],
-  max_steps: 8,
+  max_steps: 12,
   require_human_review: true,
 };
 

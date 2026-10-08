@@ -142,6 +142,19 @@ failure; parking-lot 4.11 covers onboarding Vantage into the eval.
 | F5-2026Q2 | cold | `resolve` ✓ | Correct, with a real `calc_id` for the remapped 1.30 and terms-drift flagged. |
 | F5-2026Q2 | warm | `abstain` | Policy `step_cap` at 8 steps. It had the right answer and three logged calcs; it ran out of budget before emitting the final answer. |
 
+**Fixes applied 2026-10-08, after the run and therefore NOT reflected in the
+numbers above:**
+
+| Fix | Where | Why |
+|---|---|---|
+| Step cap **8 → 12** | migration `0011_raise_step_cap.sql` (applied live), `DEFAULT_POLICY.max_steps` | Three of six investigations died at the cap and two already held the right answer. We were failing cases we had solved. |
+| Prompt **rule 8** — the governing calculation must be the last one logged, with the one-step remedy | `lib/agent/prompt.ts`, pushed to the live Foundry agent (same id) | F1's miss, twice. The guardrail's "last one logged" rule is deliberate, so the agent was fixed rather than the guardrail. |
+| Base URL derived from the platform | `lib/agent/openapi.ts` | Unrelated to the eval; removes a stale-hostname failure class. `PUBLIC_BASE_URL` deleted from Vercel production. |
+
+**The next live eval re-measures everything in the table above.** The cap raise
+also confounds the memory question — warm may have scored worse only because
+the cap bit it harder — so treat cold-vs-warm as unsettled until it re-runs.
+
 **A real gap this surfaced** (candidate for the parking lot, owner's call):
 `exceptions.reported_dscr` is a *database fact* the runner injects into the
 query prompt ("the borrower reports 1.31"), but `figure_traceable` only accepts
