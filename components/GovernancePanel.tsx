@@ -25,10 +25,10 @@ export function GovernancePanel({ rows, bare = false }: { rows: PolicyTableRow[]
       )}
       <div className="overflow-hidden rounded-lg border border-border bg-surface">
         <table className="w-full border-collapse">
-          <thead>
+          <thead className="bg-model-bg/50">
             <tr className="border-b border-border">
-              <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-text-muted">Policy</th>
-              <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Value</th>
+              <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-model-bright">Policy</th>
+              <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Value</th>
             </tr>
           </thead>
           <tbody>

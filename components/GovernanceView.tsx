@@ -53,7 +53,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 
       {tab === "overview" ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-strong bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-strong border-l-2 border-l-model bg-surface px-4 py-3">
             <p className="flex items-center gap-3 text-card text-text">
               <span aria-hidden="true">🔒</span> Human approval is required for every recommendation.
             </p>
@@ -63,7 +63,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
           <div className="grid gap-4 lg:grid-cols-2">
             <section aria-label="Investigation controls" className="rounded-lg border border-border-strong bg-surface">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
-                <h2 className="text-section text-text">Investigation controls</h2>
+                <h2 className="text-section text-model-bright">Investigation controls</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">Read-only</span>
               </div>
               <div className="p-4">
@@ -76,7 +76,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 
             <section aria-label="Evaluation results" className="rounded-lg border border-border-strong bg-surface">
               <div className="border-b border-border-strong px-4 py-3">
-                <h2 className="text-section text-text">Evaluation results</h2>
+                <h2 className="text-section text-model-bright">Evaluation results</h2>
                 <p className="mt-1 text-body text-text-secondary">
                   Compare runs without prior lessons and with prior lessons.
                 </p>

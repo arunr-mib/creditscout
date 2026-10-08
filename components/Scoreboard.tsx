@@ -48,19 +48,19 @@ function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: Metr
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <table className="w-full border-collapse">
-        <thead>
+        <thead className="bg-model-bg/50">
           <tr className="border-b border-border">
-            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-text-muted">Metric</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Target</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Cold</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Warm</th>
+            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-model-bright">Metric</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Target</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Cold</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Warm</th>
           </tr>
         </thead>
         <tbody>
           {METRICS.map((spec, i) => (
             <tr key={spec.key} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
               <td className="px-4 align-middle text-label text-text">{spec.label}</td>
-              <td className="px-4 py-2 text-right align-middle font-mono text-num tabular-nums text-text-secondary">
+              <td className="px-4 py-2 text-right align-middle font-mono text-num tabular-nums text-model-bright/80">
                 {spec.target}
               </td>
               <Actual cell={cold ? cold[i] : null} />
