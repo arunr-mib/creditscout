@@ -133,18 +133,19 @@ export default async function Home() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
             <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
-            <h1 className="text-title text-text">Work queue</h1>
+            <h1 className="text-title text-text">Credit Analysis Queue</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/borrowers/new" className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast hover:border-model">
-              + New borrower
+              + Add borrower
             </Link>
-  <RunTestButton label={`Run ${targetLabel}`} endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
+            {/* The period this runs is in the eyebrow above, so the button names
+                the action rather than repeating the quarter. */}
+            <RunTestButton label="Run Covenant Tests" endpoint="/api/tests/run-quarter" body={{ test_period_end: targetPeriod }} />
           </div>
         </div>
         <p className="max-w-prose text-body text-text-secondary">
-          Every test is computed by code from approved terms. The borrower&apos;s reported figure is evidence to
-          reconcile against — never the trigger.
+          Monitor covenant tests, investigate exceptions, and review recommendations with the evidence at hand.
         </p>
 
         <StatBand

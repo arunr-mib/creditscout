@@ -20,7 +20,7 @@ export interface NavCounts {
 }
 
 const DESTS: { href: string; label: string; countKey?: keyof NavCounts }[] = [
-  { href: "/", label: "Work queue", countKey: "queue" },
+  { href: "/", label: "Credit Analysis Queue", countKey: "queue" },
   { href: "/documents", label: "Documents", countKey: "documents" },
   { href: "/terms", label: "Terms", countKey: "terms" },
   { href: "/lessons", label: "Lessons", countKey: "lessons" },
