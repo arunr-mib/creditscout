@@ -32,9 +32,9 @@ type State =
  * an indexed document is a human action, not a passing test. A rejection states
  * the reason (a scanned PDF, a wrong type) so the analyst knows what to fix.
  */
-export function UploadPackage({ facilities }: { facilities: UploadFacility[] }) {
+export function UploadPackage({ facilities, fixedFacilityId }: { facilities: UploadFacility[]; fixedFacilityId?: string }) {
   const router = useRouter();
-  const [facilityId, setFacilityId] = useState(facilities[0]?.id ?? "");
+  const [facilityId, setFacilityId] = useState(fixedFacilityId ?? facilities[0]?.id ?? "");
   const [docType, setDocType] = useState("financials");
   const [effectiveDate, setEffectiveDate] = useState("");
   const [state, setState] = useState<State>({ kind: "idle" });
@@ -82,6 +82,7 @@ export function UploadPackage({ facilities }: { facilities: UploadFacility[] }) 
       </h3>
 
       <div className="mt-3 flex flex-wrap gap-3">
+        {!fixedFacilityId && (
         <label className="flex flex-col gap-1 text-label text-text-muted">
           Borrower
           <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className={field}>
@@ -93,6 +94,7 @@ export function UploadPackage({ facilities }: { facilities: UploadFacility[] }) 
             ))}
           </select>
         </label>
+        )}
         <label className="flex flex-col gap-1 text-label text-text-muted">
           Document type
           <select value={docType} onChange={(e) => setDocType(e.target.value)} className={field}>
@@ -122,7 +124,7 @@ export function UploadPackage({ facilities }: { facilities: UploadFacility[] }) 
           dragover ? "border-model bg-model-bg text-text" : "border-border-strong text-text-muted"
         }`}
       >
-        {state.kind === "uploading" ? "Indexing…" : "Drop the quarterly package, or click to choose a file"}
+        {state.kind === "uploading" ? "Indexing…" : fixedFacilityId ? "Drop a document (agreement, amendment, financials, or certificate), or click to choose a file" : "Drop the quarterly package, or click to choose a file"}
       </button>
       <input
         ref={inputRef}

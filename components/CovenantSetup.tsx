@@ -439,10 +439,12 @@ export function CovenantSetup(props: {
                 : "h-9 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
             }
           >
-            {proposal || phase.kind === "not_found" || proposeError ? "Propose again" : "Propose terms"}
+            {proposal || phase.kind === "not_found" || proposeError ? "Propose again" : "Extract covenant terms"}
           </button>
           <p className="text-label text-text-muted">
-            {proposal
+            {busy
+              ? "The Credit-scout Agent is extracting the covenant terms from your loan agreement"
+              : proposal
               ? "Proposing again saves a new proposed version. It governs nothing, and this one stays on file."
               : "The agent reads the agreement and any amendments. The proposal is saved but governs nothing until a person approves it."}
           </p>
