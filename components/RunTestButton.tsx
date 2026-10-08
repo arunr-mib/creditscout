@@ -55,8 +55,12 @@ export function RunTestButton(props: {
         onClick={run}
         disabled={disabled || busy}
         aria-describedby={disabled ? reasonId : undefined}
-        className="rounded-md border border-model bg-gradient-to-b from-model-bright to-model px-4 py-2 text-body font-medium leading-5 text-bg transition duration-fast ease-out hover:-translate-y-px hover:brightness-105 active:translate-y-px active:brightness-95 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex items-center justify-center gap-2 rounded-md border border-model bg-gradient-to-b from-model-bright to-model px-4 py-2 text-body font-medium leading-5 text-bg transition duration-fast ease-out hover:-translate-y-px hover:brightness-105 active:translate-y-px active:brightness-95 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
       >
+        {/* The mark says this one RUNS something, which is the distinction the
+            colour already carries — a click here spends work, the beige ones
+            only open a record. Hidden from assistive tech: the label says it. */}
+        <span aria-hidden="true">{busy ? "⟳" : "▶"}</span>
         {busy ? "Running…" : label}
       </button>
       {disabled && (
