@@ -46,7 +46,7 @@ export function UncitedClauses(props: {
           Clauses retrieved but not cited
         </h2>
         <p className="mt-1 text-body text-text-secondary">
-          Every clause of the agreement and its amendments that the server holds for this facility and that no term cites
+          Every clause of the agreement and its amendments that the server holds for this loan and that no term cites
           ({totalOnFile} on file). This is the full set, not only what the model retrieved. Nothing has checked these: read
           them for an add-back, a cap or a carve-out that no term mentions.
         </p>
@@ -67,7 +67,7 @@ export function UncitedClauses(props: {
       {totalOnFile === 0 && (
         <p role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>
-          No agreement or amendment clauses are on file for this facility, so there is nothing here to read. Do not treat
+          No agreement or amendment clauses are on file for this loan, so there is nothing here to read. Do not treat
           that as a clean result.
         </p>
       )}

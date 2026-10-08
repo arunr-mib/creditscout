@@ -380,7 +380,7 @@ export function CovenantSetup(props: {
         <div className="rounded-md border border-border bg-surface p-3">
           <h2 className="text-card text-text">Versions</h2>
           {shownHistory.length === 0 ? (
-            <p className="mt-2 text-body text-text-secondary">No covenant terms exist for this facility yet. No test can run until a person approves some.</p>
+            <p className="mt-2 text-body text-text-secondary">No covenant terms exist for this loan yet. No test can run until a person approves some.</p>
           ) : (
             <table className="mt-2 w-full text-left text-body">
               <thead>

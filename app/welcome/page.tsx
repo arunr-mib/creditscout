@@ -37,7 +37,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             approves.
           </h1>
           <p className="max-w-content text-body text-text-secondary">
-            Analysts monitor dozens of borrower facilities and investigate covenant exceptions every reporting cycle.
+            Analysts monitor dozens of borrower loans and investigate covenant exceptions every reporting cycle.
             CreditScout runs that investigation for DSCR: it finds the covenant definition across the credit agreement
             and its amendments, recomputes the ratio on the right basis, reconciles it against the borrower&rsquo;s
             reported figure, and recommends — resolve, escalate, or request more. It never makes the decision.

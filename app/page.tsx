@@ -152,7 +152,7 @@ export default async function Home() {
             { label: "Open exceptions", help: "Breaches not yet closed", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
             { label: "Awaiting your review", help: "The agent finished; you decide", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
             { label: "Avg steps / case", help: "Investigation steps", value: kpis.avgSteps, empty: "—", tone: "muted" },
-            { label: "Facilities tested", help: "This quarter", value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
+            { label: "Loans tested", help: "This quarter", value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
           ]}
         />
       </header>
@@ -161,7 +161,7 @@ export default async function Home() {
       <section aria-label="Portfolio" className="space-y-5">
         <h2 className="text-section text-text">Borrowers</h2>
         {facilities.length === 0 ? (
-          <p className="text-body text-text-secondary">No facilities on file. Board a covenant to add one.</p>
+          <p className="text-body text-text-secondary">No loans on file. Board a covenant to add one.</p>
         ) : (
           <PortfolioTable rows={rows} targetPeriod={targetPeriod} targetLabel={targetLabel} nextLabel={nextLabel} />
         )}

@@ -35,7 +35,7 @@ export function ClausePanel(props: {
       <Shell>
         <div role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>
-          <span className="font-mono">{unresolved}</span> does not resolve to any clause on file for this facility, so
+          <span className="font-mono">{unresolved}</span> does not resolve to any clause on file for this loan, so
           there is nothing to check this {subject} against.
         </div>
       </Shell>

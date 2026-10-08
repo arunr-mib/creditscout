@@ -86,7 +86,7 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
         <label className="flex flex-col gap-1 text-label text-text-muted">
           Borrower
           <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className={field}>
-            {facilities.length === 0 && <option value="">No facilities</option>}
+            {facilities.length === 0 && <option value="">No loans</option>}
             {facilities.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.borrower_name}
