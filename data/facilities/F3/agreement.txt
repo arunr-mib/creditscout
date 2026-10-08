@@ -4,7 +4,7 @@ CREDIT AGREEMENT
 
 dated as of September 20, 2023
 
-between NORTHGATE FOODS, INC., as Borrower, and FAIRHAVEN COMMERCIAL BANK, as Lender.
+between NORTHGATE FOODS, INC., as Borrower, and BANK OF STOIC, as Lender.
 
 ARTICLE I — DEFINITIONS
 
@@ -45,7 +45,7 @@ No waiver of any covenant or Event of Default, and no amendment of this Agreemen
 ARTICLE IX — MISCELLANEOUS
 
 §9.01 Notices.
-Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Northgate Foods, Inc., at cfo@northgatefoods.example. Notices to the Lender shall be sent to the attention of the Portfolio Manager, Fairhaven Commercial Bank.
+Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Northgate Foods, Inc., at cfo@northgatefoods.example. Notices to the Lender shall be sent to the attention of the Portfolio Manager, Bank of Stoic.
 
 §9.02 Governing Law.
 This Agreement is governed by the laws of the State of New York.

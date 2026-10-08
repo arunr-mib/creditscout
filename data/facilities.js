@@ -18,7 +18,7 @@
  */
 
 export const MARKER = "SYNTHETIC — FOR DEMONSTRATION";
-export const LENDER_NAME = "Fairhaven Commercial Bank";
+export const LENDER_NAME = "Bank of Stoic";
 
 /** Policy value `variance_tolerance` (supabase/migrations/0003_policy_seed.sql). */
 export const VARIANCE_TOLERANCE = 0.05;
@@ -391,18 +391,18 @@ export const FACILITIES = [F1, F3, F5];
  * calculator vocabulary only), one non-financial amendment, one passing quarter.
  * Test: (4,250,000 - 260,000 - 160,000) / (1,800,000 + 1,000,000) = 1.37.
  */
-const SUMMIT_AMENDMENT_NOTICE = "finance@summitfreight.example";
+const ZHATSAPP_AMENDMENT_NOTICE = "finance@zhatsapp.example";
 
 export const ONBOARDING_DEMO_FACILITIES = [
   {
-    id: "SUMMIT",
-    borrower_name: "Summit Freight Co.",
-    industry: "Logistics",
-    sender_domain: "summitfreight.example",
+    id: "ZHATSAPP",
+    borrower_name: "Zhatsapp Inc",
+    industry: "Software",
+    sender_domain: "zhatsapp.example",
     twist: "None. A clean borrower for exercising the onboarding flow end to end.",
     pattern_tag: "none",
     expected_outcome: "compliant",
-    amendment_notice_email: SUMMIT_AMENDMENT_NOTICE,
+    amendment_notice_email: ZHATSAPP_AMENDMENT_NOTICE,
     terms_versions: [
       {
         version: 1,
@@ -443,7 +443,7 @@ export const ONBOARDING_DEMO_FACILITIES = [
   },
   ...[
     {
-      id: "HARPER", name: "Harper Dairy Cooperative", industry: "Food & Beverage", domain: "harperdairy.example",
+      id: "MARCUS", name: "Marcus Tech", industry: "Technology", domain: "marcustech.example",
       min: 1.15, agreed: "2024-06-03", amended: "2025-09-15",
       fin: [3900000, 210000, 140000, 1500000, 1000000], dscr: 1.42,
     },
@@ -453,7 +453,7 @@ export const ONBOARDING_DEMO_FACILITIES = [
       fin: [5600000, 300000, 200000, 2200000, 1300000], dscr: 1.46,
     },
     {
-      id: "CEDAR", name: "Cedar Ridge Builders", industry: "Construction", domain: "cedarridgebuilders.example",
+      id: "PETWORKS", name: "Petworks LLC", industry: "Pet Products", domain: "petworks.example",
       min: 1.25, agreed: "2025-04-07", amended: "2026-02-20",
       fin: [3600000, 180000, 90000, 1500000, 900000], dscr: 1.39,
     },

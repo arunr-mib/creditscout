@@ -4,7 +4,7 @@ CREDIT AGREEMENT
 
 dated as of April 7, 2025
 
-between CEDAR RIDGE BUILDERS, INC., as Borrower, and FAIRHAVEN COMMERCIAL BANK, as Lender.
+between PETWORKS LLC, as Borrower, and BANK OF STOIC, as Lender.
 
 ARTICLE I — DEFINITIONS
 
@@ -45,7 +45,7 @@ No waiver of any covenant or Event of Default, and no amendment of this Agreemen
 ARTICLE IX — MISCELLANEOUS
 
 §9.01 Notices.
-Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Cedar Ridge Builders, Inc., at cfo@cedarridgebuilders.example. Notices to the Lender shall be sent to the attention of the Portfolio Manager, Fairhaven Commercial Bank.
+Notices to the Borrower shall be sent to the attention of the Chief Financial Officer, Petworks LLC, at cfo@petworks.example. Notices to the Lender shall be sent to the attention of the Portfolio Manager, Bank of Stoic.
 
 §9.02 Governing Law.
 This Agreement is governed by the laws of the State of New York.

@@ -1,15 +1,15 @@
 SYNTHETIC — FOR DEMONSTRATION
 
-SUMMIT FREIGHT CO. — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+MARCUS TECH — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
 
 Period ended: September 30, 2026
 Basis: trailing twelve months
 
 §1 Debt Service Coverage Inputs
-Consolidated EBITDA: 4,250,000
-Unfinanced Capital Expenditures: 260,000
-Cash Taxes Paid: 160,000
-Scheduled Principal Payments: 1,800,000
+Consolidated EBITDA: 3,900,000
+Unfinanced Capital Expenditures: 210,000
+Cash Taxes Paid: 140,000
+Scheduled Principal Payments: 1,500,000
 Cash Interest Paid: 1,000,000
 
 §2 Add-Back Items

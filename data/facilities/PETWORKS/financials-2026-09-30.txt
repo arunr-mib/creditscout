@@ -1,16 +1,16 @@
 SYNTHETIC — FOR DEMONSTRATION
 
-HARPER DAIRY COOPERATIVE — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
+PETWORKS LLC — TRAILING FOUR-QUARTER FINANCIAL SUMMARY
 
 Period ended: September 30, 2026
 Basis: trailing twelve months
 
 §1 Debt Service Coverage Inputs
-Consolidated EBITDA: 3,900,000
-Unfinanced Capital Expenditures: 210,000
-Cash Taxes Paid: 140,000
+Consolidated EBITDA: 3,600,000
+Unfinanced Capital Expenditures: 180,000
+Cash Taxes Paid: 90,000
 Scheduled Principal Payments: 1,500,000
-Cash Interest Paid: 1,000,000
+Cash Interest Paid: 900,000
 
 §2 Add-Back Items
 Amounts incurred during the period, before any limit under the Credit Agreement.

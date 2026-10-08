@@ -36,7 +36,12 @@ const CSV_PATH = join(DATA_DIR, "expected-values-template.csv");
 
 const LETTERS = "abcdefghijklmnopqrstuvwxyz";
 const sentenceCase = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-const legalName = (f) => `${f.borrower_name}, Inc.`;
+// Append ", Inc." only when the name has no corporate suffix already — so
+// "Zhatsapp Inc" / "Petworks LLC" don't become "…, Inc." twice.
+const legalName = (f) =>
+  /\b(inc|llc|l\.l\.c|co|corp|ltd|lp|l\.p|company|incorporated|cooperative|group|holdings)\.?$/i.test(f.borrower_name)
+    ? f.borrower_name
+    : `${f.borrower_name}, Inc.`;
 
 const doc = (f, type) => f.documents.find((d) => d.doc_type === type);
 const version = (f, n) => f.terms_versions.find((v) => v.version === n);
