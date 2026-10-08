@@ -145,7 +145,7 @@ guardrails/policy.js
 *Stage 2 · depends on nothing · **gated on owner validation of the three twists***
 
 ### Product & UX
-- **Description:** Three synthetic facilities — F1 Harbor Logistics (amendment add-back), F3 Northgate Foods (true breach), F5 Coastal Marine (repeat of F1's pattern) — each with agreement, amendment/waiver, quarterly financials, compliance certificate.
+- **Description:** Six synthetic facilities. Three carry a twist — F1 Harbor Logistics (amendment add-back), F3 Northgate Foods (true breach), F5 Coastal Marine (repeat of F1's pattern) — each with agreement, amendment/waiver, quarterly financials, compliance certificate. Three are performing loans with no twist and no amendment — F7 Dokusign Inc (1.40x), F8 Peat's Coffee Company (1.10x), F9 Costko Wholesale (1.35x) — each with agreement, financials, certificate. The minimum is per loan: `baseCitations(min)` quotes the threshold the generator prints into that agreement, so a document can never disagree with its terms.
 - **Plus two extra quarters on F5**, so the demo can show all three quarterly outcomes rather than only the third:
 
 | Period | Borrower reports | We compute | Mechanism | Outcome shown |
@@ -578,7 +578,7 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 - [x] **F4** Ingest — chunks land in the database
 - [x] **F5** Agent tools — spike passed; routes built; specialists revised to in-process function tools
 - [x] **F6** Covenant setup — terms proposed, cited, approved, versioned
-- [x] **F7** Quarterly test — all three facilities tested; F1 and F3 raise exceptions
+- [x] **F7** Quarterly test — every seeded facility tested against its own boarded minimum; F1, F3 and F5 raise exceptions
 - [x] **F8** Investigation — F1 resolves, F3 escalates; guardrail downgrade verified live
 - [x] **F9** Review + memory + screens — F1 override makes F5 faster ("seen similar" verified live)
 - [~] **F10** Deploy + eval — public URL ✓, scoreboard ✓, calc accuracy 100% recorded ✓; **live cold/warm passes pending (billable)**

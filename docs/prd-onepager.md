@@ -125,8 +125,8 @@ headline honest) · cost per investigation ≤ $1 · steps ≤ 8.
 
 ## Rollout & rollback
 
-**Rollout:** Internal measurement — 3 seeded loans + 5 onboarding loans, **10
-owner-signed eval cases**; **calculation accuracy 100% measured** (12/12
+**Rollout:** Internal measurement — 6 seeded loans (3 carrying a covenant twist,
+3 performing) + 5 onboarding loans, **10 owner-signed eval cases**; **calculation accuracy 100% measured** (12/12
 figures), the live cold + warm agent passes next → Beta (full eval, cold + warm)
 → design-partner pilot on real documents. Each gate requires **0 false
 resolves**, not a low rate. Scoreboard is grouped Honest / Harmless / Helpful.

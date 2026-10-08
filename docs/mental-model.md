@@ -251,7 +251,7 @@ second.
 The lender in every synthetic document is **Bank of Stoic** (fictional). Every
 document carries `SYNTHETIC — FOR DEMONSTRATION`.
 
-### 4.1 Three seeded loans — the investigation cases
+### 4.1 The six seeded loans — three with a twist, three performing
 
 | Loan | Period | Borrower reports | **We compute** | Mechanism | Expected path | Outcome |
 |---|---|---|---|---|---|---|
@@ -263,6 +263,28 @@ document carries `SYNTHETIC — FOR DEMONSTRATION`.
 
 **F3 is the headline case.** The borrower reports *compliant*; nobody would have
 investigated. We compute a breach because we applied their actual covenant.
+
+#### The performing loans
+
+The three above are the cases worth investigating, and for a while they were the
+whole seeded book — which made the portfolio read as though every loan were a
+problem and every covenant were set at 1.25x. Three performing loans carry the
+rest of the book:
+
+| Loan | Minimum | Borrower reports | **We compute** | Outcome |
+|---|---|---|---|---|
+| **F7 Dokusign Inc** | **1.40x** | 1.54 | 1.54 | Compliant, no action |
+| **F8 Peat's Coffee Company** | **1.10x** | 1.19 | 1.19 | Compliant, thin headroom |
+| **F9 Costko Wholesale** | **1.35x** | 1.59 | 1.59 | Compliant, no action |
+
+They are deliberately dull — one boarded version, no add-back, no amendment,
+reported equals computed — and they do two jobs. They show what the code-only
+path looks like when nothing is wrong, and they make the minimum legible as a
+**term negotiated per loan** rather than a constant. The number the agent reads
+comes from that loan's own §7.11; nothing in the product hard-codes 1.25.
+
+They raise no exception, produce no casefile and appear in **no oracle row**, so
+no eval metric counts them.
 
 **Covenant boarding lag is the F1/F5 mechanism, and it is realistic** — setup
 accuracy is a recurring loan-review audit finding, which is also why Flow A

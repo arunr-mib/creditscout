@@ -17,7 +17,10 @@ and the rest has been refreshed to 2026-10-08.
 
 The product is **built, deployed and verified live** at `https://credit-scout.vercel.app`
 (one Vercel project, deploys `main`; shared-credential demo gate,
-credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
+credentials on the sign-in page). Production deploys from branch
+`arunr-mib/creditscout`, but **only via an explicit `vercel --prod`** — the
+project's production branch is `main`, so a push to this branch builds a
+Preview and nothing else.
 
 | Area | State |
 |---|---|
@@ -28,8 +31,10 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | Eval harness | ✅ `evals/run.mjs` + `evals/grade.mjs` (17 tests). `npm run eval` · `--write` · `--live`. |
 | Deterministic eval pass | ✅ **run and recorded** — calculation accuracy **100%** (12/12 signed figures), code path 100%; `eval_runs` row (`mode: cold`, `pass: "deterministic"`) → the Governance scoreboard shows it, everything agent-level reads "—". |
 | Live cold + warm eval passes | ✅ **run twice 2026-10-08** (owner's go; billable). Latest: `eval-20261008T041142Z-cold` + `eval-20261008T041702Z-warm`, exit 0. **Zero false resolves across all four passes.** Calc accuracy 100%. Outcome accuracy **60% cold, 60% warm** (target ≥85%); avg steps **7.0 cold, 8.0 warm** — the memory effect is **negative and now cleanly measured**. The step-cap fix worked; rule 8 half-worked. See §0.6. |
-| Tests | 971/971 `npm test`, `tsc --noEmit` clean. |
-| Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state (commits `9c18ebf`, `cf076c0`). |
+| Tests | 1,010/1,010 `npm test`, `tsc --noEmit` clean. |
+| Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state, last swept 2026-10-08. |
+| **Seeded book (2026-10-08)** | ✅ **6 loans.** F1/F3/F5 carry the twists; **F7 Dokusign Inc (1.40x), F8 Peat's Coffee Company (1.10x), F9 Costko Wholesale (1.35x)** are performing loans added so the book is not made only of exceptions and the minimum reads as per-loan, not a constant. Not evaluated — no oracle rows, no eval denominator moved. |
+| **UI sweep (2026-10-08)** | ✅ Indigo brand accent throughout incl. all table headers; queue, casefile, Lessons, Governance and Documents rebuilt on the owner's mockups; equal-width row actions; two button colours only (indigo = act, beige = open). |
 
 ### 0.2 Key decisions since 2026-10-06 (all owner-approved)
 
@@ -41,7 +46,7 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | **Portfolio triage table** + "+ New borrower" + **dark-native depth, no shadows** (design.md bans `boxShadow`) | Borrowed from Covenant IQ's triage-at-a-glance; owner chose option A over shadows. | `components/PortfolioTable.tsx`, `portfolioModel.ts` |
 | **Governing-first casefile** (test-period figure under the governing terms, amendment-status panel, *provisional* label on amendment-dependent narrative) | A credit-analyst reviewer asked for the governing number first. | `components/CasefileView.tsx`, `casefileModel.ts` |
 | **Onboarding wizard**: route-driven, all documents uploaded in one step, review embedded in the wizard chrome (B), **effective date required** for agreement/amendment | Without the date, extraction 422s ("Cannot determine an effective date"). | onboarding spec §8, `components/UploadPackage.tsx` |
-| **Lender renamed "Bank of Stoic"**; onboarding borrowers **Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works**; F1/F3/F5 keep their old names; the stray "Summit" facility in the DB stays (owner: "I won't touch it in the demo") | The prior lender name resembled a real bank. | `data/facilities.js` |
+| **Lender renamed "Bank of Stoic"**; onboarding borrowers **Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works**; F1/F3/F5 keep their old names | The prior lender name resembled a real bank. | `data/facilities.js` |
 | **The five onboarding packages are never seeded** | Onboarding must genuinely create the loan live. The eval harness therefore *skips* them until onboarded (4.11). | onboarding spec §5 |
 | **Eval set is 10 signed cases, reported as 10** (not 24); scoreboard grouped **Honest / Harmless / Helpful**; evals are **hybrid** — grading is deterministic Node code against the signed key, the investigations run on Azure, only groundedness goes to the Foundry judge | The safety numbers must not be judged by a model. | PRD §5.1/§6.1, HLD §11 |
 | `generate()` **refuses to overwrite a signed oracle**; the drift test compares generator-owned columns only | `npm run generate:data` would otherwise erase the owner's values. | `data/generate.mjs`, `data/generate.test.js` |
@@ -219,7 +224,7 @@ CreditScout is a decision-support agent for commercial credit analysts monitorin
 
 A rules engine can tell an analyst that a *reported* ratio is below its threshold. What it can't do is the work either side of that: compute the ratio independently from the covenant that is actually in force, and then run the investigation when the numbers disagree — find the definition across a long credit agreement and its amendments, recompute on the right basis, explain the gap against the borrower's own figure, and judge whether the evidence is good enough to resolve, escalate, or ask for more.
 
-The scope is deliberately one covenant — **DSCR**, tested quarterly on a trailing-twelve-month basis — across three synthetic borrower facilities.
+The scope is deliberately one covenant — **DSCR**, tested quarterly on a trailing-twelve-month basis — across six synthetic borrower facilities, three of which carry a twist worth investigating.
 
 **It never makes a credit decision.** It recommends; a human analyst approves or overrides, and overrides become memory for later cases.
 
@@ -308,9 +313,11 @@ Decided 2026-10-05. The original design read the borrower's reported DSCR and in
 
 Four-eyes. A setup error here would silently corrupt every future test for that borrower, and setup accuracy is a recurring loan-review audit finding. An amendment creates `version + 1` and supersedes; it never overwrites, because a Q1 test must stay reproducible against the terms in force in Q1.
 
-### 4.7 Three facilities, not six
+### 4.7 Six facilities — three evaluated, three performing
 
-F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine. F2, F4 and F6 are parked in `docs/parking-lot.md` §4.1 — they are the two that exercise `request` and `abstain`, and they are first to restore. **Report the eval set as what it is. Six cases is six cases, never twenty-four.**
+F1 Harbor Logistics, F3 Northgate Foods and F5 Coastal Marine carry the twists and are the evaluated cases. F7 Dokusign Inc (1.40x), F8 Peat's Coffee Company (1.10x) and F9 Costko Wholesale (1.35x) were added 2026-10-08: performing loans with no twist, no amendment and reported equal to computed. They exist because a book made only of exceptions is not a book, and because three loans all boarded at 1.25 made the minimum look like a constant rather than a term negotiated per loan.
+
+The performing three raise no exception, produce no casefile and sit in **no oracle row** — `renderCsv` covers `EVALUATED_FACILITIES`, so no eval denominator moves. **F2, F4 and F6 stay reserved** in `docs/parking-lot.md` §4.1: they are the two that exercise `request` and `abstain`, they are first to restore, and the performing loans deliberately did not take their ids. **Report the eval set as what it is. Ten cases is ten cases, never twenty-four.**
 
 ### 4.8 Financial figures are printed as labeled lines
 
@@ -356,7 +363,7 @@ Build sequence is `docs/engineering/engineering-doc.md` §9 — eleven stages, e
 |---|---|---|
 | 0 | Supabase schema + RLS | ✅ live on cloud, anon-write verified blocked |
 | 1 | `calc/dscr.js`, `guardrails/*.js` + tests | ✅ |
-| 2 | Synthetic documents F1/F3/F5 + expected-values template | ✅ 16 documents seeded, twist live; oracle **signed** (10 rows, incl. the 5 onboarding loans) |
+| 2 | Synthetic documents + expected-values template | ✅ 25 documents seeded across 6 facilities, twist live; oracle **signed** (10 rows, incl. the 5 onboarding loans) — the 3 performing loans add documents but no oracle rows |
 | 3 | Next.js scaffold + design tokens + Supabase clients | ✅ |
 | 4 | `/api/ingest` + chunking + embeddings | ✅ facility isolation proved |
 | 5 | Agent tool routes + OpenAPI | ✅ fail-closed auth; specialists revised to in-process function tools (§0.2) |
@@ -371,7 +378,9 @@ Build sequence is `docs/engineering/engineering-doc.md` §9 — eleven stages, e
 
 ### What is live in the cloud database
 
-3 seeded facilities (Harbor, Northgate, Coastal) + a stray "Summit" facility (owner: leave it) + any loans onboarded live through the wizard · their documents and `doc_chunks` (lender text updated to "Bank of Stoic") · **approved v1** `covenant_terms` on the seeded three · demo-run `tests`/`exceptions`/`casefiles`/`reviews` from the live demo · 1 `eval_runs` row (deterministic). Eval passes use `eval-*` run_ids and never touch the `demo` run.
+6 seeded facilities — Harbor, Northgate, Coastal (twists) and Dokusign, Peat's Coffee, Costko (performing) — plus any loans onboarded live through the wizard · their documents and `doc_chunks` (lender text "Bank of Stoic") · **approved v1** `covenant_terms` on all six · demo-run `tests`/`exceptions`/`casefiles`/`reviews` from the live demo · `eval_runs` rows. Eval passes use `eval-*` run_ids and never touch the `demo` run.
+
+Cleaned out 2026-10-08 (all owner-approved): the stray "Summit Freight Co." facility, two duplicate "Marcus"/"Marcus Tech" rows and an empty "Zhatsapp Inc" row — all leftovers from onboarding test runs, none carrying an exception or casefile. The database now holds exactly the six seeded loans, so the queue reads "6 of 6 tested" with no stray "Not tested" row.
 
 **Both of F1's and F5's Amendment No. 2 are on file as documents with no matching terms row.** That is the covenant boarding lag, and it is the twist the whole demo rests on. Nothing — not the seed, not a fixture, not a verification script — may approve a v2 for those two facilities.
 

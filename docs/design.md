@@ -204,10 +204,21 @@ them would be hiding the best evidence the product has.
 Height 36px, padding 16px, `radius-md`, 14px/500. Disabled: 40% opacity,
 `cursor: not-allowed`.
 
+**Two button colours in a row of actions, and they mean something.** Indigo
+(`model`) is reserved for *doing work* — Run test, Investigate. Beige
+(`human`) is for *opening something* — Review, View decision, Review terms. A
+third colour in the same column would make the distinction decorative. Where a
+table column holds one action per row, give the cell a fixed width and stretch
+every child to fill it: actions of different widths read as different weights.
+Note that a button wrapped for a disabled-reason tooltip needs the wrapper
+stretched too, not just the `<button>`.
+
 ### 5.8 Data table
 
-`surface` background, `border` row dividers, 40px rows, 12px uppercase muted
-headers. Numeric columns **right-aligned, monospace, tabular-nums**. Hover
+`surface` background, `border` row dividers, 40px rows. Column headers are
+12px in `model-bright` on a `model-bg/50` wash — the header row is the one
+element that repeats on every screen, so it is where the brand accent earns its
+keep. Numeric columns **right-aligned, monospace, tabular-nums**. Hover
 `surface-raised`. Status via badge, never via row tint.
 
 ### 5.9 Locked policy value

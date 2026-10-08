@@ -33,7 +33,6 @@ data/facilities/**/*.pdf
 
 # Playwright MCP session artifacts
 .playwright-mcp/
-phaseB-casefile.png
 .vercel
 
 # Session screenshots dropped at the repo root (not product assets)

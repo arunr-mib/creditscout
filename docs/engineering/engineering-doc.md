@@ -588,7 +588,7 @@ of whether the sequence is right.
 | **4** | `/api/ingest` + chunking + embeddings | Upload an agreement, see rows in `doc_chunks` | 0, 2, 3 |
 | **5** | **Foundry spike** — one agent, one tool route, round trip | Agent calls `/api/tools/dscr-calculator` and gets a number back. **Highest-risk stage; run it first in wall-clock terms even though it depends on 1 and 4.** | 1, 4 |
 | **6** | Flow A — propose + approve covenant terms | Terms proposed with citations, analyst approves, row goes `approved` | 4, 5 |
-| **7** | Flow B part 1 — `/api/tests/run`, code-only | All three facilities tested quarterly; F1 and F3 raise exceptions. **No agent involved — pure code.** | 1, 6 |
+| **7** | Flow B part 1 — `/api/tests/run`, code-only | Every seeded facility tested quarterly, each against its own boarded minimum; F1, F3 and F5 raise exceptions, F7/F8/F9 pass. **No agent involved — pure code.** | 1, 6 |
 | **8** | Flow B part 2 — investigation, guardrail, policy | F1 resolves, F3 escalates, with cited casefiles | 5, 7 |
 | **9** | UI screens + review + memory | F1 → override → F5 resolves in fewer steps | 8 |
 | **10** | Deploy to Vercel + eval run | Public URL; scoreboard with the signed cases, cold and warm | 9 |
@@ -686,7 +686,7 @@ network beyond the schema migration, and now no platform dependency either.
 | ~~**Connected Agents may not work**~~ | **RETIRED 2026-10-05 — spiked and verified live.** An orchestrator on `gpt-4.1-mini` delegated to a `gpt-5-mini` specialist via a `connected_agent` tool, and the delegation appears as a discrete step in the run-steps API — which is also the trace the UI renders. A separate spike confirmed a function-tool round trip: the agent called `dscr_calculator`, did **not** compute the ratio itself, and reported back exactly the number the tool returned. |
 | ~~**Connected Agents is a preview feature.**~~ | **RESOLVED 2026-10-06 — fallback taken after the first working runs.** Not for flakiness: a connected agent cannot carry a function tool, so specialists could not retrieve for themselves. Demoted to function tools serviced in-process (§4.1, parking-lot 7.4). No preview dependency remains. |
 | Foundry Agent Service adds platform-specific learning time | That is the point of the exercise, and the course taught it in Week 5 |
-| Agent path too uniform, looks like a pipeline | The three seeded twists (boarding lag ×2, unpermitted add-back) plus the Vantage breach force different paths; the trace reads as an orchestration plan with per-step purpose, and the F1 vs F5 comparison is in the demo |
+| Agent path too uniform, looks like a pipeline | The three seeded twists (boarding lag ×2, unpermitted add-back) plus the Vantage breach force different paths; the three performing loans (F7/F8/F9) show the code-only path that never reaches an agent at all; the trace reads as an orchestration plan with per-step purpose, and the F1 vs F5 comparison is in the demo |
 | Model hallucinated figures or quotes | Unchanged: code guardrails force abstain, tested against fabricated outputs |
 | Step cap enforcement differs from an n8n node setting | Enforced by our polling layer against `policy.max_steps`; see §12 open item 4 |
 | Supabase free-plan database sleeps after ~1 week idle | Daily use avoids it; Pro removes it for ~$25 — owner's call |
