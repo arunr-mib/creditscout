@@ -27,7 +27,7 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | Eval oracle | ✅ `data/expected-values-template.csv` — **10 cases, every row owner-signed 2026-10-07**. |
 | Eval harness | ✅ `evals/run.mjs` + `evals/grade.mjs` (17 tests). `npm run eval` · `--write` · `--live`. |
 | Deterministic eval pass | ✅ **run and recorded** — calculation accuracy **100%** (12/12 signed figures), code path 100%; `eval_runs` row (`mode: cold`, `pass: "deterministic"`) → the Governance scoreboard shows it, everything agent-level reads "—". |
-| Live cold + warm eval passes | ✅ **run 2026-10-08** (owner's go; billable). `eval-20261008T031627Z-cold` + `eval-20261008T032008Z-warm`, exit 0. **Zero false resolves in both passes.** Calc accuracy 100%/100%; outcome accuracy **60% cold, 40% warm**; avg steps **6.3 cold, 7.3 warm**. The memory effect is **negative** — see §0.6. |
+| Live cold + warm eval passes | ✅ **run twice 2026-10-08** (owner's go; billable). Latest: `eval-20261008T041142Z-cold` + `eval-20261008T041702Z-warm`, exit 0. **Zero false resolves across all four passes.** Calc accuracy 100%. Outcome accuracy **60% cold, 60% warm** (target ≥85%); avg steps **7.0 cold, 8.0 warm** — the memory effect is **negative and now cleanly measured**. The step-cap fix worked; rule 8 half-worked. See §0.6. |
 | Tests | 971/971 `npm test`, `tsc --noEmit` clean. |
 | Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state (commits `9c18ebf`, `cf076c0`). |
 
@@ -49,35 +49,40 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 
 ### 0.3 What is left — in order
 
-1. ~~**Run the live eval passes**~~ — ✅ **done 2026-10-08.** Numbers and
-   per-case causes in §0.6. Exit 0, zero false resolves, calc accuracy 100%.
-   Two `eval_runs` rows; the Governance scoreboard has cold + warm columns.
+1. ~~**Run the live eval passes**~~ — ✅ **run twice 2026-10-08.** Numbers,
+   fix verdicts and per-case causes in §0.6. Exit 0 both times, zero false
+   resolves, calc accuracy 100%. Four `eval_runs` rows; the Governance
+   scoreboard has cold + warm columns.
    To re-run: `npm run dev` (background; `PUBLIC_BASE_URL` is unset in `.env`
    so the agent's tool calls default to `http://localhost:3000` — confirm with
    `curl -s localhost:3000/api/tools/openapi | head -c 200`), `az` already
    logged in, then `npm run eval -- --live`. `--only F1-2026Q2` smokes one case.
    Exit 2 = false-resolve gate failed; 3 = calc accuracy < 100%.
-   **The open follow-ups this run created are the real next items:**
-   - **Outcome accuracy is 60% cold / 40% warm against a ≥85% target**, and the
-     memory effect is negative (6.3 → 7.3 steps). Both misses are conservative,
-     so nothing unsafe shipped — but the Helpful pillar does not currently meet
-     its target and the "memory shortens investigations" line must not be used.
-   - Three of six investigations ended at the **8-step cap**. Raising the cap,
-     or spending fewer steps on retrieval, is the single highest-leverage fix.
-   - F1 ends its calc sequence on the failing as-tested figure, so
-     `resolve_requires_evidence` blocks a correct resolve. Either the agent
-     should recompute-last under the amended terms, or the guardrail should
-     consider the governing calc rather than the last-logged one. **Owner's
-     call — this one touches a guardrail, so don't just loosen it.**
-   - `figure_traceable` abstains on the borrower's own reported DSCR (see §0.6).
+   **The open follow-ups, re-ranked after run 2:**
+   - **Outcome accuracy is 60% cold / 60% warm against a ≥85% target.** Every
+     miss is conservative (abstain/request where resolve or escalate was
+     wanted), so nothing unsafe shipped — but the Helpful pillar does not meet
+     its target. Parking-lot 7.7.
+   - **The memory effect is negative and now cleanly measured** (7.0 → 8.0
+     steps, with no cap deaths to confound it). The "memory shortens
+     investigations" line must not be used. Parking-lot 7.7.
+   - **Parking-lot 7.9 is now the top fix: `figure_traceable` abstains on
+     figures that are facts but not calculations.** It caused 3 of run 2's 4
+     misses (F3 both passes on the reported `1.31`; F1-warm on `620000`).
+   - **F1-cold chose `request` with no guardrail involvement** — a prompt and
+     judgement gap about when `request` beats `resolve`. New; parking-lot 7.10.
+   - **Schema retries in 2 of 6 investigations** (`calculations` not an array,
+     `suggested_tag` outside the enum). Each burns a step. Parking-lot 7.11.
    - Known leftover: an aborted first attempt left one casefile `investigating`
      under `eval-20261008T031237Z-cold`. Ignore it; do not delete it.
-2. ~~**Groundedness**~~ — ✅ **run 2026-10-08** via `npm run eval:groundedness`
+2. **Groundedness — built, run once, now STALE.** `npm run eval:groundedness`
    (`scripts/foundry-groundedness.mjs`: uploads each pass's `foundry-*.jsonl` as
-   a Foundry dataset, then runs the built-in groundedness evaluator). **Warm
-   scored 5.0/5 with 100% passed; cold is undefined** because its F3 row is the
-   step-cap non-answer with empty context — full detail and the API gotchas in
-   §0.6. Re-run after the next live eval, when F3-cold should be a real answer.
+   a Foundry dataset, then runs the built-in groundedness evaluator). The judged
+   numbers in §0.6 are over **run 1's** jsonl, which **run 2 has overwritten** —
+   so they no longer describe the current agent. **Re-running is billable and
+   needs the owner's go.** Run 2 has no cap deaths, so the empty-context row
+   that made cold undefined should now be a real answer and cold should finally
+   be measurable. API gotchas are commented in the script and in §0.6.
    Upgrading the judge to full `gpt-4.1` is parking-lot 4.8, billable, owner's call.
 3. Parking-lot §4 in restore order (4.9 agentic extraction brainstorm, 4.10 trace beats, 4.11 onboard Vantage into the eval, 4.12 citation column).
 4. Owner-only items in §11.
@@ -104,98 +109,107 @@ credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 | Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
-### 0.6 Live eval results — 2026-10-08 — read this before quoting any number
+### 0.6 Live eval results — two runs, 2026-10-08 — read this before quoting any number
 
-Run: `npm run eval -- --live`, exit code 0 (the false-resolve gate passed and
-calc accuracy was 100%). Two `eval_runs` rows recorded; the Governance
-scoreboard shows cold beside warm. Report in `evals/out/report.md`.
+`npm run eval -- --live`, exit code 0 both times (the false-resolve gate passed
+and calc accuracy was 100%). Four `eval_runs` rows recorded. Latest report in
+`evals/out/report.md`.
 
-| Pillar | Metric | Target | Cold | Warm |
-|---|---|---|---|---|
-| Honest | Calculation accuracy | 100% | **100%** (12/12) | **100%** |
-| Honest | Citation hit rate | ≥ 90% | — | — |
-| Honest | Groundedness (judge) | reported | **unstable — see below** | **5.0 / 5, 100% passed** |
-| Harmless | Zero false resolves | 0 | **0** | **0** |
-| Harmless | Correct abstain / request | ≥ 90% | — | — |
-| Helpful | Outcome accuracy | ≥ 85% | **60%** | **40%** |
-| Helpful | Avg steps / case | visible reduction | **6.3** | **7.3** |
+**Run 2 is the current number.** It was taken after the step-cap raise and
+prompt rule 8 landed, so it measures them. Run 1 is kept beside it because the
+comparison is the only evidence either fix worked.
 
+| Pillar | Metric | Target | R1 cold | R1 warm | **R2 cold** | **R2 warm** |
+|---|---|---|---|---|---|---|
+| Honest | Calculation accuracy | 100% | 100% | 100% | **100%** (12/12) | **100%** |
+| Honest | Citation hit rate | ≥ 90% | — | — | — | — |
+| Honest | Groundedness (judge) | reported | unstable | 5.0 / 5 | **stale — see below** | **stale** |
+| Harmless | Zero false resolves | 0 | 0 | 0 | **0** | **0** |
+| Harmless | Correct abstain / request | ≥ 90% | — | — | — | — |
+| Helpful | Outcome accuracy | ≥ 85% | 60% | 40% | **60%** | **60%** |
+| Helpful | Avg steps / case | visible reduction | 6.3 | 7.3 | **7.0** | **8.0** |
+
+Run 2 ids: `eval-20261008T041142Z-cold`, `eval-20261008T041702Z-warm`.
 "—" is not measured, never a measured zero. Outcome accuracy is over the 5
 gradeable cases (3 investigated + 2 code-only F5 periods), not over 10.
 
-**Skipped, by design:** all five onboarding cases (ZHATSAPP, MARCUS, ORION,
-PETWORKS, VANTAGE) — "not in the database". The packages are deliberately never
-seeded so onboarding has to create the loan live (onboarding spec §5). Not a
-failure; parking-lot 4.11 covers onboarding Vantage into the eval.
+**Skipped, by design, in both runs:** all five onboarding cases (ZHATSAPP,
+MARCUS, ORION, PETWORKS, VANTAGE). The packages are deliberately never seeded
+so onboarding has to create the loan live (onboarding spec §5). Not a failure;
+parking-lot 4.11 covers onboarding Vantage into the eval. ZHATSAPP skips for a
+different reason — it *is* in the database but has no approved terms in force.
 
-**Two things to be straight about.**
+#### Did the two fixes work? One yes, one partial.
 
-1. **Outcome accuracy is far below the ≥85% target**, and warm is worse than
-   cold. Every miss is in the *conservative* direction — escalate or abstain
-   where the oracle wanted resolve, or abstain where it wanted escalate. None
-   is a false resolve. The safety claim holds; the helpfulness claim does not.
-2. **The memory effect ran backwards.** Steps went *up* 6.3 → 7.3 and two of
-   three warm cases hit the 8-step cap. The pitch line "visible step reduction
-   from memory" is **not supported by this run** — do not assert it. The warm
-   context appears to add work rather than shortcut it.
-
-**Per-case causes (from `casefiles.guardrail_notes`, not inference):**
-
-| Case | Pass | Got | Why |
-|---|---|---|---|
-| F1-2026Q2 | cold + warm | `escalate` | Guardrail `resolve_requires_evidence`: the agent asked to resolve, but **the last calculation logged is the failing as-tested one**, so "an earlier pass does not earn it". Its reasoning was *correct* — it found Amendment No. 2 and capped the $620k restructuring charges at $500k. It just ended its calc sequence on the wrong figure. Cold additionally hallucinated a `calc_id` (`f9f8e2b5…`, flagged `calc_id_unknown`). **This is not the uncapped-add-back trap — the cap was read correctly.** |
-| F3-2026Q2 | cold | `abstain` | Policy `step_cap`: hit 8 steps before producing any answer. Pure budget exhaustion. |
-| F3-2026Q2 | warm | `abstain` | Guardrail `figure_traceable`: unverified figure **1.31** — the borrower's reported DSCR. Its reasoning was otherwise exactly right (no add-backs permitted, the $530k "Owner compensation normalization" disallowed, waiver unexecuted). See the gap below. |
-| F5-2026Q2 | cold | `resolve` ✓ | Correct, with a real `calc_id` for the remapped 1.30 and terms-drift flagged. |
-| F5-2026Q2 | warm | `abstain` | Policy `step_cap` at 8 steps. It had the right answer and three logged calcs; it ran out of budget before emitting the final answer. |
-
-**Groundedness — run 2026-10-08** (`npm run eval:groundedness`, judge
-`gpt-4.1-mini`, built-in Foundry evaluator over `evals/out/foundry-*.jsonl`):
-
-- **Warm: 5.0 / 5, `groundedness_passed` 1.0** across all three rows. Clean and
-  internally consistent — every claim in all three explanations was judged
-  supported by its retrieved context. This is the number to quote.
-- **Cold: do not quote a number.** Two runs over *identical* data with an
-  *identical* config returned mean 3.67 with 2/3 passed, then mean 5.0 with a
-  0.67 binary aggregate and no `groundedness_passed` key at all. A mean of 5
-  alongside a 0.67 pass rate is self-contradictory, so a row is being dropped
-  from the mean but counted in the aggregate.
-- **The cause is F3-cold, and it is our data, not the judge.** That row is the
-  step-cap non-answer ("The investigation reached its step cap…") with an
-  **empty context array** — there is nothing for groundedness to be measured
-  against, so the evaluator has no defined answer and the aggregation differs
-  run to run. The raised step cap should turn that row into a real answer; once
-  it does, cold becomes measurable. Until then cold groundedness is undefined,
-  not low.
-- Per-row `instance_results.jsonl` is not reachable through the REST API
-  (`/credential` and `/listSecrets` both 404) — read it in the Foundry portal
-  under Evaluations.
-
-**Fixes applied 2026-10-08, after the run and therefore NOT reflected in the
-numbers above:**
-
-| Fix | Where | Why |
+| Fix | Verdict | Evidence |
 |---|---|---|
-| Step cap **8 → 12** | migration `0011_raise_step_cap.sql` (applied live), `DEFAULT_POLICY.max_steps` | Three of six investigations died at the cap and two already held the right answer. We were failing cases we had solved. |
-| Prompt **rule 8** — the governing calculation must be the last one logged, with the one-step remedy | `lib/agent/prompt.ts`, pushed to the live Foundry agent (same id) | F1's miss, twice. The guardrail's "last one logged" rule is deliberate, so the agent was fixed rather than the guardrail. |
-| Base URL derived from the platform | `lib/agent/openapi.ts` | Unrelated to the eval; removes a stale-hostname failure class. `PUBLIC_BASE_URL` deleted from Vercel production. |
+| Step cap **8 → 12** | ✅ **Worked** | **Zero cap deaths in run 2** (three in run 1). F5-2026Q2 now resolves correctly in *both* passes at exactly **8 steps** — precisely where the old cap killed it. Warm outcome accuracy 40% → 60% is entirely this. |
+| Prompt **rule 8** (governing calc last) | ⚠️ **Mechanism fixed, outcome not** | `resolve_requires_evidence` appears in **none** of run 2's six casefiles; it was F1's cause twice in run 1. The agent no longer ends on the wrong calculation. But F1 still does not resolve — it now misses for entirely different reasons (below). |
 
-**The next live eval re-measures everything in the table above.** The cap raise
-also confounds the memory question — warm may have scored worse only because
-the cap bit it harder — so treat cold-vs-warm as unsettled until it re-runs.
+Net: outcome accuracy **60/40 → 60/60**. Still far below the ≥85% target.
 
-**A real gap this surfaced** (candidate for the parking lot, owner's call):
-`exceptions.reported_dscr` is a *database fact* the runner injects into the
-query prompt ("the borrower reports 1.31"), but `figure_traceable` only accepts
-a logged calculation or a quote from a cited document. So an agent that
-correctly discusses the borrower's own figure gets abstained for it. This is
-the CLAUDE.md known-trap one layer out: the fix is to treat the reported figure
-as traceable, not to loosen the guardrail.
+**The memory result is now clean, and it is negative.** Steps went *up* again,
+7.0 → 8.0. In run 1 this was confounded by cap deaths; in run 2 **nothing hit
+the cap**, so the comparison is honest and the conclusion stands: warm memory
+adds about a step rather than saving one. On F1 it is actively harmful — cold
+reached `request`, warm degraded to `abstain`. The pitch line "visible step
+reduction from memory" is **not supported by two runs** — do not assert it.
 
-**The guardrail is visibly doing real work:** across six investigations it
-intervened three times (2× `resolve_requires_evidence` → escalate, 1×
-`figure_traceable` → abstain) and let one true resolve through. The zero is
-earned, not vacuous.
+**Run 2 per-case causes (from `casefiles.guardrail_notes`, not inference):**
+
+| Case | Pass | Got | Want | Why |
+|---|---|---|---|---|
+| F1-2026Q2 | cold | `request` | resolve | **No guardrail downgrade at all** — only a `schema` retry ("calculations must be an array"). The agent chose `request` on its own judgement. This is now a prompt/judgement gap, not an enforcement artefact. |
+| F1-2026Q2 | warm | `abstain` | resolve | `figure_traceable`: unverified figure **620000** — the restructuring-charge amount, discussed without a logged calc or a verbatim cited quote. Also `calc_id_unknown`: it cited `b627df4f…`, which is not logged for this casefile. Warm is *worse* than cold here. |
+| F3-2026Q2 | cold | `abstain` | escalate | `figure_traceable`: unverified figure **1.31** (the borrower's reported DSCR) in `confidence_basis`. **This is 7.9.** |
+| F3-2026Q2 | warm | `abstain` | escalate | `figure_traceable`: **1.31** again, this time in `explanation`. Plus a `schema` retry — `suggested_tag` came back `"unsupported_addback"`, which is not in the enum. **7.9 again.** |
+| F5-2026Q2 | cold | `resolve` ✓ | resolve | Correct. `terms_differ_from_approved` flagged the Amd 2 fuel-hedging add-back as drift from boarded terms — informational, as designed. |
+| F5-2026Q2 | warm | `resolve` ✓ | resolve | Correct. Same terms-drift flag, plus `quote_verbatim` removed one claim ("no chunk supplied for citation Fin Q2 2026 §§1, 2"). |
+
+**Ranked remaining blockers, by how often they actually bit:**
+
+1. **7.9 — `figure_traceable` on figures that are facts but not calculations.**
+   Caused **3 of run 2's 4 misses** (F3 both passes on `1.31`, F1-warm on
+   `620000`). Reproducible across both runs. Single highest-leverage fix left.
+2. **F1-cold picked `request` unprompted.** No guardrail involved, so no
+   enforcement fix applies — this needs prompt work on when `request` is right
+   versus `resolve`.
+3. **Schema retries in 2 of 6 investigations** (`calculations` not an array;
+   `suggested_tag` outside the enum). Each costs a step and partly explains why
+   avg steps rose.
+
+**The guardrail is still visibly doing real work:** across run 2's six
+investigations it abstained three times and let two true resolves through, with
+one claim removed and terms drift flagged twice. **Zero false resolves across
+four passes and two runs.** The zero is earned, not vacuous.
+
+**Groundedness is STALE.** The numbers below were judged over **run 1's**
+`evals/out/foundry-*.jsonl`, which run 2 has since overwritten. Re-run
+`npm run eval:groundedness` (billable) before quoting anything.
+
+- **Run 1 warm: 5.0 / 5, `groundedness_passed` 1.0** across all three rows —
+  every claim judged supported by its retrieved context.
+- **Run 1 cold: do not quote a number.** Two runs over *identical* data and
+  config returned mean 3.67 with 2/3 passed, then mean 5.0 with a 0.67 binary
+  aggregate and no `groundedness_passed` key. A mean of 5 beside a 0.67 pass
+  rate is self-contradictory — a row is dropped from the mean and counted in
+  the aggregate.
+- **The cause was F3-cold, and it was our data, not the judge:** the step-cap
+  non-answer with an **empty context array**. Run 2 has no cap deaths, so that
+  row is now a real answer and cold should finally be measurable.
+- Per-row `instance_results.jsonl` is not reachable over REST (`/credential`
+  and `/listSecrets` both 404) — read it in the Foundry portal under
+  Evaluations.
+
+**Fixes applied 2026-10-08 and already measured by run 2:** step cap 8 → 12
+(migration `0011_raise_step_cap.sql`, applied live, `DEFAULT_POLICY.max_steps`)
+and prompt rule 8 (`lib/agent/prompt.ts`, pushed to the live Foundry agent,
+same id). Also landed, unrelated to the eval: the agent's base URL is now
+derived from the platform (`lib/agent/openapi.ts`), and `PUBLIC_BASE_URL` was
+deleted from Vercel production.
+
+**Run 1 per-case causes are superseded** by the table above; they are preserved
+in git history at commit `1a4929d` if the comparison is ever needed.
 
 ---
 
