@@ -51,7 +51,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
       <div className="relative mx-auto max-w-content px-6">
         {/* ------------------------------------------------------------ nav */}
         <header className="flex flex-wrap items-center justify-between gap-4 pt-8">
-          <Logo className="h-8 w-auto" />
+          <Logo className="h-12 w-auto" />
           <nav aria-label="Landing" className="flex flex-wrap items-center gap-6">
             <a href="#how-it-works" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
               How it works
@@ -107,6 +107,24 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
 
         {/* -------------------------------------------------------- preview */}
         <CasefilePreview />
+
+        {/* ------------------------------------------------------ statement */}
+        {/* Placed after the preview rather than between it and the hero: it
+            keeps the casefile peeking at the fold, and the closing line then
+            reads as the conclusion drawn from the evidence above it. */}
+        <section aria-labelledby="what-heading" className="mt-16 border-t border-border pt-12">
+          <h2 id="what-heading" className="sr-only">
+            What CreditScout is
+          </h2>
+          <p className="max-w-[70ch] text-[18px] leading-relaxed text-text-secondary">
+            CreditScout is an AI assistant for commercial credit analysts. It reads the loan agreement, every
+            amendment, and the borrower&rsquo;s financials. The agent performs independent calculations, identifies
+            covenant breaches, and investigates DSCR exceptions.
+          </p>
+          <p className="mt-6 text-[26px] font-semibold leading-tight tracking-tight text-text">
+            Our agent recommends. <span className="text-model-bright">Your analyst decides.</span>
+          </p>
+        </section>
 
         {/* ------------------------------------------------------- workflow */}
         <section id="how-it-works" aria-labelledby="how-heading" className="mt-16 scroll-mt-8 border-t border-border pt-12">
@@ -219,7 +237,7 @@ function CasefilePreview() {
         <Figure label="Borrower reported" value="1.30" note="evidence, not the trigger" tone="text-text-secondary" />
       </div>
 
-      <div className="space-y-3 border-t border-border px-6 py-5">
+      <div className="space-y-3 border-t border-border-strong px-6 py-5">
         <p className="max-w-prose text-body text-text-secondary">
           Amendment No. 2 permits a fuel-hedging add-back capped at $800,000. It is on file and effective for this
           period — but the approved terms do not yet reflect it. A person decides which governs.
