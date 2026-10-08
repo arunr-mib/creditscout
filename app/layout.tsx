@@ -3,7 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { NavRail } from "@/components/NavRail";
 import { loadNavData } from "@/lib/nav-data";
-import { LANDING_PATH, LOGIN_PATH, demoDisplayName } from "@/lib/auth/gate";
+import { LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -32,7 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className="min-h-screen md:flex">
-        <NavRail counts={counts} search={search} user={demoDisplayName()} />
+        <NavRail counts={counts} search={search} user={demoUser()} />
         <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
           <div className="mx-auto max-w-content">{children}</div>
         </main>

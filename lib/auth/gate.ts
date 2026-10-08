@@ -20,15 +20,17 @@ export const LOGIN_PATH = "/login";
 const DEFAULT_USERNAME = "analyst";
 const DEFAULT_PASSWORD = "creditscout-demo";
 const DEFAULT_DISPLAY_NAME = "Arun Rajendiran";
+const DEFAULT_ROLE = "Credit Analyst";
 
 /**
- * The name shown as the signed-in analyst. One shared demo credential means one
- * name; it is a label on the session, not an identity this app verified, and
- * nothing anywhere should read it as one.
+ * Who the rail shows as signed in. One shared demo credential means one person;
+ * it is a label on the session, not an identity this app verified, and nothing
+ * anywhere should read it as one.
  */
-export function demoDisplayName(env: Record<string, string | undefined> = process.env): string {
+export function demoUser(env: Record<string, string | undefined> = process.env): { name: string; role: string } {
   const name = env.DEMO_USER_NAME?.trim();
-  return name ? name : DEFAULT_DISPLAY_NAME;
+  const role = env.DEMO_USER_ROLE?.trim();
+  return { name: name || DEFAULT_DISPLAY_NAME, role: role || DEFAULT_ROLE };
 }
 
 export function demoCredentials(env: Record<string, string | undefined> = process.env): { username: string; password: string } {

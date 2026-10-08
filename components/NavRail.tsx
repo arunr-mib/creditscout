@@ -27,7 +27,7 @@ const DESTS: { href: string; label: string; countKey?: keyof NavCounts }[] = [
   { href: "/governance", label: "Governance" },
 ];
 
-export function NavRail({ counts, search, user }: { counts: NavCounts; search: SearchItem[]; user: string }) {
+export function NavRail({ counts, search, user }: { counts: NavCounts; search: SearchItem[]; user: { name: string; role: string } }) {
   const pathname = usePathname();
   const isActive = (href: string) => (href === "/" ? pathname === "/" || pathname.startsWith("/casefiles") : pathname.startsWith(href));
 
@@ -74,12 +74,14 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
       </ul>
 
       {/* The signed-in analyst, then the way out. `mt-auto` moves to this pair
-          so both sit at the foot of the rail. */}
+          so both sit at the foot of the rail. No "Signed in" label: a name at
+          the foot of the rail already says that, and the role is what actually
+          tells you something. */}
       <div className="mt-6 border-t border-border px-3 pt-4 md:mt-auto">
-        <p className="text-badge uppercase tracking-wide text-text-muted">Signed in</p>
-        <p className="mt-1 truncate text-body text-text" title={user}>
-          {user}
+        <p className="truncate text-body text-text" title={user.name}>
+          {user.name}
         </p>
+        <p className="text-badge text-text-muted">{user.role}</p>
       </div>
 
       <form action={signOut} className="px-1 pt-1">
