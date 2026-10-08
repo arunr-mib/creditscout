@@ -180,6 +180,8 @@ export function PortfolioTable({
  * covenant is the work.
  */
 function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targetPeriod: string; targetLabel: string }) {
+  // "Q2 2026" -> "Q2". Guards against a label with no space.
+  const shortQuarter = targetLabel.split(" ")[0] || targetLabel;
   // TWO BUTTON COLOURS ON THIS SCREEN, NO MORE. Beige carries every action that
   // opens a record — review it, view the decision, review the terms. Indigo is
   // reserved for the two that SPEND something: running a test and starting an
@@ -225,7 +227,9 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
       }
       return (
         <RunTestButton
-          label={row.status === "compliant" ? `Re-run ${targetLabel}` : `Run ${targetLabel}`}
+          // Quarter only, no year: "Re-run Q2 2026" wraps to two lines in the
+          // fixed-width action cell. The year is already in the page eyebrow.
+          label={row.status === "compliant" ? `Re-run ${shortQuarter}` : `Run ${shortQuarter}`}
           endpoint="/api/tests/run"
           body={{ facility_id: row.facilityId, test_period_end: targetPeriod }}
           disabledReason={runDisabledReason({ hasApprovedTerms: row.hasApprovedTerms })}
