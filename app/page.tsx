@@ -133,7 +133,7 @@ export default async function Home() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
             <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
-            <h1 className="text-title text-text">Portfolio</h1>
+            <h1 className="text-title text-text">Work queue</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/borrowers/new" className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast hover:border-model">
@@ -151,14 +151,13 @@ export default async function Home() {
           stats={[
             { label: "Open exceptions", help: "Breaches not yet closed", value: kpis.openExceptions, empty: "None open", tone: kpis.openExceptions ? "danger" : "muted" },
             { label: "Awaiting your review", help: "The agent finished; you decide", value: kpis.pendingReview, empty: "None waiting", tone: kpis.pendingReview ? "human" : "muted" },
-            { label: "Avg steps / case", help: "Investigation steps", value: kpis.avgSteps, empty: "—", tone: "muted" },
             { label: "Loans tested", help: "This quarter", value: kpis.facilitiesTested, empty: "Run the quarter", tone: "muted" },
           ]}
         />
       </header>
 
       {/* -------------------------------------------------------- portfolio table */}
-      <section aria-label="Portfolio" className="space-y-5">
+      <section aria-label="Portfolio" className="space-y-6">
         <h2 className="text-section text-text">Borrowers</h2>
         {facilities.length === 0 ? (
           <p className="text-body text-text-secondary">No loans on file. Board a covenant to add one.</p>
@@ -178,7 +177,12 @@ export default async function Home() {
 
 /* ------------------------------------------------------------------ pieces */
 
-/** The header KPIs as raised tiles (dark-native depth: surface-raised, no shadow). */
+/**
+ * The header KPIs as raised tiles (dark-native depth: surface-raised, no shadow).
+ *
+ * "Avg steps / case" is deliberately NOT here: it measures the agent, not the
+ * portfolio, and belongs with the eval scoreboard on Governance (review 3).
+ */
 function StatBand({
   stats,
 }: {
@@ -186,11 +190,11 @@ function StatBand({
 }) {
   const tone = { danger: "text-danger", human: "text-human", muted: "text-text" } as const;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {stats.map((s) => {
         const show = s.value != null && s.value > 0;
         return (
-          <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-5 py-4">
+          <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-4 py-4">
             <p className="text-label text-text-muted">{s.label}</p>
             {show ? (
               <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>

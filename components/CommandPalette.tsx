@@ -107,7 +107,7 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
                     <span className="block truncate text-body text-text">{item.label}</span>
                     {item.sublabel && <span className="block truncate text-label text-text-muted">{item.sublabel}</span>}
                   </span>
-                  <span className="shrink-0 rounded-sm border border-border px-1.5 text-badge text-text-muted">{KIND_LABEL[item.kind]}</span>
+                  <span className="shrink-0 rounded-sm border border-border px-2 text-badge text-text-muted">{KIND_LABEL[item.kind]}</span>
                 </button>
               </li>
             ))

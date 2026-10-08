@@ -55,7 +55,7 @@ export default async function TermsPage() {
 
           return (
             <article key={f.id} className="overflow-hidden rounded-lg border border-border-strong bg-surface">
-              <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-5 py-4">
+              <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-4">
                 <h2 className="text-card text-text">
                   {f.borrower_name}
                   {approved && <span className="ml-2 font-mono text-label font-normal text-text-muted">Approved v{approved.version}</span>}
@@ -65,7 +65,7 @@ export default async function TermsPage() {
                 </Link>
               </header>
 
-              <div className="space-y-4 p-5">
+              <div className="space-y-4 p-4">
                 {unboarded.length > 0 && (
                   <div role="note" className="rounded-md border border-code border-l-4 bg-code-bg p-3">
                     <p className="text-body text-code-bright">

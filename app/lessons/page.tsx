@@ -64,7 +64,7 @@ export default async function LessonsPage() {
       ) : (
         <ul className="space-y-3">
           {lessons.map((l) => (
-            <li key={l.id} className="rounded-lg border border-border-strong bg-surface p-5">
+            <li key={l.id} className="rounded-lg border border-border-strong bg-surface p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-3">
                   {l.pattern_tag && <span className="rounded-sm border border-border-strong px-2 py-px text-label text-text-secondary">{l.pattern_tag}</span>}

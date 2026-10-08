@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
@@ -70,6 +70,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   const mode = reviewMode(view.status);
 
   const showRec = mode !== "not_ready";
+  // Enforcement overruled the agent: its prose argues a conclusion that was
+  // rejected, so it is labelled a draft rather than left reading as the answer.
+  const overridden = recommendationOverridden(view.notes);
   const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
   const headline = headlineFor(view.sections);
   const accent =
@@ -84,7 +87,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           sees, and a cue to the guardrail notices they must read before deciding
           (the notices themselves still render in full above the action bar). */}
       <header className={`overflow-hidden rounded-lg border border-border-strong ${showRec ? `border-l-2 ${accent}` : ""} bg-surface`}>
-        <div className="flex flex-wrap items-start justify-between gap-4 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4 p-4">
           <div className="space-y-2">
             <p className="text-label text-text-muted">Casefile review</p>
             <h1 className="text-title text-text">
@@ -115,17 +118,17 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         {/* The governing figures, so the decision rests on numbers the analyst
             can see at a glance — not a paragraph away (audit 3.3). */}
         {showRec && headline && (
-          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 border-t border-border px-5 py-3">
+          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 border-t border-border px-4 py-3">
             {view.testPeriodEnd && (
               <Figure label="Test period" value={`ending ${view.testPeriodEnd}`} tag={view.testBasis ?? undefined} muted />
             )}
-            <Figure label="Governing DSCR" value={fmt(headline.dscr)} tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
+            <Figure label="Computed DSCR" value={fmt(headline.dscr)} tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
               tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined} />
             <Figure label="Required" value={fmt(headline.required)} />
             <Figure label="Margin" value={fmtSigned(headline.margin)} tone={headline.margin != null && headline.margin < 0 ? "danger" : undefined} />
             <Figure label="Calculation" value={`calc_${headline.calcId.slice(0, 8)}`} muted />
             {view.termsVersion != null && (
-              <Figure label="Governing terms" value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`} muted />
+              <Figure label="Approved terms used for this test" value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`} muted />
             )}
             {view.humanReviewRequired && (
               <div className="ml-auto inline-flex items-center gap-2 self-center text-label text-text-muted">
@@ -144,16 +147,32 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       {mode !== "not_ready" && view.explanation && (
         <section aria-labelledby="explanation-heading" className="space-y-2">
           <div className="flex flex-wrap items-baseline gap-3">
-            <h2 id="explanation-heading" className="text-card text-text">Agent&rsquo;s reasoning</h2>
-            <span className="rounded-sm border border-border-strong px-2 py-px text-label text-text-muted">
-              provisional · secondary to the governing result
+            <h2 id="explanation-heading" className={`text-card ${overridden ? "text-text-muted" : "text-text"}`}>
+              {overridden ? "Agent draft — not accepted" : "Agent’s reasoning"}
+            </h2>
+            <span
+              className={`rounded-sm border px-2 py-px text-label ${
+                overridden ? "border-code bg-code-bg text-code-bright" : "border-border-strong text-text-muted"
+              }`}
+            >
+              {overridden ? "rejected by enforcement · not the conclusion" : "provisional · secondary to the enforced result"}
             </span>
           </div>
           <p className="max-w-content text-body text-text-secondary">{view.explanation}</p>
           <p className="max-w-content text-label text-text-muted">
-            This is the agent&rsquo;s account, not the decision. Where it and the governing calculation above disagree —
-            for example if it applies an amendment the approved terms do not yet reflect — the governing result and the
-            guardrail notices below are what govern. The code decides the number, not the narrative.
+            {overridden ? (
+              <>
+                Enforcement rejected this draft and replaced its recommendation with the enforced result above. It is
+                kept for the record, not as the supported conclusion — do not read it as what the product concluded.
+                The notices below say which check rejected it.
+              </>
+            ) : (
+              <>
+                This is the agent&rsquo;s account, not the decision. Where it and the computed result above disagree —
+                for example if it applies an amendment the approved terms do not yet reflect — the enforced result and
+                the guardrail notices below are what govern. The code decides the number, not the narrative.
+              </>
+            )}
           </p>
         </section>
       )}
@@ -253,9 +272,9 @@ function AmendmentPanel({ amendments, termsVersion }: { amendments: AmendmentSta
       <ul className="mt-2 space-y-2">
         {amendments.map((a) => {
           const status = a.boarded
-            ? { label: termsVersion != null ? `Reflected in terms v${termsVersion}` : "Reflected in the governing terms", tone: "text-success" }
+            ? { label: termsVersion != null ? `Reflected in terms v${termsVersion}` : "Reflected in the approved terms", tone: "text-success" }
             : a.effectiveForPeriod
-              ? { label: "On file — not reflected in the governing terms", tone: "text-human" }
+              ? { label: "On file — not reflected in the approved terms used for this test", tone: "text-human" }
               : { label: "On file — effective after this period", tone: "text-text-muted" };
           return (
             <li key={a.title} className="flex flex-wrap items-baseline justify-between gap-2">
@@ -270,7 +289,7 @@ function AmendmentPanel({ amendments, termsVersion }: { amendments: AmendmentSta
       </ul>
       {lag && (
         <p className="mt-3 max-w-content text-label text-text-secondary">
-          An amendment effective for this period is not reflected in the governing terms
+          An amendment effective for this period is not reflected in the approved terms used for this test
           {termsVersion != null ? ` (v${termsVersion})` : ""}. The calculation above uses the approved terms as they
           stand; any analysis that applies this amendment is provisional until an analyst boards it.
         </p>

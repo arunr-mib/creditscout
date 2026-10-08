@@ -95,7 +95,7 @@ export default async function DocumentsPage() {
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="h-11 border-b border-border last:border-b-0 hover:bg-surface-raised">
+                <tr key={r.id} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
                   <td className="px-4 align-middle text-body text-text">{r.title}</td>
                   <td className="px-4 align-middle text-body text-text-secondary">{r.borrower}</td>
                   <td className="px-4 align-middle text-label text-text-muted">{DOC_TYPE_LABEL[r.doc_type] ?? r.doc_type}</td>

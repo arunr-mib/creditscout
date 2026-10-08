@@ -35,7 +35,7 @@ export function NavRail({ counts, search }: { counts: NavCounts; search: SearchI
     <nav aria-label="Primary" className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-4 md:h-screen md:w-56 md:border-b-0 md:border-r">
       <div className="mb-4 px-2">
         <Link href="/" className="text-card text-text">CreditScout</Link>
-        <p className="mt-0.5 text-badge text-text-muted">recommends — a human decides</p>
+        <p className="mt-1 text-badge text-text-muted">recommends — a human decides</p>
       </div>
 
       <div className="mb-3 px-1">
@@ -57,7 +57,7 @@ export function NavRail({ counts, search }: { counts: NavCounts; search: SearchI
               >
                 <span>{d.label}</span>
                 {count > 0 && (
-                  <span className="rounded-sm bg-surface px-1.5 font-mono text-badge text-text-muted">{count}</span>
+                  <span className="rounded-sm bg-surface px-2 font-mono text-badge text-text-muted">{count}</span>
                 )}
               </Link>
             </li>

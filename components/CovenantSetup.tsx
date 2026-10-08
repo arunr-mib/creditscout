@@ -435,8 +435,8 @@ export function CovenantSetup(props: {
             disabled={busy}
             className={
               proposal
-                ? "h-9 rounded-md border border-border-strong px-4 text-body text-text hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
-                : "h-9 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
+                ? "h-8 rounded-md border border-border-strong px-4 text-body text-text hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+                : "h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
             }
           >
             {proposal || phase.kind === "not_found" || proposeError ? "Propose again" : "Extract covenant terms"}

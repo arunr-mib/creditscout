@@ -30,7 +30,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           </Link>
         </header>
 
-        <section className="mt-16 max-w-content space-y-5 md:mt-24">
+        <section className="mt-16 max-w-content space-y-6 md:mt-24">
           <p className="text-label text-model-bright">Decision support for commercial credit analysts</p>
           <h1 className="text-title text-text">
             A reasoning layer decides what evidence to inspect next. A calculation layer never guesses. A human always
@@ -85,7 +85,7 @@ function Principle({ tone, head, body }: { tone: "model" | "code" | "human"; hea
   const accent = tone === "model" ? "text-model-bright" : tone === "code" ? "text-code-bright" : "text-human";
   const rule = tone === "model" ? "border-l-model" : tone === "code" ? "border-l-code" : "border-l-border-strong";
   return (
-    <div className={`rounded-md border border-border border-l-2 ${rule} bg-surface p-5`}>
+    <div className={`rounded-md border border-border border-l-2 ${rule} bg-surface p-4`}>
       <h2 className={`text-card ${accent}`}>{head}</h2>
       <p className="mt-2 text-body text-text-secondary">{body}</p>
     </div>

@@ -57,7 +57,7 @@ function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: Metr
         </thead>
         <tbody>
           {METRICS.map((spec, i) => (
-            <tr key={spec.key} className="h-10 border-b border-border last:border-b-0 hover:bg-surface-raised">
+            <tr key={spec.key} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
               <td className="px-4 align-middle text-label text-text">{spec.label}</td>
               <td className="px-4 py-2 text-right align-middle font-mono text-num tabular-nums text-text-secondary">
                 {spec.target}

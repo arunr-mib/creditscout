@@ -18,8 +18,19 @@ import { OverrideDialog } from "./OverrideDialog";
  * there first, or a retry) is not an error: the page re-reads and shows the
  * recorded decision read-only.
  */
-/** The outcome word that goes in the Approve label, so it says what is being accepted (audit P1). */
-const APPROVE_WORD: Record<string, string> = { resolve: "resolve", escalate: "escalate", request: "request docs", abstain: "abstention" };
+/**
+ * The primary label says, in an analyst's words, what accepting the
+ * recommendation actually records (review 5) — not the internal outcome token.
+ * An `escalate` is "Record escalation", not "Approve escalate": nobody approves
+ * an escalation, they record one. Falls back to a bare "Approve" for an
+ * unrecognised outcome rather than inventing a verb for it.
+ */
+const APPROVE_LABEL: Record<string, string> = {
+  resolve: "Approve exception resolution",
+  escalate: "Record escalation",
+  request: "Mark awaiting documents",
+  abstain: "Record abstention",
+};
 
 export function ReviewActions(props: {
   casefileId: string;
@@ -28,7 +39,7 @@ export function ReviewActions(props: {
   recommendation?: string | null;
 }) {
   const { casefileId, suggestedTag, humanReviewRequired, recommendation } = props;
-  const approveLabel = recommendation && APPROVE_WORD[recommendation] ? `Approve ${APPROVE_WORD[recommendation]}` : "Approve";
+  const approveLabel = (recommendation && APPROVE_LABEL[recommendation]) || "Approve";
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState(false);
   const [outcome, setOutcome] = useState<ReviewOutcome | null>(null);
@@ -66,12 +77,19 @@ export function ReviewActions(props: {
           {pending ? "Sending…" : approveLabel}
         </button>
         <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong text-text`}>
-          Override
+          Override recommendation
         </button>
+        {/* NOT "Request documents": this records a state, it sends nothing. The
+            label must not imply a message went out (review 5). */}
         <button type="button" disabled={pending} onClick={() => send("request_docs")} className={`${button} border-border-strong text-text`}>
-          Request docs
+          Mark awaiting documents
         </button>
       </div>
+
+      <p className="mt-3 text-label text-text-muted">
+        Marking a loan as awaiting documents records that state on this casefile. It does not prepare or send a request
+        to the borrower.
+      </p>
 
       <OverrideDialog
         open={dialog}

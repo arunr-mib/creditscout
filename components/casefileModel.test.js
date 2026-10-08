@@ -19,6 +19,7 @@ import {
   humanReviewPolicy,
   isRecommendation,
   noticeHeading,
+  recommendationOverridden,
   noticesOf,
   overrideBlockers,
   reviewMode,
@@ -239,6 +240,33 @@ test("every guardrail note becomes a notice, and none is dropped", () => {
   assert.deepEqual(noticesOf(null), []);
   assert.deepEqual(noticesOf({ detail: "x" }), []);
   assert.equal(noticesOf([{ detail: "only a detail" }]).length, 1, "a malformed note is still shown");
+});
+
+test("an overruled recommendation is detected from the notice action alone", () => {
+  const abstain = { layer: "guardrail", check: "figure_traceable", action: "abstain", detail: "" };
+  const escalate = { layer: "guardrail", check: "resolve_requires_evidence", action: "escalate", detail: "" };
+  assert.equal(recommendationOverridden([abstain]), true);
+  assert.equal(recommendationOverridden([escalate]), true);
+
+  // These record something OTHER than a replaced recommendation. Treating them
+  // as an override would brand every capped or unchecked run a rejected draft.
+  assert.equal(
+    recommendationOverridden([{ layer: "policy", check: "max_steps", action: "end_run", detail: "" }]),
+    false,
+    "the step cap ends a run; it does not overrule the recommendation",
+  );
+  assert.equal(recommendationOverridden([{ layer: "policy", check: "p", action: "forced_true", detail: "" }]), false);
+  assert.equal(recommendationOverridden([{ layer: "guardrail", check: "c", action: "not_checked", detail: "" }]), false);
+
+  assert.equal(recommendationOverridden([]), false, "a clean casefile is not an overruled one");
+  assert.equal(
+    recommendationOverridden([{ layer: "policy", check: "max_steps", action: "end_run", detail: "" }, abstain]),
+    true,
+    "one overruling note among others is still an override",
+  );
+  // A note so malformed it has no action cannot claim the recommendation was
+  // replaced; `noticesOf` already turns a missing action into "".
+  assert.equal(recommendationOverridden(noticesOf([{ detail: "only a detail" }])), false);
 });
 
 // ---------------------------------------------------------------- seen similar

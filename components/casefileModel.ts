@@ -361,6 +361,22 @@ export function noticeHeading(n: Notice): string {
   return action ? `${layer} · ${action}` : layer;
 }
 
+/**
+ * Did enforcement overrule the recommendation the agent drafted?
+ *
+ * `abstain` and `escalate` are the only two actions that REPLACE the agent's
+ * recommendation (`guardrails/guardrail.js`); `forced_true`, `not_checked` and
+ * the orchestrator's `end_run` record something else. When one of them fired,
+ * the explanation on screen is arguing for a conclusion that was rejected, and
+ * the casefile must say so rather than let the prose read as the live answer.
+ *
+ * Keyed on the action alone, not the layer: a new layer that forces an abstain
+ * should be caught by default, and the two actions are unambiguous on their own.
+ */
+export function recommendationOverridden(notes: readonly Notice[]): boolean {
+  return notes.some((n) => n.action === "abstain" || n.action === "escalate");
+}
+
 // --------------------------------------------------------------- seen similar
 
 /**

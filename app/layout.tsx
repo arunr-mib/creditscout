@@ -33,7 +33,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className="min-h-screen md:flex">
         <NavRail counts={counts} search={search} />
-        <main className="min-w-0 flex-1 px-6 py-8 md:px-10">
+        <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
           <div className="mx-auto max-w-content">{children}</div>
         </main>
       </body>

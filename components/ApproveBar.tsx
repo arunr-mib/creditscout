@@ -140,7 +140,7 @@ export function ApproveBar(props: {
             type="button"
             onClick={onApprove}
             disabled={disabled}
-            className="h-10 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
             {sending ? "Sending…" : uncheckedLists.length > 0 ? "Approve without a completeness check" : "Approve terms"}
           </button>

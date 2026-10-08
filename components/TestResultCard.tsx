@@ -38,13 +38,13 @@ export function TestResultCard({ test }: { test: TestResultView }) {
 
       <div className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
         {test.computed_dscr != null && test.calc_id ? (
-          <CalcValue label="Our DSCR" value={test.computed_dscr} calcId={test.calc_id} />
+          <CalcValue label="Computed DSCR" value={test.computed_dscr} calcId={test.calc_id} />
         ) : (
-          <CalcValue label="Our DSCR" error={test.calc_error ?? "not computed"} />
+          <CalcValue label="Computed DSCR" error={test.calc_error ?? "not computed"} />
         )}
 
         <span className="inline-flex items-baseline gap-2">
-          <span className="text-label uppercase tracking-wide text-text-muted">Theirs</span>
+          <span className="text-label uppercase tracking-wide text-text-muted">Reported DSCR</span>
           {test.reported_dscr != null ? (
             <span className="font-mono text-num text-text-secondary">{test.reported_dscr.toFixed(2)}</span>
           ) : (

@@ -87,8 +87,8 @@ export function PortfolioTable({
           <thead className="bg-surface-raised">
             <tr className="text-label text-text-muted">
               <Th onClick={() => toggleSort("borrower")} active={sort.key === "borrower"} dir={sort.dir}>Borrower</Th>
-              <Th onClick={() => toggleSort("ours")} active={sort.key === "ours"} dir={sort.dir} numeric>Our DSCR</Th>
-              <Th numeric>Theirs</Th>
+              <Th onClick={() => toggleSort("ours")} active={sort.key === "ours"} dir={sort.dir} numeric>Computed DSCR</Th>
+              <Th numeric>Reported DSCR</Th>
               <Th numeric>Required</Th>
               <Th onClick={() => toggleSort("status")} active={sort.key === "status"} dir={sort.dir}>Status</Th>
               <Th>Next test</Th>
