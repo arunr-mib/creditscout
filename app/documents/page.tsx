@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { boardingState, type BoardingState } from "@/components/portfolioModel";
+import { DocumentLibrary, type DocumentRowView } from "@/components/DocumentLibrary";
 import { anonReader } from "@/lib/supabase/anon";
 import { NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, longDate } from "@/lib/terms-labels";
 
@@ -49,6 +50,17 @@ export default async function DocumentsPage() {
   }));
   const needsReview = rows.filter((r) => r.boarding === "not_boarded");
 
+  const libraryRows: DocumentRowView[] = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    borrower: r.borrower,
+    facilityId: r.facility_id,
+    docType: r.doc_type,
+    docTypeLabel: DOC_TYPE_LABEL[r.doc_type] ?? r.doc_type,
+    effectiveDate: r.effective_date,
+    boarding: r.boarding,
+  }));
+
   return (
     <div className="space-y-12">
       <header className="max-w-prose space-y-1">
@@ -89,44 +101,7 @@ export default async function DocumentsPage() {
 
       <section aria-label="Document library" className="space-y-3">
         <h2 className="text-section text-text">Document library</h2>
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document</th>
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Borrower</th>
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document type</th>
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Effective date</th>
-                <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Covenant terms</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
-                  <td className="px-4 align-middle text-body text-text">{r.title}</td>
-                  <td className="px-4 align-middle text-body text-text-secondary">{r.borrower}</td>
-                  <td className="px-4 align-middle text-label text-text-muted">{DOC_TYPE_LABEL[r.doc_type] ?? r.doc_type}</td>
-                  <td className="px-4 align-middle font-mono text-num tabular-nums text-text-secondary">{r.effective_date ?? "—"}</td>
-                  <td className="px-4 py-2 text-right align-middle">
-                    {r.boarding === "not_boarded" ? (
-                      <span className="rounded-sm bg-code-bg px-2 py-px text-badge text-code-bright" title={NOT_BOARDED_TOOLTIP}>
-                        {TERMS_PENDING}
-                      </span>
-                    ) : r.boarding === "boarded" ? (
-                      <span className="text-label text-text-secondary">{TERMS_INCLUDED}</span>
-                    ) : (
-                      /* Not an amendment, so it can never board terms. `—` is
-                         this project's mark for "no value exists", never 0. */
-                      <span className="text-label text-text-muted" title="Only amendments can change approved covenant terms.">
-                        —
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DocumentLibrary rows={libraryRows} />
       </section>
     </div>
   );
