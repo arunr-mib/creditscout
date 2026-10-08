@@ -34,7 +34,7 @@ export function ReviewNotices(props: {
   const { notRun, notes } = warnings ? splitWarnings(warnings) : { notRun: [], notes: [] };
 
   return (
-    <section aria-label="Checks raised by the server" className="space-y-3">
+    <section aria-label="Automated checks" className="space-y-3">
       {warnings === null && (
         <NotRun
           field="all"
@@ -79,16 +79,17 @@ export function ReviewNotices(props: {
 
       {warnings !== null && (
         <div className="rounded-md border border-border-strong bg-surface-raised p-3">
+          {/* A count of nothing is noise: "(0)" invites the analyst to work out
+              what it counts. The number appears only when there is something to
+              count. "The server" was ours, not theirs — these are just checks. */}
           <p className="text-card text-text">
-            Notes from the server&rsquo;s checks ({notes.length}){" "}
+            Automated checks{notes.length > 0 ? ` (${notes.length})` : ""}{" "}
             <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
               <span aria-hidden="true">⟡ </span>by code
             </span>
           </p>
           {notes.length === 0 ? (
-            <p className="mt-1 text-body text-text-secondary">
-              None raised. That is not a statement that nothing is missing: read the clauses that no term cites, below.
-            </p>
+            <p className="mt-1 text-body text-text-secondary">No issues found.</p>
           ) : (
             <ul className="mt-2 space-y-2">
               {notes.map((w, i) => (

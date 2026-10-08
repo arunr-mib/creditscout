@@ -445,7 +445,7 @@ export function CovenantSetup(props: {
             {busy
               ? "The Credit-scout Agent is extracting the covenant terms from your loan agreement"
               : proposal
-              ? "Proposing again saves a new proposed version. It governs nothing, and this one stays on file."
+              ? "Agent extracts the terms again for approval."
               : "The agent reads the agreement and any amendments. The proposal is saved but governs nothing until a person approves it."}
           </p>
         </div>
@@ -504,11 +504,10 @@ export function CovenantSetup(props: {
       {phase.kind === "proposal" && proposal && review && effectiveTerms && (
         <>
           <div className="rounded-md border border-border bg-surface p-3">
-            <p className="text-label uppercase tracking-wide text-text-muted">
-              {proposal.stored ? "Stored proposal" : "New proposal"}
-              {proposal.version ? ` · version ${proposal.version}` : ""}
-              {proposal.effectiveFrom ? ` · would take effect ${proposal.effectiveFrom}` : ""}
-            </p>
+            {/* No version and no storage state. "Stored proposal · version 3"
+                answered questions an analyst never asked — where we held it,
+                and a number that means nothing until they open the history. */}
+            <p className="text-label uppercase tracking-wide text-text-muted">Proposed covenants</p>
             {approval.kind === "approved" ? (
               <p className="mt-1 text-body text-text-secondary">
                 <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">approved by {approval.by}</span> A
@@ -516,8 +515,8 @@ export function CovenantSetup(props: {
               </p>
             ) : (
               <p className="mt-1 text-body text-text-secondary">
-                <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span> Every value
-                below was produced by the agent and governs nothing yet. Your approval is the act that makes it govern.
+                <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span> Extracted
+                by the agent from loan documents. Effective if you approve.
               </p>
             )}
           </div>

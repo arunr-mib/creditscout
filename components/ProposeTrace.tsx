@@ -35,7 +35,7 @@ export function ProposeTrace(props: { borrower: string; documents: string[] }) {
           </p>
         </li>
         <li className="border-l-2 border-border-strong pl-3">
-          <p className="text-body text-text-muted">Not started: server check</p>
+          <p className="text-body text-text-muted">Not started: automated check</p>
           <p className="text-body text-text-muted">
             When the agent returns, code checks every value against the clause it cites. The proposal is saved, but it governs nothing until you approve it.
           </p>

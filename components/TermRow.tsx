@@ -109,7 +109,7 @@ export function TermRow(props: {
               </p>
               <p className="mt-1 text-body text-text-secondary">
                 <span className="mr-2 rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
-                  <span aria-hidden="true">⟡ </span>refused by the server&rsquo;s check
+                  <span aria-hidden="true">⟡ </span>refused by an automated check
                 </span>
                 <span className="font-mono text-label text-text-muted">{p.violation.field}</span> · {p.violation.reason}
               </p>
@@ -128,7 +128,7 @@ export function TermRow(props: {
         <div className="mt-3 space-y-2">
           {!blocked && state !== "edited" && !row.absence && (
             <p className="text-label text-text-muted">
-              The server&rsquo;s value checks passed, but it raised {notes.length === 1 ? "a note" : `${notes.length} notes`} on this term. Read before trusting it:
+              Automated value checks passed, but raised {notes.length === 1 ? "a note" : `${notes.length} notes`} on this term. Read before trusting it:
             </p>
           )}
           {notes.map((w, i) => (
@@ -146,7 +146,7 @@ export function TermRow(props: {
       {state === "ok" && row.citeField !== null && notes.length === 0 && (
         <p className="mt-2 text-label text-text-muted">
           <span aria-hidden="true">✓ </span>
-          {row.checkedAgainst ? `checked by the server against ${row.checkedAgainst}` : "supported by the clause it cites"}
+          {row.checkedAgainst ? `checked against ${row.checkedAgainst}` : "supported by the clause it cites"}
         </p>
       )}
       {state === "edited" && (

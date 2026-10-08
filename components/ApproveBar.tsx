@@ -166,7 +166,7 @@ function Open({ omission: o, uncheckedLists }: { omission: OmissionCounts; unche
   const items: string[] = [];
   if (uncheckedLists.length > 0) items.push(`no completeness check ran for ${uncheckedLists.join(", ")}`);
   if (o.unboarded > 0) items.push(`${o.unboarded} amendment${o.unboarded === 1 ? "" : "s"} on file not boarded`);
-  if (o.notes > 0) items.push(`${o.notes} note${o.notes === 1 ? "" : "s"} from the server`);
+  if (o.notes > 0) items.push(`${o.notes} note${o.notes === 1 ? "" : "s"} from automated checks`);
   items.push(
     `${o.uncited} clause${o.uncited === 1 ? "" : "s"} no term cites` +
       (o.neverShown !== null && o.uncited > 0 ? `, ${o.neverShown} never shown to the model` : "") +
@@ -186,9 +186,9 @@ function Refused({ refusal }: { refusal: Refusal }) {
   const { status, message, violations, errors } = refusal;
   const headline =
     status === 422
-      ? "The server refused these terms"
+      ? "These terms were refused"
       : status === 400
-        ? "The server rejected the request"
+        ? "The request was rejected"
         : status === 0
           ? "The server could not be reached"
           : `Approval failed (${status})`;
