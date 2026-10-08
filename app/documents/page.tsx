@@ -27,6 +27,25 @@ const DOC_TYPE_LABEL: Record<string, string> = {
  * carry is a "Terms review required" — the covenant-boarding lag the agent is
  * built to catch, surfaced as an action rather than buried in a borrower card.
  */
+/** One wording for the boarding states, so the card and the table cannot drift apart. */
+const TERMS_PENDING = "Terms update pending";
+const TERMS_INCLUDED = "Included in approved terms";
+const NOT_BOARDED_TOOLTIP = "This amendment is on file but is not reflected in approved covenant terms.";
+
+/**
+ * "Apr 1, 2026" for prose. The table keeps the stored ISO date in monospace:
+ * it is a column an analyst scans and sorts by eye, and design.md §3 puts every
+ * such value in tabular figures. Parsed as UTC — `new Date("2026-04-01")` is
+ * already UTC midnight, so formatting in a western timezone would render the
+ * day before.
+ */
+function longDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}
+
 export default async function DocumentsPage() {
   const db = anonReader();
   const [facilitiesRes, documentsRes, termsRes] = await Promise.all([
@@ -51,24 +70,30 @@ export default async function DocumentsPage() {
   return (
     <div className="space-y-12">
       <header className="max-w-prose space-y-1">
-        <p className="text-label text-text-muted">Intake &amp; library</p>
+        <p className="text-label text-text-muted">Loan documentation</p>
         <h1 className="text-title text-text">Documents</h1>
         <p className="pt-1 text-body text-text-secondary">
-          Every document on file. An amendment the approved terms don&apos;t yet reflect is flagged for review — ingestion
-          proposes; an analyst boards the terms.
+          Access borrower documents and identify amendments that need to be reflected in approved covenant terms.
         </p>
       </header>
 
       {needsReview.length > 0 && (
-        <section aria-label="Needs review" className="space-y-3">
-          <h2 className="text-section text-text">Terms review required</h2>
+        <section aria-label="Amendments requiring review" className="space-y-3">
+          <h2 className="text-section text-text">Amendments requiring review</h2>
+          <p className="max-w-prose text-body text-text-secondary">
+            These amendments are on file but are not included in approved terms. Review their impact before updating
+            the covenant.
+          </p>
           <ul className="space-y-2">
             {needsReview.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border border-l-2 border-l-code bg-surface px-4 py-3">
                 <div>
                   <p className="text-card text-text">{r.title}</p>
                   <p className="text-label text-text-muted">
-                    {r.borrower} · effective {r.effective_date ?? "—"} · <span className="text-code-bright">not boarded</span>
+                    {r.borrower} · Effective {longDate(r.effective_date)} ·{" "}
+                    <span className="text-code-bright" title={NOT_BOARDED_TOOLTIP}>
+                      {TERMS_PENDING}
+                    </span>
                   </p>
                 </div>
                 <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg hover:bg-text">
@@ -80,17 +105,17 @@ export default async function DocumentsPage() {
         </section>
       )}
 
-      <section aria-label="All documents" className="space-y-3">
-        <h2 className="text-section text-text">All documents</h2>
+      <section aria-label="Document library" className="space-y-3">
+        <h2 className="text-section text-text">Document library</h2>
         <div className="overflow-hidden rounded-lg border border-border bg-surface">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-border">
                 <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document</th>
                 <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Borrower</th>
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Type</th>
-                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Effective</th>
-                <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Terms status</th>
+                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document type</th>
+                <th className="px-4 py-2 text-label uppercase tracking-wide text-text-muted">Effective date</th>
+                <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Covenant terms</th>
               </tr>
             </thead>
             <tbody>
@@ -102,11 +127,17 @@ export default async function DocumentsPage() {
                   <td className="px-4 align-middle font-mono text-num tabular-nums text-text-secondary">{r.effective_date ?? "—"}</td>
                   <td className="px-4 py-2 text-right align-middle">
                     {r.boarding === "not_boarded" ? (
-                      <span className="rounded-sm bg-code-bg px-2 py-px text-badge text-code-bright">not boarded</span>
+                      <span className="rounded-sm bg-code-bg px-2 py-px text-badge text-code-bright" title={NOT_BOARDED_TOOLTIP}>
+                        {TERMS_PENDING}
+                      </span>
                     ) : r.boarding === "boarded" ? (
-                      <span className="text-label text-text-secondary">Boarded</span>
+                      <span className="text-label text-text-secondary">{TERMS_INCLUDED}</span>
                     ) : (
-                      <span className="text-label text-text-muted">—</span>
+                      /* Not an amendment, so it can never board terms. `—` is
+                         this project's mark for "no value exists", never 0. */
+                      <span className="text-label text-text-muted" title="Only amendments can change approved covenant terms.">
+                        —
+                      </span>
                     )}
                   </td>
                 </tr>
