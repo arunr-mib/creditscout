@@ -14,6 +14,7 @@ A decision-support agent for commercial credit analysts investigating DSCR coven
 | Product docs | `docs/prd.md`, `docs/prd-onepager.md`, `docs/mental-model.md` (flows, storyboard, screen inventory) |
 | Everything deferred, with reasons | `docs/parking-lot.md` |
 | Design tokens (no shadows — dark-native depth) | `docs/design.md` |
+| Diagrams — user flow + architecture | `docs/diagrams/` — **generated**; edit `generate.py` and re-run, never the SVG |
 | Eval harness + signed oracle | `evals/run.mjs`, `evals/grade.mjs`, `data/expected-values-template.csv` |
 | Original plan 1 (stale: six facilities, n8n, CommonJS) | `docs/superpowers/plans/2026-10-02-creditscout-deterministic-core.md` |
 

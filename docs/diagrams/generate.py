@@ -1,0 +1,215 @@
+"""Generate the two CreditScout diagrams.
+
+    python3 docs/diagrams/generate.py        (run from the repo root)
+
+Writes creditscout-user-flow.svg and creditscout-architecture.svg beside this
+file. Hand-editing the SVGs is a mistake — edit here and regenerate, so the
+coordinates stay consistent.
+
+Restraint is the point: ONE accent (indigo, the product's model colour) and
+nothing else. The model / code / human distinction is load-bearing in this
+product, so it is carried by line treatment and typeface rather than by three
+competing hues — indigo border for the agent, plain light border plus a
+monospace label for deterministic code, dashed border for a human step.
+"""
+from html import escape
+
+BG, PANEL, BORDER = "#0A1628", "#11243D", "#2A3A52"
+TEXT, SECOND, MUTED = "#F8FAFC", "#CBD5E1", "#94A3B8"
+ACCENT, ACCENT_DIM, ACCENT_FILL = "#818CF8", "#4C51BF", "#171a3a"
+MONO = "ui-monospace, SFMono-Regular, Menlo, monospace"
+SANS = "Inter, -apple-system, Helvetica, Arial, sans-serif"
+
+def esc(s): return escape(str(s), quote=False)
+
+def box(x, y, w, h, title, lines=(), kind="plain", tag=None):
+    """kind: plain | model | code | human"""
+    o = []
+    if kind == "model":
+        fill, stroke, dash, tcol = ACCENT_FILL, ACCENT, "", "#A5B4FC"
+    elif kind == "human":
+        fill, stroke, dash, tcol = PANEL, MUTED, ' stroke-dasharray="5 4"', TEXT
+    else:
+        fill, stroke, dash, tcol = PANEL, BORDER, "", TEXT
+    o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="7" fill="{fill}" stroke="{stroke}" stroke-width="1.25"{dash}/>')
+    cx = x + w / 2
+    ty = y + (26 if tag else 30)
+    if tag:
+        o.append(f'<text x="{cx}" y="{y+20}" fill="{MUTED}" font-size="10.5" letter-spacing="1.3" text-anchor="middle">{esc(tag.upper())}</text>')
+        ty = y + 42
+    tf = MONO if kind == "code" else SANS
+    fs = 14 if kind == "code" else 15
+    o.append(f'<text x="{cx}" y="{ty}" fill="{tcol}" font-size="{fs}" font-weight="600" font-family="{tf}" text-anchor="middle">{esc(title)}</text>')
+    for i, ln in enumerate(lines):
+        o.append(f'<text x="{cx}" y="{ty+21+i*17}" fill="{MUTED}" font-size="12.5" text-anchor="middle">{esc(ln)}</text>')
+    return "\n  ".join(o)
+
+def arrow(x1, y1, x2, y2, label=None, dashed=False, mid_dx=0):
+    d = ' stroke-dasharray="4 4"' if dashed else ""
+    o = [f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="#4A5B76" stroke-width="1.25"{d} marker-end="url(#a)"/>']
+    if label:
+        mx, my = (x1 + x2) / 2 + mid_dx, (y1 + y2) / 2
+        anchor = "middle" if y1 == y2 else "start"
+        dy = -9 if y1 == y2 else 4
+        dx = 0 if y1 == y2 else 10
+        o.append(f'<text x="{mx+dx}" y="{my+dy}" fill="{MUTED}" font-size="11.5" text-anchor="{anchor}">{esc(label)}</text>')
+    return "\n  ".join(o)
+
+def lane(y, label, note, w=1536, x=64):
+    return "\n  ".join([
+        f'<text x="{x}" y="{y}" fill="{ACCENT}" font-size="11.5" font-weight="700" letter-spacing="1.6">{esc(label.upper())}</text>',
+        f'<text x="{x+len(label)*8.2+34}" y="{y}" fill="{MUTED}" font-size="12">{esc(note)}</text>',
+        f'<line x1="{x}" y1="{y+12}" x2="{w+x}" y2="{y+12}" stroke="{BORDER}" stroke-width="1"/>',
+    ])
+
+def doc(w, h, title, sub, body, legend_y=52):
+    return f'''<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{SANS}">
+  <defs>
+    <marker id="a" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7 Z" fill="#4A5B76"/>
+    </marker>
+  </defs>
+  <rect width="{w}" height="{h}" fill="{BG}"/>
+  <text x="64" y="54" fill="{TEXT}" font-size="26" font-weight="700" letter-spacing="-0.4">{esc(title)}</text>
+  <text x="64" y="80" fill="{MUTED}" font-size="14">{esc(sub)}</text>
+  {legend(w - 64, legend_y)}
+  {body}
+  <text x="64" y="{h-26}" fill="#5A6B86" font-size="11.5">CreditScout · synthetic data only · the agent recommends, a human decides</text>
+</svg>
+'''
+
+def legend(xr, y):
+    items = [("model", "Agent / model"), ("code", "Deterministic code"), ("human", "Human approval")]
+    out, x = [], xr
+    for kind, label in reversed(items):
+        tw = len(label) * 6.9
+        x -= tw + 26
+        if kind == "model":
+            sw = f'fill="{ACCENT_FILL}" stroke="{ACCENT}"'
+        elif kind == "human":
+            sw = f'fill="{PANEL}" stroke="{MUTED}" stroke-dasharray="3 2.5"'
+        else:
+            sw = f'fill="{PANEL}" stroke="{BORDER}"'
+        out.append(f'<rect x="{x}" y="{y-11}" width="13" height="13" rx="3" {sw} stroke-width="1.25"/>')
+        lf = MONO if kind == "code" else SANS
+        out.append(f'<text x="{x+20}" y="{y}" fill="{SECOND}" font-size="12" font-family="{lf}">{esc(label)}</text>')
+        x -= 14
+    return "\n  ".join(out)
+
+# ============================================================ USER FLOW
+P = []
+P.append(lane(140, "Flow A — Loan onboarding", "once per loan · re-runs when an amendment arrives"))
+ay, ah = 166, 104
+P.append(box(64, ay, 232, ah, "Upload documents", ["agreement, amendment,", "financials, certificate"], "human", tag="Analyst"))
+P.append(arrow(302, ay+ah/2, 336, ay+ah/2))
+P.append(box(342, ay, 256, ah, "definition_agent", ["reads the definitions article", "and every amendment on file"], "model", tag="Extract"))
+P.append(arrow(604, ay+ah/2, 638, ay+ah/2))
+P.append(box(644, ay, 244, ah, "provenance checks", ["every term needs a citation", "and a verbatim quote"], "code", tag="Verify"))
+P.append(arrow(894, ay+ah/2, 928, ay+ah/2))
+P.append(box(934, ay, 232, ah, "Approve terms", ["four-eyes; nothing is", "testable until approved"], "human", tag="Analyst"))
+P.append(arrow(1172, ay+ah/2, 1206, ay+ah/2))
+P.append(box(1212, ay, 388, ah, "covenant_terms v1 — approved", ["versioned, effective-dated; an amendment creates v2", "and supersedes, it never overwrites"], "plain", tag="Boarded"))
+
+P.append(lane(336, "Flow B — Quarterly covenant test", "every loan, every quarter · no model involved"))
+by, bh = 362, 104
+P.append(box(64, by, 232, bh, "Run Covenant Tests", ["one click, whole book"], "human", tag="Analyst"))
+P.append(arrow(302, by+bh/2, 336, by+bh/2))
+P.append(box(342, by, 256, bh, "calc/dscr.js", ["computes EVERY test from the", "approved terms — never infers"], "code", tag="Compute"))
+P.append(arrow(604, by+bh/2, 638, by+bh/2))
+P.append(box(644, by, 244, bh, "reconcile", ["our figure vs the borrower's", "reported figure"], "code", tag="Compare"))
+# Pass and fail are BRANCHES, not a sequence. Chaining them read as
+# "a pass leads to a breach", which is the opposite of what happens.
+P.append(f'<path d="M894 {by+bh/2} H912 V{by+22} H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>')
+P.append(f'<path d="M894 {by+bh/2} H912 V{by+80} H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>')
+P.append(box(934, by, 666, 46, "Meets minimum — no action", ["variance logged if the borrower's figure disagrees with ours"], "plain", tag=None))
+P.append(box(934, by+58, 666, 46, "Below minimum — exception raised", ["OUR figure raises it, never theirs: a borrower whose arithmetic favours them is invisible otherwise"], "plain", tag=None))
+
+P.append(lane(532, "Flow C — Investigation", "only on an exception · the agent decides what to read next"))
+cy, ch = 558, 150
+P.append(box(64, cy, 232, ch, "Investigate", ["analyst starts it;", "nothing runs unasked"], "human", tag="Analyst"))
+P.append(arrow(302, cy+ch/2, 336, cy+ch/2))
+P.append(box(342, cy, 388, ch, "Credit-scout Agent", ["gpt-4.1-mini orchestrator, six function tools.", "Plans, reads, delegates, re-calculates —", "then decides whether the evidence is enough."], "model", tag="Reason"))
+P.append(arrow(736, cy+ch/2, 770, cy+ch/2))
+P.append(box(776, cy, 300, ch, "guardrails/*.js", ["six checks, zero dependencies.", "A figure with no logged calculation", "and no cited quote forces abstain."], "code", tag="Enforce"))
+P.append(arrow(1082, cy+ch/2, 1116, cy+ch/2))
+P.append(box(1122, cy, 220, ch, "Casefile", ["recommendation,", "cited claims,", "calculation log"], "plain", tag="Output"))
+P.append(arrow(1348, cy+ch/2, 1382, cy+ch/2))
+P.append(box(1388, cy, 212, ch, "Analyst decides", ["approve or override —", "the decision of record", "is always a person's"], "human", tag="Review"))
+
+tools_y = 740
+P.append(f'<text x="342" y="{tools_y}" fill="{MUTED}" font-size="11.5" letter-spacing="1.3">THE SIX TOOLS IT CHOOSES BETWEEN</text>')
+tools = [("search_documents", "code"), ("dscr_calculator", "code"), ("search_past_cases", "code"),
+         ("definition_agent", "model"), ("research_agent", "model"), ("document_agent", "model")]
+tx = 342
+for name, kind in tools:
+    w = 196
+    col = ACCENT if kind == "model" else SECOND
+    bd = ACCENT_DIM if kind == "model" else BORDER
+    P.append(f'<rect x="{tx}" y="{tools_y+12}" width="{w}" height="34" rx="5" fill="{PANEL}" stroke="{bd}" stroke-width="1"/>')
+    P.append(f'<text x="{tx+w/2}" y="{tools_y+34}" fill="{col}" font-size="12.5" font-family="{MONO}" text-anchor="middle">{name}</text>')
+    tx += w + 12
+
+P.append(f'<line x1="64" y1="{tools_y+86}" x2="1600" y2="{tools_y+86}" stroke="{BORDER}" stroke-width="1"/>')
+P.append(f'<text x="64" y="{tools_y+118}" fill="{SECOND}" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="{MONO}" fill="{ACCENT}">search_past_cases</tspan> on the next similar exception.</text>')
+P.append(f'<text x="64" y="{tools_y+140}" fill="{MUTED}" font-size="12.5">Measured across three live runs it has not shortened investigations — the effect is neutral, and the claim that memory saves steps is not made.</text>')
+
+open("docs/diagrams/creditscout-user-flow.svg", "w").write(
+    doc(1664, 960, "CreditScout — end-to-end covenant monitoring",
+        "A reasoning layer decides what evidence to inspect. A calculation layer never guesses. A human always approves.",
+        "\n  ".join(P)))
+print("user flow written")
+
+# ========================================================= ARCHITECTURE
+A = []
+RAIL, CX, CW = 64, 238, 1362
+
+def band(y, name, note):
+    A.append(f'<text x="{RAIL}" y="{y+22}" fill="{SECOND}" font-size="13" font-weight="600">{esc(name)}</text>')
+    A.append(f'<text x="{RAIL}" y="{y+41}" fill="#5A6B86" font-size="11.5">{esc(note)}</text>')
+
+y1 = 132
+band(y1, "Analyst", "browser")
+A.append(box(CX, y1, CW, 72, "Credit Analysis Queue · Casefile · Onboarding · Documents · Covenant terms · Lessons · Governance",
+             ["Server-rendered. Reads use the anon key under RLS; every write goes through a route handler or Server Action."], "human"))
+
+y2 = 262
+band(y2, "Application", "Next.js on Vercel")
+A.append(arrow(CX+216, y1+72, CX+216, y2-6))
+A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · review · approve terms", "service-role key, server-side only"], "plain", tag="Private"))
+A.append(box(CX+450, y2, 432, 108, "Agent tool routes", ["OpenAPI 3.0 · key-gated", "the only surface the agent can reach"], "code", tag="Public to Foundry"))
+A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings", ["chunk by section, 1536-dim vectors", "text-embedding-3-small"], "code", tag="Pipeline"))
+
+y3 = 432
+band(y3, "Reasoning", "Azure AI Foundry")
+A.append(arrow(CX+216, y2+108, CX+216, y3-6, "starts a run"))
+A.append(arrow(CX+666, y3+104, CX+666, y2+114, "six function tools over HTTPS"))
+A.append(box(CX, y3, CW, 104, "Credit-scout Agent — gpt-4.1-mini", 
+             ["One orchestrator. It chooses what to read next, delegates, re-calculates, and stops when the evidence is enough.",
+              "Connected Agents was dropped 2026-10-06: a connected agent cannot carry a function tool, so specialists could not retrieve."], "model", tag="Orchestrator"))
+
+y4 = 600
+band(y4, "In process", "same Node process")
+A.append(arrow(CX+216, y3+104, CX+216, y4-6, "delegates"))
+A.append(box(CX, y4, 648, 118, "Three specialists — gpt-5-mini", 
+             ["definition_agent · research_agent · document_agent", "Serviced in-process by lib/agent/specialists.ts.", "facility_id is never a tool parameter — it comes from the casefile."], "model", tag="Delegation"))
+A.append(box(CX+678, y4, 684, 118, "calc/dscr.js   ·   guardrails/*.js",
+             ["Zero dependencies, import-free, never a model. The calculator refuses a missing input",
+              "rather than defaulting it. Six guardrail checks run on every answer; a figure with no logged",
+              "calculation and no cited quote forces the recommendation to abstain."], "code", tag="Deterministic core"))
+
+y5 = 786
+band(y5, "Data", "Supabase · cloud only")
+A.append(arrow(CX+340, y4+118, CX+340, y5-6))
+A.append(arrow(CX+1020, y4+118, CX+1020, y5-6))
+A.append(box(CX, y5, CW, 96, "Postgres + pgvector",
+             ["facilities · documents · doc_chunks (vector 1536) · covenant_terms (versioned, approved) · tests · exceptions",
+              "casefiles · trace_steps · calculations · reviews · lessons · policy · eval_runs"], "plain", tag="Row-level security"))
+
+A.append(f'<line x1="{RAIL}" y1="{y5+134}" x2="1600" y2="{y5+134}" stroke="{BORDER}" stroke-width="1"/>')
+A.append(f'<text x="{RAIL}" y="{y5+166}" fill="{SECOND}" font-size="13.5">The boundary that matters: <tspan fill="{ACCENT}">the model never produces a number.</tspan> It decides what to inspect; <tspan font-family="{MONO}">calc/dscr.js</tspan> computes and <tspan font-family="{MONO}">guardrails/*.js</tspan> enforces — both zero-dependency, neither reachable by the model.</text>')
+
+open("docs/diagrams/creditscout-architecture.svg", "w").write(
+    doc(1664, 1010, "CreditScout — system architecture",
+        "One orchestrator, six function tools, and a deterministic core the model cannot reach.",
+        "\n  ".join(A)))
+print("architecture written")
