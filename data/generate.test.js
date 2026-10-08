@@ -1,13 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { verifyTermsProvenance } from "../guardrails/guardrail.js";
 import { FACILITIES, MARKER, termsFor } from "./facilities.js";
-import { CSV_COLUMNS, generate, renderAll, renderCsv, renderDocument } from "./generate.mjs";
+import { CSV_COLUMNS, generate, isSignedOracle, renderAll, renderCsv, renderDocument } from "./generate.mjs";
 
 const DATA_DIR = fileURLToPath(new URL("./", import.meta.url));
 
@@ -318,9 +318,48 @@ test("generate() writes the file layout: 4 for F1, 4 for F3, 8 for F5, plus the 
   assert.equal(readFileSync(join(dir, "template.csv"), "utf8"), renderCsv());
 });
 
-test("the committed documents and CSV are exactly what the generator produces from the fixture", () => {
+test("the committed documents are exactly what the generator produces from the fixture", () => {
   for (const d of renderAll()) {
     assert.equal(readFileSync(join(DATA_DIR, "facilities", d.facility, d.file), "utf8"), d.text, `${d.facility}/${d.file} is stale: run npm run generate:data`);
   }
-  assert.equal(readFileSync(join(DATA_DIR, "expected-values-template.csv"), "utf8"), renderCsv());
+});
+
+// The committed CSV is the SIGNED oracle: the owner filled the expected columns
+// and signed every row, and five onboarding rows were added by hand. So it is
+// no longer byte-identical to the template — but every column the generator
+// owns (the inputs) must still match it exactly, row for row, or the oracle is
+// grading a different case than the fixture describes.
+const OWNER_COLUMNS = ["expected_dscr_as_tested", "expected_dscr_remapped", "owner_signed_off"];
+
+test("the committed oracle's inputs match the generator row for row; only the owner's columns differ", () => {
+  const [tHeader, ...template] = parseCsv(renderCsv());
+  const [cHeader, ...committed] = parseCsv(readFileSync(join(DATA_DIR, "expected-values-template.csv"), "utf8"));
+  assert.deepEqual(cHeader, tHeader);
+  assert.ok(committed.length >= template.length, "the committed oracle has at least the generated rows");
+  template.forEach((tRow, i) => {
+    const cRow = committed[i];
+    tHeader.forEach((col, j) => {
+      if (OWNER_COLUMNS.includes(col)) return;
+      assert.equal(cRow[j], tRow[j], `${tRow[0]} column ${col} drifted from the fixture: run npm run generate:data`);
+    });
+  });
+  // and the owner's columns are filled and signed, never the template's blanks
+  const col = (name) => cHeader.indexOf(name);
+  for (const r of committed) {
+    assert.equal(r[col("owner_signed_off")], "YES", `${r[0]} is unsigned`);
+    assert.notEqual(r[col("expected_dscr_as_tested")], "", `${r[0]} has no expected value`);
+  }
+});
+
+test("generate() never overwrites a signed oracle", () => {
+  const dir = mkdtempSync(join(tmpdir(), "creditscout-gen-"));
+  const csvPath = join(dir, "template.csv");
+  const signed = `${CSV_COLUMNS.join(",")}\nX,F1,Harbor Logistics,2026-06-30,1.25,1,1,"",1,1,1,1,1.12,1.12,1.28,resolve,amendment_addback,YES\n`;
+  writeFileSync(csvPath, signed);
+  const r = generate({ outDir: join(dir, "facilities"), csvPath });
+  assert.equal(r.csvKept, true);
+  assert.equal(r.csvRows, 0);
+  assert.equal(readFileSync(csvPath, "utf8"), signed);
+  assert.equal(isSignedOracle(signed), true);
+  assert.equal(isSignedOracle(renderCsv()), false);
 });

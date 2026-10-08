@@ -12,7 +12,7 @@
  * Every figure printed here comes from FACILITIES. Nothing numeric is a literal
  * in a template string.
  */
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PDFDocument, StandardFonts } from "pdf-lib";
@@ -465,11 +465,28 @@ export function renderAll(facilities = FACILITIES) {
   );
 }
 
+/**
+ * True once the owner has signed any row. A signed oracle is the owner's, not
+ * the generator's: regenerating over it would erase the independent expected
+ * values that make "100% calculation accuracy" a measurement.
+ */
+export function isSignedOracle(text) {
+  return text
+    .split("\n")
+    .slice(1)
+    .some((line) => /,YES\s*$/.test(line));
+}
+
 export function generate({ outDir = OUT_DIR, csvPath = CSV_PATH } = {}) {
   const docs = renderAll();
   for (const d of docs) {
     mkdirSync(join(outDir, d.facility), { recursive: true });
     writeFileSync(join(outDir, d.facility, d.file), d.text);
+  }
+  // Never overwrite a signed oracle. The template is only ever written fresh
+  // or over an unsigned one; after sign-off the CSV is owner-owned.
+  if (existsSync(csvPath) && isSignedOracle(readFileSync(csvPath, "utf8"))) {
+    return { documents: docs.length, facilities: FACILITIES.length, csvRows: 0, csvKept: true };
   }
   writeFileSync(csvPath, renderCsv());
   return { documents: docs.length, facilities: FACILITIES.length, csvRows: FACILITIES.flatMap((f) => f.quarters).length };

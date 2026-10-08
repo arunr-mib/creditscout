@@ -11,12 +11,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/**/*.test.js\" \"components/*.test.js\"",
+    "test": "node --test \"calc/*.test.js\" \"guardrails/*.test.js\" \"data/*.test.js\" \"lib/**/*.test.js\" \"components/*.test.js\" \"evals/*.test.js\"",
     "generate:data": "node data/generate.mjs",
     "generate:pdf": "node data/generate.mjs --pdf",
     "ingest:demo": "node --env-file=.env data/ingest-demo.mjs",
     "test:calc": "node --test \"calc/*.test.js\"",
-    "eval": "node evals/run.mjs"
+    "eval": "node --env-file-if-exists=.env --conditions=react-server evals/run.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.0",
