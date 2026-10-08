@@ -2,6 +2,7 @@
 
 import { ingestFromForm } from "@/lib/ingest-form";
 import { runApprove } from "@/lib/terms";
+import { validateNewLoan } from "@/lib/onboarding";
 import { InvestigationError, startInvestigation } from "@/lib/agent/orchestrator";
 
 /**
@@ -53,4 +54,19 @@ export async function approveTerms(body: unknown): Promise<{ status: number; bod
     console.error("approve failed", err);
     return { status: 500, body: { error: "Approval failed. Check the server log." } };
   }
+}
+
+/**
+ * Create a loan (a `facilities` row). The only new write in the onboarding
+ * flow; everything else reuses existing routes/actions. Service role, because
+ * the anon key is SELECT-only.
+ */
+export async function createLoan(input: { borrower_name: string; industry?: string }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const v = validateNewLoan(input);
+  if (!v.ok) return v;
+  const { supabaseAdmin } = await import("@/lib/supabase/server");
+  const db = supabaseAdmin();
+  const res = await db.from("facilities").insert({ borrower_name: v.value.borrower_name, industry: v.value.industry }).select("id").single();
+  if (res.error) return { ok: false, error: `Could not create the loan: ${res.error.message}` };
+  return { ok: true, id: res.data.id as string };
 }
