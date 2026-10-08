@@ -1,11 +1,85 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06
-**Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git`
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06 · **Current-state handoff (§0):** 2026-10-08
+**Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
-Read this file, then the spec. Don't start coding until you've read both.
+**Start at §0.** It is the current state and the next actions. §1–§5 are the
+design reasoning (still true), §8–§9 are the gotchas and lessons (still true),
+and the rest has been refreshed to 2026-10-08.
+
+---
+
+## 0. Current state — 2026-10-08 — START HERE
+
+### 0.1 What is done
+
+The product is **built, deployed and verified live** at `https://credit-scout.vercel.app`
+(Vercel project `creditscout-nrb7`, deploys `main`; shared-credential demo gate,
+credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
+
+| Area | State |
+|---|---|
+| Stages 0–10 (schema → deploy) | ✅ built. Engineering doc §9. |
+| Stage 11 — **loan onboarding wizard** | ✅ built 2026-10-07, verified live with the five synthetic packages. Spec: `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md`. |
+| Investigation live on the deploy | ✅ Harbor re-run streamed real Foundry steps; the guardrail downgraded an unearned `resolve` to `escalate`; "seen similar" memory shown on Coastal. |
+| Eval oracle | ✅ `data/expected-values-template.csv` — **10 cases, every row owner-signed 2026-10-07**. |
+| Eval harness | ✅ `evals/run.mjs` + `evals/grade.mjs` (17 tests). `npm run eval` · `--write` · `--live`. |
+| Deterministic eval pass | ✅ **run and recorded** — calculation accuracy **100%** (12/12 signed figures), code path 100%; `eval_runs` row (`mode: cold`, `pass: "deterministic"`) → the Governance scoreboard shows it, everything agent-level reads "—". |
+| Live cold + warm eval passes | ⬜ **built, not run** — billable. **Owner gave the go on 2026-10-08.** See §0.3. |
+| Tests | 971/971 `npm test`, `tsc --noEmit` clean. |
+| Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state (commits `9c18ebf`, `cf076c0`). |
+
+### 0.2 Key decisions since 2026-10-06 (all owner-approved)
+
+| Decision | Why | Where recorded |
+|---|---|---|
+| **Connected Agents dropped; specialists are in-process function tools** | A connected agent's inner run cannot carry a function tool, so specialists could not retrieve for themselves; delegations burnt 2–4 of 8 steps. One agent object remains: the orchestrator with six function tools. | parking-lot 7.4, HLD §4.1, `lib/agent/foundry.ts` |
+| **"Credit-scout Agent"** is the orchestrator's name in every user-facing surface; **"loan"** not "facility" on screens (schema unchanged) | Owner's wording; analysts say loan. | PRD scope-changes table |
+| **Trace redesigned to foreground orchestration** — arc header, per-step purpose annotations, decision markers, "delegated by the Credit-scout Agent" tags. Priority of pitch beats **A (orchestration) → C (memory) → B (guardrail)**; C and B trace beats parked (4.10). | The pitch objective is to show the orchestrator's power. | `components/traceModel.ts`, `TraceArc.tsx` |
+| **Portfolio triage table** + "+ New borrower" + **dark-native depth, no shadows** (design.md bans `boxShadow`) | Borrowed from Covenant IQ's triage-at-a-glance; owner chose option A over shadows. | `components/PortfolioTable.tsx`, `portfolioModel.ts` |
+| **Governing-first casefile** (test-period figure under the governing terms, amendment-status panel, *provisional* label on amendment-dependent narrative) | A credit-analyst reviewer asked for the governing number first. | `components/CasefileView.tsx`, `casefileModel.ts` |
+| **Onboarding wizard**: route-driven, all documents uploaded in one step, review embedded in the wizard chrome (B), **effective date required** for agreement/amendment | Without the date, extraction 422s ("Cannot determine an effective date"). | onboarding spec §8, `components/UploadPackage.tsx` |
+| **Lender renamed "Bank of Stoic"**; onboarding borrowers **Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works**; F1/F3/F5 keep their old names; the stray "Summit" facility in the DB stays (owner: "I won't touch it in the demo") | The prior lender name resembled a real bank. | `data/facilities.js` |
+| **The five onboarding packages are never seeded** | Onboarding must genuinely create the loan live. The eval harness therefore *skips* them until onboarded (4.11). | onboarding spec §5 |
+| **Eval set is 10 signed cases, reported as 10** (not 24); scoreboard grouped **Honest / Harmless / Helpful**; evals are **hybrid** — grading is deterministic Node code against the signed key, the investigations run on Azure, only groundedness goes to the Foundry judge | The safety numbers must not be judged by a model. | PRD §5.1/§6.1, HLD §11 |
+| `generate()` **refuses to overwrite a signed oracle**; the drift test compares generator-owned columns only | `npm run generate:data` would otherwise erase the owner's values. | `data/generate.mjs`, `data/generate.test.js` |
+| One Vercel project (`creditscout-nrb7` → `credit-scout.vercel.app`); the duplicate was deleted; deploy auth via service principal with the **"Foundry User"** role ("Azure AI User" does not exist in this subscription) | Two projects were both auto-deploying `main`. | `docs/engineering/deploy-runbook.md`, memory notes |
+
+### 0.3 What is left — in order
+
+1. **Run the live eval passes** (owner's go given 2026-10-08; billable — est. 15–30 min, under ~$10 at the PRD's ~$1/investigation; estimates, not measurements):
+   - The agent's HTTP tool calls go to `PUBLIC_BASE_URL`, which is **unset** in the local `.env` → defaults to `http://localhost:3000`. So first start a local dev server from this repo with the same `.env`: `npm run dev` (background), confirm `curl -s localhost:3000/api/tools/openapi | head -c 200` responds.
+   - Local Foundry auth is the `az` CLI (logged in: "Azure subscription 1", arunr.friend@gmail.com); the orchestrator id is in `lib/agent/agents.json`; Azure OpenAI uses the api key in `.env`. Nothing else to set.
+   - Run: `npm run eval -- --live`. It runs COLD then WARM, each with its own `eval-<stamp>-<mode>` run_id (nothing lands in the `demo` run). Investigated: F1-2026Q2, F3-2026Q2, F5-2026Q2 (×2 passes); F5-Q4/Q1 are code-only; the 5 onboarding cases are **skipped** unless onboarded. Warm pass reviews each case through `submitReview` before the next (approve on match, override to the oracle otherwise).
+   - It writes `evals/out/results.csv`, `report.md`, `foundry-cold.jsonl`, `foundry-warm.jsonl` (gitignored) and **two `eval_runs` rows**. Exit code 2 = false-resolve gate failed; 3 = calc accuracy < 100%.
+   - Then: read `evals/out/report.md`; open `credit-scout.vercel.app/governance` and confirm cold + warm columns; copy the HHH numbers into this §0.1 table and parking-lot 3.5; commit. **If `false_resolves > 0`, say so plainly and investigate the casefile — never soften the gate.**
+   - Useful: `--only F1-2026Q2` to smoke one case first (still billable, one run per pass).
+2. **Groundedness** — upload `foundry-*.jsonl` to Azure AI Foundry Evaluations (judge `gpt-4.1-mini` deployed; `gpt-4.1` is parking-lot 4.8, billable, owner's call). Optional for the pitch.
+3. Parking-lot §4 in restore order (4.9 agentic extraction brainstorm, 4.10 trace beats, 4.11 onboard Vantage into the eval, 4.12 citation column).
+4. Owner-only items in §11.
+
+### 0.4 Files touched in the 2026-10-07 stretch (where to look)
+
+| Area | Files |
+|---|---|
+| Evals | `evals/run.mjs`, `evals/grade.mjs`, `evals/grade.test.js`, `data/expected-values-template.csv` (signed), `data/generate.mjs` (+test), `package.json` (`eval`, test glob) |
+| Onboarding | `app/borrowers/new/page.tsx`, `app/borrowers/[id]/onboarding/page.tsx`, `app/actions.ts` (`createLoan`), `lib/onboarding.ts` (+test), `lib/covenant-setup-data.ts`, `components/OnboardingStepper.tsx`, `NewBorrowerForm.tsx`, `UploadPackage.tsx`, `CovenantSetup.tsx`, `ProposeTrace.tsx` |
+| Trace / casefile / portfolio | `components/traceModel.ts`, `TraceStep.tsx`, `TraceArc.tsx`, `LiveTrace.tsx`, `CasefileEvidence.tsx`, `CasefileView.tsx`, `casefileModel.ts`, `CalcValue.tsx`, `portfolioModel.ts`, `PortfolioTable.tsx`, `app/page.tsx`, `ReinvestigateButton.tsx` |
+| Data | `data/facilities.js` (`LENDER_NAME`, `ONBOARDING_DEMO_FACILITIES`), `data/facilities/<ID>/` packages |
+| Docs | `docs/prd.md`, `prd-onepager.md`, `mental-model.md`, `engineering/engineering-doc.md`, `engineering/implementation-specs.md`, `parking-lot.md`, `CLAUDE.md`, this file |
+
+### 0.5 How to run things
+
+| | |
+|---|---|
+| Tests | `npm test` (971) · `npx tsc --noEmit` |
+| Deterministic eval | `npm run eval` (free) · `npm run eval -- --write` (records the row) |
+| Live eval | `npm run dev` (background) then `npm run eval -- --live` (billable; see 0.3) |
+| Regenerate synthetic docs | `npm run generate:data` — safe: will not touch the signed oracle |
+| Deploy | push `main`; `vercel ls creditscout-nrb7 --prod`; runbook in `docs/engineering/deploy-runbook.md` |
+| DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
 ---
 
@@ -52,11 +126,13 @@ The practical consequence: the model is never allowed to produce a number. Every
 | Path | What it is |
 |---|---|
 | `docs/superpowers/specs/2026-10-01-creditscout-design.md` | **The spec. Source of truth.** The owner owns this file. |
-| `docs/engineering/engineering-doc.md` | Architecture and the **10-stage build sequence** (§9). The thing to read second. |
-| `docs/engineering/implementation-specs.md` | File-by-file blueprint, features F0–F10, keyed to the build stages. |
-| `docs/parking-lot.md` | **Everything deferred, with a reason and a trigger.** Includes the open security findings. |
-| `docs/design.md` | Design tokens. Teal = model step, amber = code step. |
-| `docs/prd.md`, `docs/prd-onepager.md` | Product framing for the pitch. |
+| `docs/engineering/engineering-doc.md` | Architecture (HLD) and the **build sequence, stages 0–11** (§9). The thing to read second. |
+| `docs/engineering/implementation-specs.md` | File-by-file blueprint (LLD), features F0–F11, keyed to the build stages. |
+| `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md` | The loan onboarding wizard (stage 11 / F11). |
+| `docs/parking-lot.md` | **Everything deferred, with a reason and a trigger.** Includes the security findings and the live-eval item (3.5). |
+| `docs/design.md` | Design tokens. Teal = model step, amber = code step. **No shadows** — depth is dark-native. |
+| `docs/prd.md`, `docs/prd-onepager.md`, `docs/mental-model.md` | Product framing for the pitch; the mental model carries the flow diagrams, demo storyboard and screen inventory. |
+| `evals/run.mjs`, `evals/grade.mjs`, `data/expected-values-template.csv` | The eval harness and the owner-signed oracle. |
 | `docs/superpowers/plans/2026-10-02-creditscout-deterministic-core.md` | Plan 1 of the original three. **Stale** — six facilities, n8n, CommonJS. Useful code skeletons only. |
 | `.env.example` / `.env` | Credentials. `.env` is gitignored. **Never commit it.** |
 
@@ -143,27 +219,29 @@ The owner has not decided to make it public. Don't decide for them.
 
 ## 6. Where the build stands
 
-Build sequence is `docs/engineering/engineering-doc.md` §9 — ten stages, each producing something runnable. Commits are tagged `feat(stage-N):`. **323 tests green**, `tsc` clean, `next build` passes.
+*(Refreshed 2026-10-08 — §0 is the summary; this is the per-stage detail.)*
+Build sequence is `docs/engineering/engineering-doc.md` §9 — eleven stages, each producing something runnable. Commits are tagged `feat(stage-N):` / `feat(onboarding):` / `feat(ux):`. **971 tests green**, `tsc` clean, `next build` passes, deployed.
 
 | Stage | What | State |
 |---|---|---|
 | 0 | Supabase schema + RLS | ✅ live on cloud, anon-write verified blocked |
-| 1 | `calc/dscr.js`, `guardrails/*.js` + tests | ✅ reviewed, seven findings fixed |
-| 2 | Synthetic documents F1/F3/F5 + expected-values template | ✅ 16 documents, seeded, twist live |
-| 3 | Next.js scaffold + design tokens + Supabase clients | ✅ builds, serves, no key leaks |
-| 4 | `/api/ingest` + chunking + embeddings | ✅ **98 chunks live**, facility isolation proved over 360 calls |
-| 5 | Agent tool routes + OpenAPI | ✅ S-2 closed, fail-closed auth, `calc_id` chain intact |
-| 6 | Covenant setup — propose + approve | ◐ **6a backend in fix round 4**; 6b screen briefed, not started |
-| 7 | Flow B part 1 — `/api/tests/run`, code only | ⬜ |
-| 8 | Flow B part 2 — investigation, guardrail, policy | ⬜ |
-| 9 | UI screens + review + memory | ⬜ |
-| 10 | Deploy to Vercel + eval run | ⬜ |
+| 1 | `calc/dscr.js`, `guardrails/*.js` + tests | ✅ |
+| 2 | Synthetic documents F1/F3/F5 + expected-values template | ✅ 16 documents seeded, twist live; oracle **signed** (10 rows, incl. the 5 onboarding loans) |
+| 3 | Next.js scaffold + design tokens + Supabase clients | ✅ |
+| 4 | `/api/ingest` + chunking + embeddings | ✅ facility isolation proved |
+| 5 | Agent tool routes + OpenAPI | ✅ fail-closed auth; specialists revised to in-process function tools (§0.2) |
+| 6 | Covenant setup — propose + approve | ✅ propose/approve routes + screen; provenance gate (S-1) |
+| 7 | Flow B part 1 — `/api/tests/run`, `run-quarter`, code only | ✅ |
+| 8 | Flow B part 2 — investigation, guardrail, policy | ✅ verified live: unearned `resolve` → `escalate` |
+| 9 | UI screens + review + memory | ✅ portfolio, casefile (two-column, governing-first), governance, documents/terms/lessons, global search, landing + demo gate |
+| 10 | Deploy to Vercel + eval | ✅ deployed; harness built; deterministic pass recorded; **live passes pending (§0.3)** |
+| 11 | Loan onboarding wizard | ✅ verified live with the 5 synthetic packages |
 
 **Stage 7 produces a working product with no agent at all** — ingest, approved terms, deterministic calculation, exception detection. If everything downstream collapses, that is still a demonstrable system, and it is what the kill switch degrades to in production.
 
 ### What is live in the cloud database
 
-3 facilities · 16 documents · 98 `doc_chunks` · 3 **approved v1** `covenant_terms` · 1 stray `proposed` v2 on F3 from verification (governs nothing) · 1 stray `calc_log` row from verification (no casefile) · `doc_chunks` and memory search both callable.
+3 seeded facilities (Harbor, Northgate, Coastal) + a stray "Summit" facility (owner: leave it) + any loans onboarded live through the wizard · their documents and `doc_chunks` (lender text updated to "Bank of Stoic") · **approved v1** `covenant_terms` on the seeded three · demo-run `tests`/`exceptions`/`casefiles`/`reviews` from the live demo · 1 `eval_runs` row (deterministic). Eval passes use `eval-*` run_ids and never touch the `demo` run.
 
 **Both of F1's and F5's Amendment No. 2 are on file as documents with no matching terms row.** That is the covenant boarding lag, and it is the twist the whole demo rests on. Nothing — not the seed, not a fixture, not a verification script — may approve a v2 for those two facilities.
 
@@ -173,7 +251,7 @@ Build sequence is `docs/engineering/engineering-doc.md` §9 — ten stages, each
 |---|---|
 | **S-1** covenant terms unverified against their citations | **Closed in substance** by the provenance gate in `lib/terms.ts` + `guardrails/guardrail.js`; one residual scope hole in fix round 4 (see §9.2) |
 | **S-2** `CREDITSCOUT_TOOL_KEY` fail-open | ✅ **Closed.** Fails closed on unset, empty and short keys; SHA-256 digests compared with `timingSafeEqual`; all three tool routes check before reading the body |
-| S-3 / S-4 | Still unassessable until deploy. **`/security-foundation` must be re-run before stage 10.** |
+| S-3 / S-4 | Deploy-time findings. The deploy gates `/api/ingest`, `/api/investigate`, `/api/investigate/sync` and `/api/covenant-terms/approve` behind the tool key or Server Actions; the UI sits behind the shared-credential demo gate. A full `/security-foundation` re-run on the deploy is still worth doing before anything public. |
 
 Known, deliberate limitation: **four-eyes is recorded, not enforced.** `approved_by` is a self-asserted string, nothing records who proposed, and the routes have no user auth, so nothing stops a proposer approving their own proposal. Auth is out of scope per spec §2. Say this plainly in the demo — maker-checker is a governance control, and claiming enforcement the code does not have is the kind of thing a credit risk officer probes first.
 
@@ -188,12 +266,14 @@ Verified with live calls, not assumed.
 | Supabase service key | ✅ read and write confirmed |
 | Azure Foundry project | ✅ `creditscout` under account `contractreviewagent-resource`, resource group `AI_Learning`, eastus2 |
 | Azure embeddings | ✅ `text-embedding-3-small`, **1536 dimensions** (the schema depends on this number) |
-| Azure chat models | ✅ `gpt-4.1-mini` and `gpt-5-mini` deployed; Connected Agents round trip spiked green |
+| Azure chat models | ✅ `gpt-4.1-mini` (orchestrator) and `gpt-5-mini` (specialists) deployed; Connected Agents spiked green then dropped (§0.2) |
+| Vercel | ✅ one project, `creditscout-nrb7` → `credit-scout.vercel.app`, deploys `main`; CLI logged in as `arunrmib-3989`; agent env vars incl. SP creds, `FOUNDRY_ORCHESTRATOR_AGENT_ID`, `PUBLIC_BASE_URL` set on the project |
+| Local `.env` | ✅ Supabase + Azure OpenAI + tool key set; **`PUBLIC_BASE_URL` and the SP vars are unset** on purpose — locally the `az` CLI authenticates Foundry and tool self-calls go to `localhost:3000` (so a live eval needs `npm run dev` running) |
 | CLIs | ✅ `az` 2.90 (+ `ml` ext), `supabase` 2.119, `uv`, `gh`, `docker`, Node 24.8 (`engines` requires ≥22.18 — the `.ts` files run directly) |
 | Supabase **CLI** token | ❌ **`SUPABASE_ACCESS_TOKEN` is dead** and regenerating it fails with the same `FGA Authentication Error`. Not blocking: migrations go to the owner as SQL for the dashboard editor, and everything else uses the service-role key. |
 | Migrations | 0001–0005 applied at stage 0; **0006** `match_lessons` applied via the Management API before the token died; **0007** `covenant_terms_one_approved_per_facility` applied by the owner through the dashboard, 2026-10-06. 0006 and 0007 may not appear in `supabase_migrations.schema_migrations`. |
 
-**Not set up, deliberately:** local Supabase (see 4.3), n8n (dropped). Vercel deployment is in scope but not yet done — stage 10.
+**Not set up, deliberately:** local Supabase (see 4.3), n8n (dropped).
 
 ---
 
@@ -270,15 +350,17 @@ If the gate blocks terms that are right, the analyst cannot board a covenant at 
 
 ## 11. Open items — only the owner can close these
 
-1. **Do the three twists ring true?** (§5 above.) The documents exist now — read `data/facilities/F1|F3|F5/` and react to the real text rather than the description. This is the one thing no agent can judge.
-2. **Expected DSCR values** — fill and sign off `data/expected-values-template.csv`. Five rows, both expected columns empty, every row `NO`. Computed in a spreadsheet, not copied from anything this code produces. The eval runner must refuse to run while any row says `NO`.
-3. **The sixth eval case.** Five fall out of the quarterly tests the data produces; the parking lot allows six. A documents-missing variation is the candidate, since nothing else in the cut-down set reaches `abstain`.
-4. **The eval labels**, once drafted (spec §14.2).
-5. **`SUPABASE_ACCESS_TOKEN`** — dead, and regenerating it fails on Supabase's side. Only needed for CLI work; the SQL-editor route replaces it. Retry whenever, no rush.
-6. **Whether `max_steps: 8` is right.** Now a `policy` row, so changing it is a database update, not a redeploy.
-7. **Whether full `gpt-4.1` gets deployed** for the judge. Billable.
+1. ~~Do the three twists ring true?~~ **Done 2026-10-05.**
+2. ~~Expected DSCR values~~ **Done 2026-10-07** — 10 rows signed; deterministic eval matches all 12 figures.
+3. **An `abstain`/`request` eval case.** Nothing in the signed set reaches `abstain`, so that metric reads "—". A documents-missing variation (parking-lot 4.1 F2/F4) is the candidate.
+4. ~~The eval labels~~ **Done** — in the same 10 rows.
+5. **`SUPABASE_ACCESS_TOKEN`** — dead, and regenerating it fails on Supabase's side. Only needed for CLI work; the SQL-editor / MCP route replaces it. Retry whenever, no rush.
+6. **Whether `max_steps: 8` is right.** A `policy` row; revisit with the live-eval step counts.
+7. **Whether full `gpt-4.1` gets deployed** for the judge. Billable (parking-lot 4.8).
 8. **Making the repo public.** Not decided.
 9. **How four-eyes is described in the pitch** (§6). It is recorded, not enforced, and that distinction is worth stating before someone asks.
+10. **The Vercel project slug** — the owner may rename `creditscout-nrb7` to `credit-scout` in the dashboard; cosmetic.
+11. **Transcribe the oracle + HHH mapping into the cohort's evals spreadsheet** (parking-lot 3.4) before submission.
 
 ## 12. Working notes for agents
 

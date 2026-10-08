@@ -2,15 +2,19 @@
 
 A decision-support agent for commercial credit analysts investigating DSCR covenant exceptions. It recommends; a human analyst always decides.
 
-**Read the spec first, then the engineering doc.** `docs/HANDOFF.md` carries the original design reasoning and the machine gotchas, but it was written 2026-10-02 and pre-dates the 2026-10-05 amendments — treat it as history, not as current state.
+**Start with `docs/HANDOFF.md` §0** — the current state (2026-10-08), what is left, and how to run things. Then the spec, then the engineering doc. The product is **built and deployed** at `https://credit-scout.vercel.app`; the next open item is the billable live eval run (HANDOFF §0.3).
 
 | | |
 |---|---|
+| Current state + next actions | `docs/HANDOFF.md` §0 (§1–§5 design reasoning, §8–§9 gotchas and lessons — still true) |
 | Spec (source of truth, owner-owned) | `docs/superpowers/specs/2026-10-01-creditscout-design.md` |
-| Architecture + build sequence (stages 0–10) | `docs/engineering/engineering-doc.md` §9 |
-| File-by-file blueprint (features F0–F10) | `docs/engineering/implementation-specs.md` |
+| Onboarding wizard spec (stage 11) | `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md` |
+| Architecture (HLD) + build sequence (stages 0–11) | `docs/engineering/engineering-doc.md` §9 |
+| File-by-file blueprint (LLD, features F0–F11) | `docs/engineering/implementation-specs.md` |
+| Product docs | `docs/prd.md`, `docs/prd-onepager.md`, `docs/mental-model.md` (flows, storyboard, screen inventory) |
 | Everything deferred, with reasons | `docs/parking-lot.md` |
-| Design tokens | `docs/design.md` |
+| Design tokens (no shadows — dark-native depth) | `docs/design.md` |
+| Eval harness + signed oracle | `evals/run.mjs`, `evals/grade.mjs`, `data/expected-values-template.csv` |
 | Original plan 1 (stale: six facilities, n8n, CommonJS) | `docs/superpowers/plans/2026-10-02-creditscout-deterministic-core.md` |
 
 ## The idea that settles most design questions
@@ -36,7 +40,10 @@ Azure AI Foundry Agent Service runs one orchestrator — the **Credit-scout Agen
 - **Supabase is cloud, never local.** Foundry and Vercel are both remote and cannot reach localhost.
 - **Covenant terms are versioned, effective-dated and analyst-approved.** Only `status = approved` terms may govern a test; an amendment creates `version + 1` and supersedes — it never overwrites.
 - **Synthetic data only.** Every generated document carries the literal marker `SYNTHETIC — FOR DEMONSTRATION`. Borrower names are fictional. No real bank data, ever.
-- **Three facilities, not six.** F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine. F2/F4/F6 are parked (`docs/parking-lot.md` §4.1).
+- **Three seeded facilities, not six.** F1 Harbor Logistics, F3 Northgate Foods, F5 Coastal Marine. F2/F4/F6 are parked (`docs/parking-lot.md` §4.1). The **five onboarding borrowers** (Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works) exist only as upload packages under `data/facilities/` and are **never seeded** — onboarding must create them live. Lender name everywhere: **Bank of Stoic**.
+- **User-facing vocabulary:** the reasoning agent is the **"Credit-scout Agent"**; screens say **"loan"**, never "facility" (the schema keeps `facility`).
+- **The eval oracle is owner-signed and owner-owned.** `data/expected-values-template.csv` — never regenerate or edit its expected columns; `generate()` refuses to overwrite it. The eval runner refuses to run on any unsigned row. Unmeasured metrics are `null` → "—", never 0.
+- **The live eval is billable** (`npm run eval -- --live`): confirm with the owner before running; needs a local `npm run dev` for the agent's tool self-calls. Deterministic `npm run eval` is free.
 - **`.env` is gitignored.** Never commit it. `.env.example` lists what's needed.
 
 ## Execution
@@ -57,3 +64,5 @@ Plans run **subagent-driven** (`superpowers:subagent-driven-development`) — th
 - A guardrail that only accepts *calculated* numbers abstains on every well-formed explanation, because legitimate explanations quote figures from the covenant ("requires 1.25x"). The zero-false-resolve metric would read perfect while the product did nothing. Quoted figures are valid; compare numbers after normalisation, not as text.
 - **An add-back with no `cap` field, or `cap: null`, means uncapped.** Read as zero and F1 flips from a correct resolve to a false escalation.
 - **Covenant boarding lag is the F1/F5 twist.** The amendment is on file but deliberately *not* boarded into `covenant_terms`. Any seed or fixture that boards it dissolves the twist and there is nothing left to investigate.
+- **`lib/supabase/server.ts` imports `server-only`**, which throws outside Next. Scripts that import `lib/*` from Node (the eval harness) run with `--conditions=react-server` and pass an explicit `client` in `deps`.
+- **Never `git stash` bare** in this worktree — the stash is shared across worktrees. Prefer a WIP commit.
