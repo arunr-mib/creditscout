@@ -42,9 +42,18 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
   const inputRef = useRef<HTMLInputElement>(null);
   const baseId = useId();
 
+  // In onboarding (a pinned loan), the agreement and amendment anchor the terms'
+  // effective-from, so their effective date is required — without it, extracting
+  // the covenant terms fails. Financials/certificates stay optional.
+  const requireEffectiveDate = fixedFacilityId != null && (docType === "agreement" || docType === "amendment");
+
   async function upload(file: File) {
     if (!facilityId) {
       setState({ kind: "rejected", reason: "Choose a borrower before uploading." });
+      return;
+    }
+    if (requireEffectiveDate && !effectiveDate) {
+      setState({ kind: "rejected", reason: `Set the effective date above — it is required for the ${docType === "agreement" ? "agreement" : "amendment"} so the Credit-scout Agent can extract its terms.` });
       return;
     }
     setState({ kind: "uploading" });
@@ -106,8 +115,8 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
           </select>
         </label>
         <label className="flex flex-col gap-1 text-label text-text-muted">
-          Effective date (optional)
-          <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className={`${field} font-mono`} />
+          {requireEffectiveDate ? "Effective date (required)" : "Effective date (optional)"}
+          <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className={`${field} font-mono ${requireEffectiveDate && !effectiveDate ? "border-human" : ""}`} />
         </label>
       </div>
 
