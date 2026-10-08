@@ -175,10 +175,12 @@ export function PortfolioTable({
  * covenant is the work.
  */
 function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targetPeriod: string; targetLabel: string }) {
-  const primary =
-    "inline-flex rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text";
-  const secondary =
-    "inline-flex rounded-md border border-border-strong px-3 py-1 text-body leading-5 text-text transition-colors duration-fast hover:bg-surface-raised";
+  // One width for every row action so the column reads as a column. Without it
+  // "Review" sat visibly narrower than "View decision" and "Review terms".
+  const base =
+    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong px-3 py-2 text-body leading-5 transition-colors duration-fast";
+  const primary = `${base} bg-human font-medium text-bg hover:bg-text`;
+  const secondary = `${base} text-text hover:bg-surface-raised`;
 
   switch (row.status) {
     case "breach_investigate":
