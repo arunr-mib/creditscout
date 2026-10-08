@@ -17,7 +17,7 @@ and the rest has been refreshed to 2026-10-08.
 
 The product is **built, deployed and verified live** at `https://credit-scout.vercel.app`
 (Vercel project `creditscout-nrb7`, deploys `main`; shared-credential demo gate,
-credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
+credentials on the sign-in page). `main` = `b43abe5` at the time of writing.
 
 | Area | State |
 |---|---|
@@ -27,7 +27,7 @@ credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
 | Eval oracle | ✅ `data/expected-values-template.csv` — **10 cases, every row owner-signed 2026-10-07**. |
 | Eval harness | ✅ `evals/run.mjs` + `evals/grade.mjs` (17 tests). `npm run eval` · `--write` · `--live`. |
 | Deterministic eval pass | ✅ **run and recorded** — calculation accuracy **100%** (12/12 signed figures), code path 100%; `eval_runs` row (`mode: cold`, `pass: "deterministic"`) → the Governance scoreboard shows it, everything agent-level reads "—". |
-| Live cold + warm eval passes | ⬜ **built, not run** — billable. **Owner gave the go on 2026-10-08.** See §0.3. |
+| Live cold + warm eval passes | ✅ **run 2026-10-08** (owner's go; billable). `eval-20261008T031627Z-cold` + `eval-20261008T032008Z-warm`, exit 0. **Zero false resolves in both passes.** Calc accuracy 100%/100%; outcome accuracy **60% cold, 40% warm**; avg steps **6.3 cold, 7.3 warm**. The memory effect is **negative** — see §0.6. |
 | Tests | 971/971 `npm test`, `tsc --noEmit` clean. |
 | Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state (commits `9c18ebf`, `cf076c0`). |
 
@@ -49,14 +49,29 @@ credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
 
 ### 0.3 What is left — in order
 
-1. **Run the live eval passes** (owner's go given 2026-10-08; billable — est. 15–30 min, under ~$10 at the PRD's ~$1/investigation; estimates, not measurements):
-   - The agent's HTTP tool calls go to `PUBLIC_BASE_URL`, which is **unset** in the local `.env` → defaults to `http://localhost:3000`. So first start a local dev server from this repo with the same `.env`: `npm run dev` (background), confirm `curl -s localhost:3000/api/tools/openapi | head -c 200` responds.
-   - Local Foundry auth is the `az` CLI (logged in: "Azure subscription 1", arunr.friend@gmail.com); the orchestrator id is in `lib/agent/agents.json`; Azure OpenAI uses the api key in `.env`. Nothing else to set.
-   - Run: `npm run eval -- --live`. It runs COLD then WARM, each with its own `eval-<stamp>-<mode>` run_id (nothing lands in the `demo` run). Investigated: F1-2026Q2, F3-2026Q2, F5-2026Q2 (×2 passes); F5-Q4/Q1 are code-only; the 5 onboarding cases are **skipped** unless onboarded. Warm pass reviews each case through `submitReview` before the next (approve on match, override to the oracle otherwise).
-   - It writes `evals/out/results.csv`, `report.md`, `foundry-cold.jsonl`, `foundry-warm.jsonl` (gitignored) and **two `eval_runs` rows**. Exit code 2 = false-resolve gate failed; 3 = calc accuracy < 100%.
-   - Then: read `evals/out/report.md`; open `credit-scout.vercel.app/governance` and confirm cold + warm columns; copy the HHH numbers into this §0.1 table and parking-lot 3.5; commit. **If `false_resolves > 0`, say so plainly and investigate the casefile — never soften the gate.**
-   - Useful: `--only F1-2026Q2` to smoke one case first (still billable, one run per pass).
-   - Known leftover: an aborted first attempt (2026-10-08) left one casefile `investigating` under run_id `eval-20261008T031237Z-cold`. Ignore it — a new run gets a new run_id, and it never touches the `demo` run. Do not delete it.
+1. ~~**Run the live eval passes**~~ — ✅ **done 2026-10-08.** Numbers and
+   per-case causes in §0.6. Exit 0, zero false resolves, calc accuracy 100%.
+   Two `eval_runs` rows; the Governance scoreboard has cold + warm columns.
+   To re-run: `npm run dev` (background; `PUBLIC_BASE_URL` is unset in `.env`
+   so the agent's tool calls default to `http://localhost:3000` — confirm with
+   `curl -s localhost:3000/api/tools/openapi | head -c 200`), `az` already
+   logged in, then `npm run eval -- --live`. `--only F1-2026Q2` smokes one case.
+   Exit 2 = false-resolve gate failed; 3 = calc accuracy < 100%.
+   **The open follow-ups this run created are the real next items:**
+   - **Outcome accuracy is 60% cold / 40% warm against a ≥85% target**, and the
+     memory effect is negative (6.3 → 7.3 steps). Both misses are conservative,
+     so nothing unsafe shipped — but the Helpful pillar does not currently meet
+     its target and the "memory shortens investigations" line must not be used.
+   - Three of six investigations ended at the **8-step cap**. Raising the cap,
+     or spending fewer steps on retrieval, is the single highest-leverage fix.
+   - F1 ends its calc sequence on the failing as-tested figure, so
+     `resolve_requires_evidence` blocks a correct resolve. Either the agent
+     should recompute-last under the amended terms, or the guardrail should
+     consider the governing calc rather than the last-logged one. **Owner's
+     call — this one touches a guardrail, so don't just loosen it.**
+   - `figure_traceable` abstains on the borrower's own reported DSCR (see §0.6).
+   - Known leftover: an aborted first attempt left one casefile `investigating`
+     under `eval-20261008T031237Z-cold`. Ignore it; do not delete it.
 2. **Groundedness** — upload `foundry-*.jsonl` to Azure AI Foundry Evaluations (judge `gpt-4.1-mini` deployed; `gpt-4.1` is parking-lot 4.8, billable, owner's call). Optional for the pitch.
 3. Parking-lot §4 in restore order (4.9 agentic extraction brainstorm, 4.10 trace beats, 4.11 onboard Vantage into the eval, 4.12 citation column).
 4. Owner-only items in §11.
@@ -81,6 +96,64 @@ credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
 | Regenerate synthetic docs | `npm run generate:data` — safe: will not touch the signed oracle |
 | Deploy | push `main`; `vercel ls creditscout-nrb7 --prod`; runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
+
+### 0.6 Live eval results — 2026-10-08 — read this before quoting any number
+
+Run: `npm run eval -- --live`, exit code 0 (the false-resolve gate passed and
+calc accuracy was 100%). Two `eval_runs` rows recorded; the Governance
+scoreboard shows cold beside warm. Report in `evals/out/report.md`.
+
+| Pillar | Metric | Target | Cold | Warm |
+|---|---|---|---|---|
+| Honest | Calculation accuracy | 100% | **100%** (12/12) | **100%** |
+| Honest | Citation hit rate | ≥ 90% | — | — |
+| Honest | Groundedness (judge) | reported | — | — |
+| Harmless | Zero false resolves | 0 | **0** | **0** |
+| Harmless | Correct abstain / request | ≥ 90% | — | — |
+| Helpful | Outcome accuracy | ≥ 85% | **60%** | **40%** |
+| Helpful | Avg steps / case | visible reduction | **6.3** | **7.3** |
+
+"—" is not measured, never a measured zero. Outcome accuracy is over the 5
+gradeable cases (3 investigated + 2 code-only F5 periods), not over 10.
+
+**Skipped, by design:** all five onboarding cases (ZHATSAPP, MARCUS, ORION,
+PETWORKS, VANTAGE) — "not in the database". The packages are deliberately never
+seeded so onboarding has to create the loan live (onboarding spec §5). Not a
+failure; parking-lot 4.11 covers onboarding Vantage into the eval.
+
+**Two things to be straight about.**
+
+1. **Outcome accuracy is far below the ≥85% target**, and warm is worse than
+   cold. Every miss is in the *conservative* direction — escalate or abstain
+   where the oracle wanted resolve, or abstain where it wanted escalate. None
+   is a false resolve. The safety claim holds; the helpfulness claim does not.
+2. **The memory effect ran backwards.** Steps went *up* 6.3 → 7.3 and two of
+   three warm cases hit the 8-step cap. The pitch line "visible step reduction
+   from memory" is **not supported by this run** — do not assert it. The warm
+   context appears to add work rather than shortcut it.
+
+**Per-case causes (from `casefiles.guardrail_notes`, not inference):**
+
+| Case | Pass | Got | Why |
+|---|---|---|---|
+| F1-2026Q2 | cold + warm | `escalate` | Guardrail `resolve_requires_evidence`: the agent asked to resolve, but **the last calculation logged is the failing as-tested one**, so "an earlier pass does not earn it". Its reasoning was *correct* — it found Amendment No. 2 and capped the $620k restructuring charges at $500k. It just ended its calc sequence on the wrong figure. Cold additionally hallucinated a `calc_id` (`f9f8e2b5…`, flagged `calc_id_unknown`). **This is not the uncapped-add-back trap — the cap was read correctly.** |
+| F3-2026Q2 | cold | `abstain` | Policy `step_cap`: hit 8 steps before producing any answer. Pure budget exhaustion. |
+| F3-2026Q2 | warm | `abstain` | Guardrail `figure_traceable`: unverified figure **1.31** — the borrower's reported DSCR. Its reasoning was otherwise exactly right (no add-backs permitted, the $530k "Owner compensation normalization" disallowed, waiver unexecuted). See the gap below. |
+| F5-2026Q2 | cold | `resolve` ✓ | Correct, with a real `calc_id` for the remapped 1.30 and terms-drift flagged. |
+| F5-2026Q2 | warm | `abstain` | Policy `step_cap` at 8 steps. It had the right answer and three logged calcs; it ran out of budget before emitting the final answer. |
+
+**A real gap this surfaced** (candidate for the parking lot, owner's call):
+`exceptions.reported_dscr` is a *database fact* the runner injects into the
+query prompt ("the borrower reports 1.31"), but `figure_traceable` only accepts
+a logged calculation or a quote from a cited document. So an agent that
+correctly discusses the borrower's own figure gets abstained for it. This is
+the CLAUDE.md known-trap one layer out: the fix is to treat the reported figure
+as traceable, not to loosen the guardrail.
+
+**The guardrail is visibly doing real work:** across six investigations it
+intervened three times (2× `resolve_requires_evidence` → escalate, 1×
+`figure_traceable` → abstain) and let one true resolve through. The zero is
+earned, not vacuous.
 
 ---
 
