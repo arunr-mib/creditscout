@@ -426,12 +426,7 @@ export function CovenantSetup(props: {
         </p>
       </header>
 
-      {/* Hidden once a proposal exists: re-proposing is a recovery action, not
-          something to offer beside terms waiting to be read. It still shows as
-          "Extract covenant terms" before the first proposal (the onboarding
-          path) and stays available when extraction found nothing or failed,
-          which are the states it is the only way out of. Parking lot 7.12. */}
-      {!approved && (!proposal || phase.kind === "not_found" || proposeError) && (
+      {!approved && (
         <div className="flex flex-wrap items-center gap-4">
           <button
             type="button"

@@ -24,17 +24,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-body text-text-secondary">Enter the demo credentials to open the analyst workspace.</p>
           </div>
 
-          <div className="rounded-lg border border-border-strong bg-surface p-6">
-            <LoginForm next={safeNext(next)} />
-          </div>
-
-          <div className="rounded-md border border-border bg-surface p-3">
-            <p className="text-label text-text-muted">Demo access</p>
-            <p className="mt-1 text-body text-text-secondary">
-              Username <span className="font-mono text-text">{creds.username}</span> · Password{" "}
-              <span className="font-mono text-text">{creds.password}</span>
-            </p>
-          </div>
+          {/* The form and the demo-credential card share state (one click fills
+              and submits), so the card is rendered by LoginForm, not here. */}
+          <LoginForm next={safeNext(next)} demo={creds} />
 
           <Link href="/welcome" className="text-label text-text-muted underline-offset-2 hover:underline">
             ← Back to overview
