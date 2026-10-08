@@ -56,6 +56,7 @@ credentials on the sign-in page). `main` = `cf076c0` at the time of writing.
    - It writes `evals/out/results.csv`, `report.md`, `foundry-cold.jsonl`, `foundry-warm.jsonl` (gitignored) and **two `eval_runs` rows**. Exit code 2 = false-resolve gate failed; 3 = calc accuracy < 100%.
    - Then: read `evals/out/report.md`; open `credit-scout.vercel.app/governance` and confirm cold + warm columns; copy the HHH numbers into this §0.1 table and parking-lot 3.5; commit. **If `false_resolves > 0`, say so plainly and investigate the casefile — never soften the gate.**
    - Useful: `--only F1-2026Q2` to smoke one case first (still billable, one run per pass).
+   - Known leftover: an aborted first attempt (2026-10-08) left one casefile `investigating` under run_id `eval-20261008T031237Z-cold`. Ignore it — a new run gets a new run_id, and it never touches the `demo` run. Do not delete it.
 2. **Groundedness** — upload `foundry-*.jsonl` to Azure AI Foundry Evaluations (judge `gpt-4.1-mini` deployed; `gpt-4.1` is parking-lot 4.8, billable, owner's call). Optional for the pitch.
 3. Parking-lot §4 in restore order (4.9 agentic extraction brainstorm, 4.10 trace beats, 4.11 onboard Vantage into the eval, 4.12 citation column).
 4. Owner-only items in §11.
