@@ -24,7 +24,11 @@ export default async function OnboardingPage({ params, searchParams }: { params:
     db.from("covenant_terms").select("status").eq("facility_id", id),
   ]);
   const derived = onboardingStep({ documents: docs.data ?? [], terms: terms.data ?? [] });
-  const step = derived === "done" ? "done" : requested === "terms" && derived !== "documents" ? "terms" : derived; // done wins; never jump ahead of the agreement gate
+  const step =
+    derived === "done" ? "done"
+    : requested === "documents" ? "documents"
+    : requested === "terms" && derived !== "documents" ? "terms"
+    : derived; // done wins; ?step=documents stays put; terms never jumps ahead of the agreement gate
 
   if (step === "terms" || step === "done") {
     const props = await loadCovenantSetupProps(db, id);
@@ -32,6 +36,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
     return (
       <div className="space-y-8">
         <OnboardingStepper current={step === "done" ? "done" : "terms"} />
+        <Link href={`/borrowers/${id}/onboarding?step=documents`} className="text-label text-text-muted underline-offset-2 hover:underline">← Upload more documents</Link>
         <header className="space-y-1">
           <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
           <h1 className="text-title text-text">Covenant terms</h1>
