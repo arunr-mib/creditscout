@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileEvidence } from "./CasefileEvidence";
 import { FinishClosing } from "./FinishClosing";
@@ -26,6 +26,8 @@ export interface CasefileViewModel {
   casefileId: string;
   /** The owning exception, for the re-run action. */
   exceptionId: string;
+  /** The loan this casefile belongs to, for the terms-review link. */
+  facilityId: string;
   /** For a superseded casefile: the current casefile of the same exception, if one exists. */
   supersededBy: string | null;
   status: string;
@@ -84,77 +86,195 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         : rec === "request" ? "border-l-human"
           : "border-l-border-strong";
 
+  const summary = investigationSummary(view.sections, view.notes);
+  const statusPill =
+    mode === "active"
+      ? { label: "Ready for analyst decision", tone: "border-success bg-success-bg text-success" }
+      : mode === "read_only"
+        ? { label: decidedHeadline(view.status), tone: "border-border-strong text-text-muted" }
+        : { label: view.status, tone: "border-border-strong text-text-muted" };
+
   return (
     <article className="space-y-6">
-      {/* The decision banner: the recommendation is the first thing the analyst
-          sees, and a cue to the guardrail notices they must read before deciding
-          (the notices themselves still render in full above the action bar). */}
-      <header className={`overflow-hidden rounded-lg border border-border-strong ${showRec ? `border-l-2 ${accent}` : ""} bg-surface`}>
-        <div className="flex flex-wrap items-start justify-between gap-4 p-4">
-          <div className="space-y-2">
-            <p className="text-label text-text-muted">Casefile review</p>
-            <h1 className="text-title text-text">
-              {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
-            </h1>
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <SeenSimilarBadge count={view.seenSimilar} />
-              {view.notes.length > 0 && (
-                <a
-                  href="#guardrail-notices"
-                  className="inline-flex items-center gap-1 rounded-sm border border-code bg-code-bg px-2 py-px text-label text-code-bright"
-                >
-                  <span aria-hidden="true">⟡</span>
-                  {view.notes.length} guardrail {view.notes.length === 1 ? "notice" : "notices"} to review
-                </a>
-              )}
-            </div>
-          </div>
-          {showRec && rec && (
-            <div className={`shrink-0 inline-flex items-center gap-2 rounded-md px-3 py-2 text-section ${RECOMMENDATION_BADGE[rec].tone}`}>
-              <span aria-hidden="true">{RECOMMENDATION_BADGE[rec].icon}</span>
-              {RECOMMENDATION_BADGE[rec].label}
-            </div>
-          )}
-          {showRec && !rec && <RecommendationBadge recommendation={view.recommendation} />}
-        </div>
+      {/* ------------------------------------------------------------ header */}
+      <nav aria-label="Breadcrumb" className="text-label text-text-muted">
+        <Link href="/" className="underline-offset-2 hover:text-text-secondary hover:underline">
+          Credit Analysis Queue
+        </Link>
+        <span aria-hidden="true"> / </span>
+        <span className="text-text-secondary">{view.borrower}</span>
+      </nav>
 
-        {/* The governing figures, so the decision rests on numbers the analyst
-            can see at a glance — not a paragraph away (audit 3.3). */}
-        {showRec && headline && (
-          <dl className="flex flex-wrap items-end gap-x-8 gap-y-3 border-t border-border px-4 py-3">
-            {view.testPeriodEnd && (
-              <Figure label="Test period" value={`ending ${view.testPeriodEnd}`} tag={view.testBasis ?? undefined} muted />
-            )}
-            {/* When the governing calculation ran on terms the approved version
-                does not carry, the label SAYS SO. Without it this strip reads
-                "Computed DSCR 1.30" beside "Approved terms v1" — and v1 does
-                not produce 1.30, it produces the breach. That is the summary
-                contradicting the evidence under it. */}
-            <Figure
-              label={onAmendedTerms ? "Computed DSCR · amended terms" : "Computed DSCR"}
-              value={fmt(headline.dscr)}
-              tone={headline.passes === false ? "danger" : headline.passes ? "success" : undefined}
-              tag={headline.passes === false ? "breach" : headline.passes ? "passes" : undefined}
-            />
-            <Figure label="Required" value={fmt(headline.required)} />
-            <Figure label="Margin" value={fmtSigned(headline.margin)} tone={headline.margin != null && headline.margin < 0 ? "danger" : undefined} />
-            <Figure label="Calculation" value={`calc_${headline.calcId.slice(0, 8)}`} muted />
-            {view.termsVersion != null && (
-              <Figure
-                label="Approved terms used for this test"
-                value={`v${view.termsVersion}${view.termsStatus === "superseded" ? " · superseded" : ""}`}
-                tag={onAmendedTerms ? "amendment not included" : undefined}
-                muted
-              />
-            )}
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-2">
+          <p className="text-label uppercase tracking-[0.14em] text-model-bright">DSCR exception investigation</p>
+          <h1 className="text-title text-text">
+            {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
+          </h1>
+          <p className="max-w-prose text-body text-text-secondary">
+            Review the agent&rsquo;s recommendation, calculations, and supporting evidence.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <SeenSimilarBadge count={view.seenSimilar} />
+          </div>
+        </div>
+        <span className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-body ${statusPill.tone}`}>
+          <span aria-hidden="true">●</span> {statusPill.label}
+        </span>
+      </header>
+
+      {/* ------------------------------------------------- the recommendation */}
+      {showRec && rec && (
+        <section
+          aria-label="Agent recommendation"
+          className={`rounded-lg border border-border-strong border-l-2 ${accent} bg-surface p-4`}
+        >
+          <p className="text-label text-model-bright">CreditScout Agent recommendation</p>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h2 className="text-section text-text">{RECOMMENDATION_HEADLINE[rec]}</h2>
             {view.humanReviewRequired && (
-              <div className="ml-auto inline-flex items-center gap-2 self-center text-label text-text-muted">
-                <span aria-hidden="true">🔒</span> Human approval required · Locked
+              <span className="inline-flex items-center gap-2 rounded-md border border-success bg-success-bg px-3 py-px text-label text-success">
+                <span aria-hidden="true">🔒</span> Human approval required
+              </span>
+            )}
+          </div>
+          {/* Assembled from the calculation log, never a second model summary. */}
+          {summary.steps.length > 0 && (
+            <p className="mt-2 max-w-prose text-body text-text-secondary">{summary.steps[summary.steps.length - 1].detail}</p>
+          )}
+          {onAmendedTerms && (
+            <p className="mt-3 inline-flex items-center gap-2 rounded-md border border-code bg-code-bg px-3 py-1 text-label text-code-bright">
+              <span aria-hidden="true">⚠</span> Provisional · amendment not reflected in approved terms
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ---------------------------------------------------------- figures */}
+      {showRec && (summary.initial || headline) && (
+        <dl className="grid gap-px overflow-hidden rounded-lg border border-border-strong bg-border sm:grid-cols-2 lg:grid-cols-4">
+          {summary.initial && (
+            <Figure
+              label="Initial DSCR"
+              value={fmtX(summary.initial.dscr)}
+              tag={summary.comparison[0]?.status === "below_minimum" ? "below minimum" : undefined}
+              tone={summary.comparison[0]?.status === "below_minimum" ? "danger" : undefined}
+            />
+          )}
+          {summary.comparison.length > 1 && summary.governing && (
+            <Figure
+              label={onAmendedTerms ? "Investigation recalculation" : "Recalculation"}
+              value={fmtX(summary.governing.dscr)}
+              tag={onAmendedTerms ? "provisional" : undefined}
+              tone={onAmendedTerms ? "code" : summary.governing.passes ? "success" : undefined}
+            />
+          )}
+          <Figure label="Minimum DSCR" value={fmtX(summary.required)} />
+          <Figure
+            label="Period"
+            value={view.testPeriodEnd ? `${view.testBasis ?? ""} ending ${view.testPeriodEnd}`.trim() : view.period}
+            muted
+          />
+        </dl>
+      )}
+
+      {/* ------------------------------------ what was found / what to check */}
+      {showRec && (summary.steps.length > 0 || view.amendments.length > 0 || view.notes.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <section aria-label="What the agent found" className="rounded-lg border border-border-strong bg-surface lg:col-span-2">
+            <h2 className="border-b border-border px-4 py-3 text-card text-text">What the agent found</h2>
+            <ol className="space-y-4 p-4">
+              {summary.steps.map((step) => (
+                <li key={step.n} className="flex gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="mt-px inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-model bg-model-bg font-mono text-label text-model-bright"
+                  >
+                    {step.n}
+                  </span>
+                  <div>
+                    <p className="text-body font-medium text-text">{step.title}</p>
+                    <p className="mt-1 max-w-prose text-body text-text-secondary">{step.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {summary.comparison.length > 1 && (
+              <div className="border-t border-border p-4">
+                <h3 className="text-card text-text">Calculation comparison</h3>
+                <div className="mt-2 overflow-x-auto rounded-md border border-border">
+                  <table className="w-full border-collapse text-left">
+                    <thead className="bg-surface-raised">
+                      <tr className="text-label uppercase tracking-wide text-text-muted">
+                        <th className="px-3 py-2 font-medium">Basis</th>
+                        <th className="px-3 py-2 text-right font-medium">DSCR</th>
+                        <th className="px-3 py-2 font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.comparison.map((row) => (
+                        <tr key={row.basis} className="border-t border-border">
+                          <td className="px-3 py-2 text-body text-text">{row.basis}</td>
+                          <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text">{fmtX(row.dscr)}</td>
+                          <td className="px-3 py-2">
+                            <StatusPill status={row.status} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
-          </dl>
-        )}
-      </header>
+          </section>
+
+          {/* Points AT the notices rather than replacing them: the full text
+              still renders below, where the decision is made. */}
+          <section aria-label="What needs your attention" className="rounded-lg border border-border-strong bg-surface">
+            <h2 className="border-b border-border px-4 py-3 text-card text-text">What needs your attention</h2>
+            <div className="space-y-4 p-4">
+              {view.amendments.filter((a) => a.effectiveForPeriod && !a.boarded).map((a) => (
+                <div key={a.title} className="flex gap-3">
+                  <span aria-hidden="true" className="text-card text-code-bright">⚠</span>
+                  <div>
+                    <p className="text-body text-text">Amendment review pending</p>
+                    <p className="mt-1 text-label text-text-muted">
+                      {a.title} is not reflected in approved terms{view.termsVersion != null ? ` v${view.termsVersion}` : ""}.
+                    </p>
+                    <Link
+                      href={`/facilities/${view.facilityId}/covenant-setup`}
+                      className="mt-2 inline-flex rounded-md border border-border-strong px-3 py-1 text-label text-text hover:bg-surface-raised"
+                    >
+                      Review amendment and terms
+                    </Link>
+                  </div>
+                </div>
+              ))}
+              {view.notes.length > 0 && (
+                <div className="flex items-start justify-between gap-3 border-t border-border pt-4">
+                  <p className="text-body text-text-secondary">
+                    {view.notes.length} validation notice{view.notes.length === 1 ? "" : "s"} to review
+                  </p>
+                  <a href="#guardrail-notices" className="shrink-0 text-label text-model-bright underline-offset-2 hover:underline">
+                    View notice{view.notes.length === 1 ? "" : "s"}
+                  </a>
+                </div>
+              )}
+              {view.missingEvidence.length > 0 && (
+                <div className="border-t border-border pt-4">
+                  <p className="text-body text-text">Evidence the agent says is not on file</p>
+                  <ul className="mt-1 space-y-1">
+                    {view.missingEvidence.map((m, i) => (
+                      <li key={i} className="text-label text-text-muted">{m}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       {view.amendments.length > 0 && <AmendmentPanel amendments={view.amendments} termsVersion={view.termsVersion} />}
 
@@ -214,10 +334,23 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         </section>
       )}
 
-      {/* Above the actions, always visible, never collapsible. */}
-      <div id="guardrail-notices" className="scroll-mt-4">
-        <GuardrailNotices notes={view.notes} />
-      </div>
+      {/* Collapsible (owner's call), but OPEN BY DEFAULT when a notice actually
+          changed the answer. A flag is context; an abstain or escalate replaced
+          the recommendation being reviewed, and that must not start hidden. */}
+      {view.notes.length > 0 && (
+        <details id="guardrail-notices" open={overridden} className="scroll-mt-4 rounded-lg border border-border-strong bg-surface">
+          <summary className="cursor-pointer list-none px-4 py-3 text-card text-text marker:content-['']">
+            <span aria-hidden="true" className="mr-2 text-code-bright">⟡</span>
+            {view.notes.length} validation notice{view.notes.length === 1 ? "" : "s"}
+            <span className="ml-2 text-label text-text-muted">
+              {overridden ? "— enforcement changed the recommendation; read before deciding" : "— click to read"}
+            </span>
+          </summary>
+          <div className="border-t border-border p-4">
+            <GuardrailNotices notes={view.notes} />
+          </div>
+        </details>
+      )}
 
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} />
@@ -242,8 +375,33 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   );
 }
 
+/** The recommendation as a sentence, so the card does not just repeat a token. */
+const RECOMMENDATION_HEADLINE: Record<string, string> = {
+  resolve: "Recommends exception resolution",
+  escalate: "Recommends escalation",
+  request: "Recommends requesting more documents",
+  abstain: "Reaches no conclusion",
+};
+
 const fmt = (v: number | null): string => (v == null ? "—" : v.toFixed(2));
+/** DSCR is a multiple; the x is how an analyst reads it. */
+const fmtX = (v: number | null): string => (v == null ? "—" : `${v.toFixed(2)}x`);
 const fmtSigned = (v: number | null): string => (v == null ? "—" : `${v > 0 ? "+" : ""}${v.toFixed(2)}`);
+
+/** The basis of a compared figure, in the product's own colour language. */
+function StatusPill({ status }: { status: string }) {
+  const tone =
+    status === "below_minimum" ? "border-danger bg-danger-bg text-danger"
+      : status === "meets_minimum" ? "border-success bg-success-bg text-success"
+        : status === "provisional" ? "border-code bg-code-bg text-code-bright"
+          : "border-border-strong text-text-muted";
+  const label =
+    status === "below_minimum" ? "Below minimum"
+      : status === "meets_minimum" ? "Meets minimum"
+        : status === "provisional" ? "Provisional"
+          : "Not computed";
+  return <span className={`inline-flex whitespace-nowrap rounded-full border px-3 py-px text-label ${tone}`}>{label}</span>;
+}
 
 /** One figure in the decision banner's governing-figures strip. */
 function Figure({
@@ -255,18 +413,21 @@ function Figure({
 }: {
   label: string;
   value: string;
-  tone?: "danger" | "success";
+  tone?: "danger" | "success" | "code";
   tag?: string;
   muted?: boolean;
 }) {
   const toneClass =
-    tone === "danger" ? "text-danger" : tone === "success" ? "text-success" : muted ? "text-text-muted" : "text-text";
+    tone === "danger" ? "text-danger"
+      : tone === "success" ? "text-success"
+        : tone === "code" ? "text-code-bright"
+          : muted ? "text-text-muted" : "text-text";
   return (
-    <div>
+    <div className="bg-surface px-4 py-3">
       <dt className="text-label text-text-muted">{label}</dt>
-      <dd className={`font-mono text-num tabular-nums ${toneClass}`}>
+      <dd className={`mt-1 font-mono text-section tabular-nums ${toneClass}`}>
         {value}
-        {tag && <span className="ml-2 text-label text-text-muted">{tag}</span>}
+        {tag && <span className="ml-2 align-middle text-label text-text-muted">{tag}</span>}
       </dd>
     </div>
   );

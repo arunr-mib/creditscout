@@ -28,7 +28,7 @@ import { OverrideDialog } from "./OverrideDialog";
 const APPROVE_LABEL: Record<string, string> = {
   resolve: "Approve exception resolution",
   escalate: "Record escalation",
-  request: "Mark awaiting documents",
+  request: "Hold for borrower documents",
   abstain: "Record abstention",
 };
 
@@ -82,7 +82,7 @@ export function ReviewActions(props: {
         {/* NOT "Request documents": this records a state, it sends nothing. The
             label must not imply a message went out (review 5). */}
         <button type="button" disabled={pending} onClick={() => send("request_docs")} className={`${button} border-border-strong text-text`}>
-          Mark awaiting documents
+          Hold for borrower documents
         </button>
       </div>
 

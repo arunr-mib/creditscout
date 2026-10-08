@@ -134,6 +134,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
       view={{
         casefileId: id,
         exceptionId: casefile.exception_id,
+        facilityId: exception.facility_id,
         supersededBy,
         status: casefile.status,
         borrower: (must(facility, "select facilities") as { borrower_name: string } | null)?.borrower_name ?? "Unknown borrower",

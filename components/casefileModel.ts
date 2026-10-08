@@ -529,3 +529,136 @@ export function humanReviewNotice(value: boolean | null): HumanReviewNotice {
   }
   return { mandatory: false, text: "The human-review policy is not readable, so it is not treated as mandatory. The agent never resolves itself; an analyst decides here." };
 }
+
+// ------------------------------------------------- the investigation summary
+
+/** One numbered finding, built from the calculation log — never from a model. */
+export interface FoundStep {
+  n: number;
+  title: string;
+  detail: string;
+}
+
+export interface ComparisonRow {
+  basis: string;
+  dscr: number | null;
+  /** `provisional` means the figure rests on terms the approved version does not carry. */
+  status: "below_minimum" | "meets_minimum" | "provisional" | "unknown";
+}
+
+export interface InvestigationSummary {
+  /** The first calculation logged: the test as the approved terms produce it. */
+  initial: { calcId: string; dscr: number | null } | null;
+  /** The calculation the policy judged — what the recommendation rests on. */
+  governing: { calcId: string; dscr: number | null; passes: boolean | null } | null;
+  required: number | null;
+  /** The governing calculation used terms the approved version does not carry. */
+  onAmendedTerms: boolean;
+  /** The add-back the amendment permits, when the guardrail named one. */
+  addback: { name: string; cap: number | null } | null;
+  steps: FoundStep[];
+  comparison: ComparisonRow[];
+}
+
+/**
+ * The amendment's add-back, read out of the guardrail's own note.
+ *
+ * The note is written by `guardrails/guardrail.js` in a fixed shape, so this
+ * parse is tight and fails closed: no match returns null and the screen simply
+ * says less. It never invents a cap, and an uncapped add-back (no `cap`) stays
+ * null rather than becoming 0 — reading an uncapped add-back as zero is the
+ * known trap that flips a correct resolve into a false escalation.
+ */
+export function addbackFromNote(detail: string): { name: string; cap: number | null } | null {
+  const m = /added add-back "([^"]+)"(?:\s*\(cap\s*([0-9]+)\))?/i.exec(detail);
+  if (!m) return null;
+  return { name: m[1], cap: m[2] === undefined ? null : Number(m[2]) };
+}
+
+const dscrOf = (s: CalcSection): number | null => s.rows.find((r) => r.key === "dscr")?.value ?? null;
+
+/**
+ * What the investigation found, assembled from the calculation log and the
+ * guardrail's notes.
+ *
+ * EVERY FIGURE HERE IS READ, NEVER WRITTEN. The screen this feeds reads as a
+ * narrative, which is exactly why it must not be one: the review forbids a
+ * second unconstrained model summary, so the sentences are assembled from the
+ * logged calculations and the guardrail's own words.
+ */
+export function investigationSummary(
+  sections: readonly CalcSection[],
+  notes: readonly Notice[],
+): InvestigationSummary {
+  const head = headlineFor(sections);
+  const first = sections[0] ?? null;
+  const gov = sections.find((s) => s.governing) ?? sections[sections.length - 1] ?? null;
+  const required = head?.required ?? null;
+
+  const termsNote = notes.find((n) => n.check === "terms_differ_from_approved") ?? null;
+  const onAmendedTerms = termsNote !== null;
+  const addback = termsNote ? addbackFromNote(termsNote.detail) : null;
+
+  const initial = first ? { calcId: first.calcId, dscr: dscrOf(first) } : null;
+  const governing = gov ? { calcId: gov.calcId, dscr: dscrOf(gov), passes: head?.passes ?? null } : null;
+
+  const x = (v: number | null): string => (v == null ? "—" : `${v.toFixed(2)}x`);
+  const steps: FoundStep[] = [];
+
+  if (initial) {
+    const below = initial.dscr != null && required != null && initial.dscr < required;
+    steps.push({
+      n: steps.length + 1,
+      title: below ? "Initial test below minimum" : "Initial test calculated",
+      detail: `The original calculation returned ${x(initial.dscr)} against a ${x(required)} minimum.`,
+    });
+  }
+
+  if (addback) {
+    steps.push({
+      n: steps.length + 1,
+      title: "Additional add-back identified",
+      detail:
+        addback.cap == null
+          ? `An amendment permits an add-back for ${addback.name}, with no cap stated.`
+          : `An amendment permits an add-back for ${addback.name}, capped at $${addback.cap.toLocaleString("en-US")}.`,
+    });
+  }
+
+  // Only worth a third step when the recalculation actually moved the figure.
+  if (governing && initial && governing.calcId !== initial.calcId && governing.dscr !== initial.dscr) {
+    const above = governing.dscr != null && required != null && governing.dscr >= required;
+    steps.push({
+      n: steps.length + 1,
+      title: above ? "Recalculation above minimum" : "Recalculation still below minimum",
+      detail: onAmendedTerms
+        ? `Applying the amendment produced ${x(governing.dscr)}. The amendment basis still requires review.`
+        : `The recalculation produced ${x(governing.dscr)}.`,
+    });
+  }
+
+  const comparison: ComparisonRow[] = [];
+  if (initial) {
+    comparison.push({
+      basis: "Initial test",
+      dscr: initial.dscr,
+      status:
+        initial.dscr == null || required == null ? "unknown" : initial.dscr < required ? "below_minimum" : "meets_minimum",
+    });
+  }
+  if (governing && initial && governing.calcId !== initial.calcId) {
+    comparison.push({
+      basis: onAmendedTerms ? "Amendment scenario" : "Recalculation",
+      dscr: governing.dscr,
+      status: onAmendedTerms
+        ? "provisional"
+        : governing.dscr == null || required == null
+          ? "unknown"
+          : governing.dscr < required
+            ? "below_minimum"
+            : "meets_minimum",
+    });
+  }
+
+  return { initial, governing, required, onAmendedTerms, addback, steps, comparison };
+}

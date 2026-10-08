@@ -18,6 +18,8 @@ import {
   humanReviewNotice,
   humanReviewPolicy,
   isRecommendation,
+  addbackFromNote,
+  investigationSummary,
   noticeHeading,
   recommendationOverridden,
   noticesOf,
@@ -405,4 +407,77 @@ test("amendmentStatuses: an amendment effective after the period does not bear o
   const docs = [{ doc_type: "amendment", title: "Amendment No. 3", effective_date: "2026-09-01" }];
   const r = amendmentStatuses(docs, [], "2026-06-30");
   assert.equal(r[0].effectiveForPeriod, false);
+});
+
+// --------------------------------------------- the investigation summary
+
+const sec = (calcId, dscr, governing, threshold) => ({
+  calcId,
+  title: "",
+  governing,
+  rows: [
+    { key: "dscr", value: dscr, note: threshold != null && dscr != null ? (dscr < threshold ? "breach" : "passes") : null },
+    ...(threshold == null ? [] : [{ key: "threshold", value: threshold, note: null }]),
+  ],
+});
+
+const TERMS_NOTE = {
+  layer: "guardrail",
+  check: "terms_differ_from_approved",
+  action: "flag",
+  detail:
+    'the governing calculation ran on terms that differ from the approved version: added add-back "fuel hedging mark-to-market losses" (cap 800000) — Amd 2 §3',
+};
+
+test("addbackFromNote reads the guardrail's own words, and never invents a cap", () => {
+  assert.deepEqual(addbackFromNote(TERMS_NOTE.detail), { name: "fuel hedging mark-to-market losses", cap: 800000 });
+  // THE KNOWN TRAP: an add-back with no cap is UNCAPPED. Reading it as 0 flips a
+  // correct resolve into a false escalation, so it must stay null.
+  assert.deepEqual(addbackFromNote('added add-back "restructuring charges"'), {
+    name: "restructuring charges",
+    cap: null,
+  });
+  assert.equal(addbackFromNote("nothing of the sort here"), null);
+});
+
+test("the summary is assembled from the calculation log, not written", () => {
+  const sections = [sec("c1", 1.12, false, 1.25), sec("c2", 1.3, true, 1.25)];
+  const s = investigationSummary(sections, [TERMS_NOTE]);
+
+  assert.equal(s.initial.dscr, 1.12);
+  assert.equal(s.governing.dscr, 1.3);
+  assert.equal(s.required, 1.25);
+  assert.equal(s.onAmendedTerms, true);
+
+  assert.equal(s.steps.length, 3);
+  assert.match(s.steps[0].detail, /1\.12x against a 1\.25x minimum/);
+  assert.match(s.steps[1].detail, /capped at \$800,000/);
+  assert.match(s.steps[2].detail, /1\.30x/);
+
+  // The comparison names the basis of each figure — that pairing is the whole
+  // point: 1.30 is NOT what the approved terms produce.
+  assert.deepEqual(s.comparison, [
+    { basis: "Initial test", dscr: 1.12, status: "below_minimum" },
+    { basis: "Amendment scenario", dscr: 1.3, status: "provisional" },
+  ]);
+});
+
+test("a clean pass with one calculation produces no amendment step and no comparison row", () => {
+  const s = investigationSummary([sec("c1", 1.4, true, 1.25)], []);
+  assert.equal(s.onAmendedTerms, false);
+  assert.equal(s.addback, null);
+  assert.equal(s.steps.length, 1);
+  assert.equal(s.comparison.length, 1, "nothing to compare against");
+  assert.equal(s.comparison[0].status, "meets_minimum");
+});
+
+test("a recalculation that did not move the figure earns no third step", () => {
+  const s = investigationSummary([sec("c1", 1.12, false, 1.25), sec("c2", 1.12, true, 1.25)], []);
+  assert.equal(s.steps.length, 1, "repeating the same figure is not a finding");
+});
+
+test("a missing figure is never read as a pass", () => {
+  const s = investigationSummary([sec("c1", null, true, 1.25)], []);
+  assert.equal(s.comparison[0].status, "unknown");
+  assert.match(s.steps[0].detail, /—/);
 });
