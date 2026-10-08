@@ -7,3 +7,9 @@ export function validateNewLoan(input: { borrower_name?: unknown; industry?: unk
   const industryRaw = typeof input.industry === "string" ? input.industry.trim() : "";
   return { ok: true, value: { borrower_name: name, industry: industryRaw === "" ? null : industryRaw } };
 }
+
+export function onboardingStep(input: { documents: { doc_type: string | null }[]; terms: { status: string }[] }): "documents" | "terms" | "done" {
+  if (input.terms.some((t) => t.status === "approved")) return "done";
+  if (!input.documents.some((d) => d.doc_type === "agreement")) return "documents";
+  return "terms";
+}
