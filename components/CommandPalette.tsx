@@ -78,7 +78,7 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
         ref={dialogRef}
         onClose={() => setOpen(false)}
         aria-label="Search"
-        className="m-auto mt-24 w-full max-w-dialog rounded-lg border border-border-strong bg-surface-raised p-0 text-text-secondary backdrop:bg-bg/80"
+        className="m-auto mt-16 w-full max-w-dialog rounded-lg border border-border-strong bg-surface-raised p-0 text-text-secondary backdrop:bg-bg/80"
       >
         <input
           ref={inputRef}
@@ -89,7 +89,7 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
           aria-label="Search query"
           className="w-full rounded-t-lg border-b border-border bg-transparent px-4 py-3 text-body text-text placeholder:text-text-muted focus-visible:outline-none"
         />
-        <ul className="max-h-80 overflow-y-auto p-2">
+        <ul className="max-h-[320px] overflow-y-auto p-2">
           {results.length === 0 ? (
             <li className="px-3 py-4 text-label text-text-muted">No matches. Try a borrower, period, or case.</li>
           ) : (

@@ -31,8 +31,48 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
   const { next } = await searchParams;
   const signInHref = `/login${nextParam(next)}`;
 
+  // No `overflow-hidden` on <main>: it would make it a scroll container and the
+  // sticky bar would stop sticking. The glow is inset-x-0 and fades to
+  // transparent, so there is nothing to clip.
   return (
-    <main className="relative min-h-screen overflow-hidden bg-bg">
+    <main className="relative min-h-screen bg-bg">
+      {/* ------------------------------------------------------------- bar */}
+      {/* A defined band rather than a nav floating over the hero: its own
+          translucent surface, a bottom edge, and the destinations grouped
+          beside the logo. Sticky so the demo stays one click away at any
+          scroll depth. */}
+      <header className="sticky top-0 z-20 border-b border-border bg-bg/70 backdrop-blur-md">
+        <div className="mx-auto flex max-w-content items-center justify-between gap-6 px-6 py-3">
+          <div className="flex items-center gap-8">
+            <Logo className="h-12 w-auto" />
+            {/* Hidden on narrow widths rather than wrapped: a two-line sticky
+                bar eats the viewport. The sections are sequential below, so
+                scrolling still reaches them. */}
+            <nav aria-label="Landing" className="hidden items-center gap-6 md:flex">
+              <a href="#how-it-works" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
+                How it works
+              </a>
+              <a href="#oversight" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
+                Evidence &amp; oversight
+              </a>
+            </nav>
+          </div>
+          {/* shrink-0: flex children may shrink below their content width, and
+              without it the pill was squeezed narrower than its own label. */}
+          <div className="flex shrink-0 items-center gap-4">
+            <Link href={signInHref} className="whitespace-nowrap text-body text-text-secondary transition-colors duration-fast hover:text-text">
+              Sign in
+            </Link>
+            <Link
+              href={signInHref}
+              className="whitespace-nowrap rounded-full bg-model px-6 py-2 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+            >
+              Explore the demo
+            </Link>
+          </div>
+        </div>
+      </header>
+
       {/* The atmosphere. Decorative only, so it is hidden from assistive tech
           and never intercepts a click. design.md bans shadows for ELEVATION;
           this is a background field, not a raised surface. */}
@@ -49,25 +89,6 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
       />
 
       <div className="relative mx-auto max-w-content px-6">
-        {/* ------------------------------------------------------------ nav */}
-        <header className="flex flex-wrap items-center justify-between gap-4 pt-8">
-          <Logo className="h-12 w-auto" />
-          <nav aria-label="Landing" className="flex flex-wrap items-center gap-6">
-            <a href="#how-it-works" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
-              How it works
-            </a>
-            <a href="#oversight" className="text-body text-text-secondary transition-colors duration-fast hover:text-text">
-              Evidence &amp; oversight
-            </a>
-            <Link
-              href={signInHref}
-              className="rounded-full border border-border-strong bg-surface/60 px-4 py-2 text-body text-text backdrop-blur transition-colors duration-fast hover:border-model"
-            >
-              Sign in
-            </Link>
-          </nav>
-        </header>
-
         {/* ----------------------------------------------------------- hero */}
         {/* Arbitrary paddings on purpose: the spacing scale tops out at 64px
             (`pt-16`), which is not enough air for a hero. This page is the one
@@ -80,10 +101,17 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
                 wrap up beside "covenant." buries it. */}
             <span className="mt-2 block text-model-bright">Or did they?</span>
           </h1>
-          <p className="mt-6 max-w-[62ch] text-[17px] leading-relaxed text-text-secondary">
-            CreditScout helps commercial credit analysts investigate DSCR exceptions across loan agreements,
-            amendments, and borrower reporting — with independent calculations, cited findings, and a recommendation
-            for human review.
+          {/* This replaced a description that said the same thing in different
+              words — both named the analyst, the agreement and amendments, the
+              independent calculation and the human decision. Two paragraphs
+              making one point is weaker than one. */}
+          <p className="mt-6 max-w-[70ch] text-[18px] leading-relaxed text-text-secondary">
+            CreditScout is an AI assistant for commercial credit analysts. It reads the loan agreement, every
+            amendment, and the borrower&rsquo;s financials. The agent performs independent calculations, identifies
+            covenant breaches, and investigates DSCR exceptions.
+          </p>
+          <p className="mt-6 text-[26px] font-semibold leading-tight tracking-tight text-text">
+            Our agent recommends. <span className="text-model-bright">Your analyst decides.</span>
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -108,26 +136,9 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         {/* -------------------------------------------------------- preview */}
         <CasefilePreview />
 
-        {/* ------------------------------------------------------ statement */}
-        {/* Placed after the preview rather than between it and the hero: it
-            keeps the casefile peeking at the fold, and the closing line then
-            reads as the conclusion drawn from the evidence above it. */}
-        <section aria-labelledby="what-heading" className="mt-16 border-t border-border pt-12">
-          <h2 id="what-heading" className="sr-only">
-            What CreditScout is
-          </h2>
-          <p className="max-w-[70ch] text-[18px] leading-relaxed text-text-secondary">
-            CreditScout is an AI assistant for commercial credit analysts. It reads the loan agreement, every
-            amendment, and the borrower&rsquo;s financials. The agent performs independent calculations, identifies
-            covenant breaches, and investigates DSCR exceptions.
-          </p>
-          <p className="mt-6 text-[26px] font-semibold leading-tight tracking-tight text-text">
-            Our agent recommends. <span className="text-model-bright">Your analyst decides.</span>
-          </p>
-        </section>
 
         {/* ------------------------------------------------------- workflow */}
-        <section id="how-it-works" aria-labelledby="how-heading" className="mt-16 scroll-mt-8 border-t border-border pt-12">
+        <section id="how-it-works" aria-labelledby="how-heading" className="mt-16 scroll-mt-[96px] border-t border-border pt-12">
           <h2 id="how-heading" className="max-w-prose text-section text-text">
             The borrower&rsquo;s ratio is the starting point. Verification is the work.
           </h2>
@@ -158,7 +169,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         </section>
 
         {/* ------------------------------------------------------ oversight */}
-        <section id="oversight" aria-labelledby="oversight-heading" className="mt-16 scroll-mt-8 border-t border-border pt-12">
+        <section id="oversight" aria-labelledby="oversight-heading" className="mt-16 scroll-mt-[96px] border-t border-border pt-12">
           <h2 id="oversight-heading" className="text-section text-text">A recommendation you can inspect.</h2>
           <dl className="mt-8 grid gap-6 md:grid-cols-2">
             <Point head="Open the source" body="Move from a finding to the exact clause and quoted passage behind it." />
@@ -237,7 +248,7 @@ function CasefilePreview() {
         <Figure label="Borrower reported" value="1.30" note="evidence, not the trigger" tone="text-text-secondary" />
       </div>
 
-      <div className="space-y-3 border-t border-border-strong px-6 py-5">
+      <div className="space-y-3 border-t border-border-strong px-6 py-4">
         <p className="max-w-prose text-body text-text-secondary">
           Amendment No. 2 permits a fuel-hedging add-back capped at $800,000. It is on file and effective for this
           period — but the approved terms do not yet reflect it. A person decides which governs.
@@ -254,7 +265,7 @@ function CasefilePreview() {
 
 function Figure({ label, value, note, tone }: { label: string; value: string; note: string; tone: string }) {
   return (
-    <div className="bg-surface px-6 py-5">
+    <div className="bg-surface px-6 py-4">
       <p className="text-label text-text-muted">{label}</p>
       <p className={`mt-1 font-mono text-title tabular-nums ${tone}`}>{value}</p>
       <p className="mt-1 text-label text-text-muted">{note}</p>
