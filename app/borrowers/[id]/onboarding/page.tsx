@@ -24,7 +24,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
     db.from("covenant_terms").select("status").eq("facility_id", id),
   ]);
   const derived = onboardingStep({ documents: docs.data ?? [], terms: terms.data ?? [] });
-  const step = requested === "terms" && derived !== "documents" ? "terms" : derived; // never jump ahead of the agreement gate
+  const step = derived === "done" ? "done" : requested === "terms" && derived !== "documents" ? "terms" : derived; // done wins; never jump ahead of the agreement gate
 
   if (step === "terms" || step === "done") {
     const props = await loadCovenantSetupProps(db, id);
