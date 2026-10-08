@@ -1,6 +1,11 @@
 case_id,facility,borrower,test_period_end,threshold,terms_version_boarded,ebitda,addbacks,unfinanced_capex,cash_taxes,scheduled_principal,cash_interest,reported_dscr,expected_dscr_as_tested,expected_dscr_remapped,expected_outcome,expected_tag,owner_signed_off
-F1-2026Q2,F1,Harbor Logistics,2026-06-30,1.25,1,4020000,"restructuring charges=620000 (cap 500000 under unboarded v2 only)",300000,250000,2000000,1100000,1.12,,,resolve,amendment_addback,NO
-F3-2026Q2,F3,Northgate Foods,2026-06-30,1.25,1,2884000,"owner compensation normalisation=530000 (no clause permits this)",220000,180000,1600000,700000,1.31,,n/a,escalate,true_breach,NO
-F5-2025Q4,F5,Coastal Marine,2025-12-31,1.25,1,6720000,"dry-dock and vessel overhaul charges=300000 (cap 500000)",400000,360000,3000000,1440000,1.41,,n/a,compliant_no_action,n/a,NO
-F5-2026Q1,F5,Coastal Marine,2026-03-31,1.25,1,6028000,"dry-dock and vessel overhaul charges=900000 (cap 500000)",420000,380000,3000000,1440000,1.38,,n/a,variance_logged_no_investigation,n/a,NO
-F5-2026Q2,F5,Coastal Marine,2026-06-30,1.25,1,5313000,"dry-dock and vessel overhaul charges=520000 (cap 500000); fuel hedging mark-to-market losses=950000 (cap 800000 under unboarded v2 only)",450000,390000,3000000,1440000,1.30,,,resolve,amendment_addback,NO
+F1-2026Q2,F1,Harbor Logistics,2026-06-30,1.25,1,4020000,"restructuring charges=620000 (cap 500000 under unboarded v2 only)",300000,250000,2000000,1100000,1.12,1.12,1.28,resolve,amendment_addback,YES
+F3-2026Q2,F3,Northgate Foods,2026-06-30,1.25,1,2884000,"owner compensation normalisation=530000 (no clause permits this)",220000,180000,1600000,700000,1.31,1.08,n/a,escalate,true_breach,YES
+F5-2025Q4,F5,Coastal Marine,2025-12-31,1.25,1,6720000,"dry-dock and vessel overhaul charges=300000 (cap 500000)",400000,360000,3000000,1440000,1.41,1.41,n/a,compliant_no_action,n/a,YES
+F5-2026Q1,F5,Coastal Marine,2026-03-31,1.25,1,6028000,"dry-dock and vessel overhaul charges=900000 (cap 500000)",420000,380000,3000000,1440000,1.38,1.29,n/a,variance_logged_no_investigation,n/a,YES
+F5-2026Q2,F5,Coastal Marine,2026-06-30,1.25,1,5313000,"dry-dock and vessel overhaul charges=520000 (cap 500000); fuel hedging mark-to-market losses=950000 (cap 800000 under unboarded v2 only)",450000,390000,3000000,1440000,1.30,1.12,1.30,resolve,amendment_addback,YES
+ZHATSAPP-2026Q3,ZHATSAPP,Zhatsapp Inc,2026-09-30,1.25,1,4250000,none,260000,160000,1800000,1000000,1.37,1.37,n/a,compliant_no_action,n/a,YES
+MARCUS-2026Q3,MARCUS,Marcus Tech,2026-09-30,1.15,1,3900000,none,210000,140000,1500000,1000000,1.42,1.42,n/a,compliant_no_action,n/a,YES
+ORION-2026Q3,ORION,Orion Medical Supply,2026-09-30,1.20,1,5600000,none,300000,200000,2200000,1300000,1.46,1.46,n/a,compliant_no_action,n/a,YES
+PETWORKS-2026Q3,PETWORKS,Petworks LLC,2026-09-30,1.25,1,3600000,none,180000,90000,1500000,900000,1.39,1.39,n/a,compliant_no_action,n/a,YES
+VANTAGE-2026Q3,VANTAGE,Vantage Print Works,2026-09-30,1.30,1,3900000,none,350000,150000,1700000,1300000,1.13,1.13,n/a,escalate,true_breach,YES
