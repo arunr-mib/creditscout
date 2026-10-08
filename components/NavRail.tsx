@@ -46,7 +46,6 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
         <Link href="/" aria-label="CreditScout — go to the queue" className="block">
           <Logo className="h-8 w-auto" />
         </Link>
-        <p className="mt-1 text-badge text-text-muted">recommends — a human decides</p>
       </div>
 
       <div className="mb-3 px-1">

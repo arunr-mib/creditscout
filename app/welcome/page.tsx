@@ -93,7 +93,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         {/* Arbitrary paddings on purpose: the spacing scale tops out at 64px
             (`pt-16`), which is not enough air for a hero. This page is the one
             place the system is waived. */}
-        <section className="pt-[104px] pb-[40px] md:pt-[148px]">
+        <section className="pt-[56px] pb-[24px] md:pt-[80px]">
           <p className="text-label uppercase tracking-[0.18em] text-model-bright">Commercial credit intelligence</p>
           <h1 className="mt-6 max-w-[22ch] text-[40px] font-semibold leading-[1.05] tracking-tight text-text sm:text-display">
             A borrower just missed a loan covenant.{" "}
@@ -105,15 +105,15 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
               words — both named the analyst, the agreement and amendments, the
               independent calculation and the human decision. Two paragraphs
               making one point is weaker than one. */}
-          <p className="mt-6 max-w-[70ch] text-[18px] leading-relaxed text-text-secondary">
+          <p className="mt-4 max-w-[66ch] text-[17px] leading-relaxed text-text-secondary">
             CreditScout is an AI assistant for commercial credit analysts. It reads the loan agreement, every
             amendment, and the borrower&rsquo;s financials. The agent performs independent calculations, identifies
             covenant breaches, and investigates DSCR exceptions.
           </p>
-          <p className="mt-6 text-[26px] font-semibold leading-tight tracking-tight text-text">
+          <p className="mt-4 text-[22px] font-semibold leading-tight tracking-tight text-text">
             Our agent recommends. <span className="text-model-bright">Your analyst decides.</span>
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href={signInHref}
               className="rounded-full bg-model px-6 py-3 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
@@ -128,8 +128,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
               See how it works
             </a>
           </div>
-          <p className="mt-6 text-label text-text-muted">
-            Built around DSCR covenant monitoring. Demo uses synthetic documents and fictional borrowers.
+          <p className="mt-4 text-label text-text-muted">            Built around DSCR covenant monitoring. Demo uses synthetic documents and fictional borrowers.
           </p>
         </section>
 
@@ -229,7 +228,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
  */
 function CasefilePreview() {
   return (
-    <div className="mt-8 overflow-hidden rounded-lg border border-border-strong bg-surface/80 backdrop-blur">
+    <div className="mt-6 overflow-hidden rounded-lg border border-border-strong bg-surface/80 backdrop-blur">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
         <div>
           <p className="text-label text-text-muted">Casefile review</p>
