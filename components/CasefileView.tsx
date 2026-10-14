@@ -106,13 +106,20 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       {/* ------------------------------------------------------------ header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
-          <p className="text-label uppercase tracking-[0.14em] text-model-bright">DSCR exception investigation</p>
+          {/* A breadcrumb back to the queue: the casefile is reached FROM a
+              list, and an analyst reviewing a book of loans needs the way
+              back. */}
+          <nav aria-label="Breadcrumb" className="text-label text-text-muted">
+            <Link href="/" className="underline-offset-2 hover:text-text hover:underline">
+              Credit Analysis Queue
+            </Link>
+            <span aria-hidden="true" className="mx-2">/</span>
+            <span className="text-text-secondary">{view.borrower}</span>
+          </nav>
           <h1 className="text-title text-text">
             {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
           </h1>
-          <p className="max-w-prose text-body text-text-secondary">
-            Review the agent&rsquo;s recommendation, calculations, and supporting evidence.
-          </p>
+          <p className="max-w-prose text-body text-text-secondary">Covenant exception review</p>
         </div>
         {/* The memory badge sits under the status pill rather than taking a row
             of its own below the subtitle. */}
@@ -134,6 +141,11 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           explanation={view.explanation}
           overridden={overridden}
           basis={basis}
+          facts={{
+            testResult: summary.governing?.passes === false ? "Outside covenant limit" : summary.governing?.passes === true ? "Within covenant limit" : null,
+            termsUsed: view.termsVersion != null ? `Approved v${view.termsVersion}` : null,
+            period: view.period,
+          }}
         />
       )}
 

@@ -20,6 +20,7 @@ export function RecommendationCard({
   explanation,
   overridden,
   basis,
+  facts,
 }: {
   accent: string;
   headline: string;
@@ -28,6 +29,8 @@ export function RecommendationCard({
   explanation: string | null;
   overridden: boolean;
   basis: DecisionBasis;
+  /** The three facts that frame the recommendation. Any may be absent. */
+  facts?: { testResult: string | null; termsUsed: string | null; period: string | null };
 }) {
   const [open, setOpen] = useState(false);
 
@@ -63,6 +66,32 @@ export function RecommendationCard({
       </div>
 
       {summary && <p className="mt-2 text-body text-text-secondary">{summary}</p>}
+
+      {/* The three facts an analyst checks before reading anything else: what
+          the test said, which terms produced it, and for what period. A strip,
+          not prose. */}
+      {(facts?.testResult || facts?.termsUsed || facts?.period) && (
+        <dl className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-3">
+          {facts.testResult && (
+            <div>
+              <dt className="text-label text-text-muted">Test result</dt>
+              <dd className="mt-px text-body text-text">{facts.testResult}</dd>
+            </div>
+          )}
+          {facts.termsUsed && (
+            <div className="sm:border-l sm:border-border sm:pl-4">
+              <dt className="text-label text-text-muted">Terms used</dt>
+              <dd className="mt-px text-body text-text">{facts.termsUsed}</dd>
+            </div>
+          )}
+          {facts.period && (
+            <div className="sm:border-l sm:border-border sm:pl-4">
+              <dt className="text-label text-text-muted">Reporting period</dt>
+              <dd className="mt-px text-body text-text">{facts.period}</dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       {/* WHY this recommendation stands, given everything else on the screen.
           The analyst was being shown an escalation beside a pending amendment

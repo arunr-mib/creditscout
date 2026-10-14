@@ -58,10 +58,13 @@ export function CasefileFindings({
   const unboarded = amendments.filter((a) => a.effectiveForPeriod && !a.boarded);
   const termsNote = notes.find((n) => n.check === "terms_differ_from_approved") ?? null;
 
+  // items-start: without it the grid stretches every column to the tallest, so a
+  // single finding left a panel of empty white and the investigation read as
+  // incomplete. Panels are content-sized.
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <div className="grid items-start gap-4 lg:grid-cols-3">
       {/* ------------------------------------------------ what the agent found */}
-      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border bg-surface shadow-card shadow-card lg:col-span-2">
+      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border bg-surface shadow-card lg:col-span-2">
         <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Investigation findings</h2>
 
         <ol className="px-4 py-3">
@@ -181,7 +184,7 @@ export function CasefileFindings({
       {/* ------------------------------------ supporting evidence + attention */}
       <div className="min-w-0 space-y-4">
         {amendments.length > 0 && (
-          <section aria-label="Supporting evidence" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
+          <section aria-label="Supporting evidence" className="rounded-lg border border-border bg-surface shadow-card">
             <div role="tablist" className="flex border-b border-border-strong">
               <button
                 type="button"
@@ -244,7 +247,7 @@ export function CasefileFindings({
           </section>
         )}
 
-        <section aria-label="Outstanding review items" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
+        <section aria-label="Outstanding review items" className="rounded-lg border border-border bg-surface shadow-card">
           <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Outstanding review items</h2>
           <div className="space-y-3 px-4 py-3">
             {unboarded.map((a) => (
