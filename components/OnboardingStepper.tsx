@@ -1,12 +1,21 @@
+/**
+ * Three steps, not four. Borrower details is two fields — a name and an
+ * optional industry — which does not warrant a screen of its own, and splitting
+ * it from the upload made onboarding feel like paperwork before the work.
+ *
+ * `borrower` and `documents` both map to the first step so existing links and
+ * the derived-step logic keep working.
+ */
 const STEPS: { key: "borrower" | "documents" | "terms" | "done"; label: string }[] = [
-  { key: "borrower", label: "New borrower" },
-  { key: "documents", label: "Upload documents" },
-  { key: "terms", label: "Covenant terms" },
-  { key: "done", label: "Done" },
+  { key: "documents", label: "Borrower & documents" },
+  { key: "terms", label: "Review terms" },
+  { key: "done", label: "Complete" },
 ];
 
 export function OnboardingStepper({ current }: { current: "borrower" | "documents" | "terms" | "done" }) {
-  const idx = STEPS.findIndex((s) => s.key === current);
+  // "borrower" is the same step as "documents" now.
+  const key = current === "borrower" ? "documents" : current;
+  const idx = STEPS.findIndex((s) => s.key === key);
   return (
     <ol className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface-raised px-4 py-3">
       {STEPS.map((s, i) => {

@@ -61,12 +61,15 @@ export default async function OnboardingPage({ params, searchParams }: { params:
   }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-[900px] space-y-6">
       <OnboardingStepper current="documents" />
       <header className="space-y-1">
         <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
-        <h1 className="text-title text-text">Upload documents</h1>
-        <p className="max-w-prose text-body text-text-secondary">Upload the loan agreement (required), any amendments, the quarter&rsquo;s financials, and the compliance certificate. The agreement is what the CreditScout Agent reads to extract the covenant terms.</p>
+        <h1 className="text-title text-text">Add a borrower</h1>
+        <p className="max-w-prose text-body text-text-secondary">
+          Upload the loan agreement and relevant amendments to prepare covenant terms. Add financial statements and the
+          compliance certificate for covenant testing.
+        </p>
       </header>
       <UploadPackage facilities={[{ id: facility.data.id, borrower_name: facility.data.borrower_name }]} fixedFacilityId={facility.data.id} />
 
@@ -91,13 +94,13 @@ export default async function OnboardingPage({ params, searchParams }: { params:
 
       <div className="flex flex-wrap items-center gap-3">
         <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-model bg-model text-bg hover:bg-model-bright"}`}>
-          Continue to covenant terms
+          Prepare covenant terms
         </Link>
         {derived === "documents" && (
           <span className="max-w-prose text-label text-text-muted">
             {uploaded.length === 0
-              ? "Upload the loan agreement to continue."
-              : `None of the ${uploaded.length} document${uploaded.length === 1 ? "" : "s"} on file is filed as a loan agreement. Set Document type to “Agreement” and upload it again — the agreement is what the terms are extracted from.`}
+              ? "Upload the loan agreement to prepare covenant terms. Financial statements are needed for covenant testing, not for this step."
+              : `None of the ${uploaded.length} document${uploaded.length === 1 ? "" : "s"} on file is filed as a loan agreement. Set its document type to “Agreement” and upload it again — the agreement is what the terms are extracted from.`}
           </span>
         )}
       </div>
