@@ -48,12 +48,14 @@ function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: Metr
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       <table className="w-full border-collapse">
-        <thead className="bg-model-bg/50">
+        <thead className="bg-surface-raised">
           <tr className="border-b border-border">
-            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-model-bright">Metric</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Target</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Cold</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Warm</th>
+            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-text-muted">Metric</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Target</th>
+            {/* The analyst-facing names. `cold`/`warm` are the harness's words
+                and stay in the metadata line beneath the card's heading. */}
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Without lessons</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">With lessons</th>
           </tr>
         </thead>
         <tbody>

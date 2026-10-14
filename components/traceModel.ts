@@ -184,7 +184,7 @@ function calcFailed(step: TraceStepView): boolean {
 function decisionFor(step: TraceStepView, prev: TraceStepView | undefined): string | null {
   if (!prev) return null;
   if (step.kind === "model" && calcFailed(prev)) {
-    return "The baseline did not pass — the Credit-scout Agent delegated to reinterpret the covenant rather than conclude.";
+    return "The baseline did not pass — the CreditScout Agent delegated to reinterpret the covenant rather than conclude.";
   }
   if (step.calculator && prev.kind === "model") {
     return "Recomputed on the corrected terms the specialist returned.";

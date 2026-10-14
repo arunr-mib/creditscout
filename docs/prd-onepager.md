@@ -76,7 +76,7 @@ Two flows. Diagrams and the screen inventory: `docs/mental-model.md`.
 
 **A — Loan onboarding** *(once per loan, re-runs on amendment)* — a four-step
 wizard from **"+ New borrower"**: create the loan → upload **all** its documents
-in one place → *"The Credit-scout Agent is extracting the covenant terms from
+in one place → *"The CreditScout Agent is extracting the covenant terms from
 your loan agreement"* — every term with a citation and verbatim quote, every
 quote code-verified → **analyst approves beside the source clause** → terms are
 versioned and effective-dated → reused every quarter.
@@ -92,7 +92,7 @@ Upload package → "Run Q{N}" → load the approved terms in force → **code co
 | Passes | Differs beyond tolerance | Log the variance, no investigation |
 | **Fails** | Anything | **Exception → agent investigation** |
 
-Investigation → the **Credit-scout Agent** (one Foundry orchestrator, six
+Investigation → the **CreditScout Agent** (one Foundry orchestrator, six
 tools) decides what to read next, delegates to three specialists, calls the
 deterministic calculator, searches past cases — the trace reads as its
 orchestration plan, each step annotated → **code guardrail** forces `abstain`

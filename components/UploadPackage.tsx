@@ -3,19 +3,20 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadPackage } from "@/app/actions";
+import {
+  DATED_TYPES,
+  DOC_TYPES,
+  duplicateNames,
+  stageFile,
+  stagingBlockers,
+  type StagedFile,
+} from "./uploadModel";
 
 export interface UploadFacility {
   id: string;
   borrower_name: string;
 }
 
-const DOC_TYPES: { value: string; label: string }[] = [
-  { value: "financials", label: "Financials" },
-  { value: "compliance_certificate", label: "Compliance certificate" },
-  { value: "amendment", label: "Amendment" },
-  { value: "agreement", label: "Agreement" },
-  { value: "waiver", label: "Waiver" },
-];
 
 /** One file's outcome. A batch reports every file, so a partial failure cannot read as a success. */
 type Result =
@@ -42,25 +43,21 @@ type State =
 export function UploadPackage({ facilities, fixedFacilityId }: { facilities: UploadFacility[]; fixedFacilityId?: string }) {
   const router = useRouter();
   const [facilityId, setFacilityId] = useState(fixedFacilityId ?? facilities[0]?.id ?? "");
-  const [docType, setDocType] = useState("financials");
-  const [effectiveDate, setEffectiveDate] = useState("");
+  const [staged, setStaged] = useState<StagedFile[]>([]);
   const [state, setState] = useState<State>({ kind: "idle" });
   const [dragover, setDragover] = useState(false);
+  const [picked, setPicked] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const baseId = useId();
 
-  // In onboarding (a pinned loan), the agreement and amendment anchor the terms'
-  // effective-from, so their effective date is required — without it, extracting
-  // the covenant terms fails. Financials/certificates stay optional.
-  const requireEffectiveDate = fixedFacilityId != null && (docType === "agreement" || docType === "amendment");
 
-  /** Send one file. Returns its outcome rather than setting state, so a batch can report every file. */
-  async function send(file: File): Promise<Result> {
+  /** Send one file WITH ITS OWN TYPE. Returns its outcome so a batch can report every file. */
+  async function send(file: File, meta: StagedFile): Promise<Result> {
     const form = new FormData();
     form.set("file", file);
     form.set("facility_id", facilityId);
-    form.set("doc_type", docType);
-    if (effectiveDate) form.set("effective_date", effectiveDate);
+    form.set("doc_type", meta.docType);
+    if (meta.date) form.set("effective_date", meta.date);
     try {
       const { status, body: data } = await uploadPackage(form);
       if (status !== 200) {
@@ -72,48 +69,55 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
     }
   }
 
-  /**
-   * Every dropped file is indexed, one after another.
-   *
-   * It used to take `files[0]` and drop the rest on the floor while reporting
-   * success — an analyst who dragged a quarter's package in one gesture lost
-   * most of it silently. Sequential, not parallel: each upload embeds its
-   * sections, and the ingest route is not the place to open N of those at once.
-   *
-   * Every file's outcome is reported, so a batch where one file fails cannot
-   * read as a clean success.
-   */
-  async function upload(files: readonly File[]) {
+  /** Dropped files are STAGED, not sent: each one is classified before anything is stored. */
+  function stage(files: readonly File[]) {
     if (files.length === 0) return;
-    if (!facilityId) {
-      setState({ kind: "rejected", reason: "Choose a borrower before uploading." });
-      return;
-    }
-    if (requireEffectiveDate && !effectiveDate) {
-      setState({ kind: "rejected", reason: `Set the effective date above — it is required for the ${docType === "agreement" ? "agreement" : "amendment"} so the Credit-scout Agent can extract its terms.` });
+    setState({ kind: "idle" });
+    setPicked((p) => [...p, ...files]);
+    setStaged((rows) => [...rows, ...files.map((f) => stageFile(f))]);
+  }
+
+  /**
+   * Upload the staged batch, each file with the type the analyst confirmed.
+   *
+   * It used to send every file with ONE dropdown value, so a package dropped in
+   * a single gesture was filed entirely as whatever that dropdown showed —
+   * `financials` by default. doc_type scopes the agent's retrieval, so a
+   * misfiled agreement is invisible to terms extraction.
+   */
+  async function upload() {
+    const blockers = stagingBlockers(staged, facilityId !== "");
+    if (blockers.length > 0) {
+      setState({ kind: "rejected", reason: blockers[0] });
       return;
     }
     const results: Result[] = [];
-    for (const [i, file] of files.entries()) {
-      setState({ kind: "uploading", done: i, total: files.length, current: file.name });
-      results.push(await send(file));
+    for (const [i, meta] of staged.entries()) {
+      const file = picked.find((f) => f.name === meta.name && f.size === meta.size);
+      if (!file) continue;
+      setState({ kind: "uploading", done: i, total: staged.length, current: meta.name });
+      results.push(await send(file, meta));
     }
     setState({ kind: "results", results });
+    setStaged([]);
+    setPicked([]);
     router.refresh();
   }
 
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragover(false);
-    void upload(Array.from(e.dataTransfer.files ?? []));
+    stage(Array.from(e.dataTransfer.files ?? []));
   }
 
   const field = "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
+  const blockers = stagingBlockers(staged, facilityId !== "");
+  const dupes = duplicateNames(staged);
 
   return (
     <section aria-labelledby={`${baseId}-title`} className="rounded-md border border-border bg-surface p-4">
       <h3 id={`${baseId}-title`} className="text-card text-text">
-        Upload a quarterly package
+        Add borrower documents
       </h3>
 
       <div className="mt-3 flex flex-wrap gap-3">
@@ -130,20 +134,6 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
           </select>
         </label>
         )}
-        <label className="flex flex-col gap-1 text-label text-text-muted">
-          Document type
-          <select value={docType} onChange={(e) => setDocType(e.target.value)} className={field}>
-            {DOC_TYPES.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-1 text-label text-text-muted">
-          {requireEffectiveDate ? "Effective date (required)" : "Effective date (optional)"}
-          <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} className={`${field} font-mono ${requireEffectiveDate && !effectiveDate ? "border-human" : ""}`} />
-        </label>
       </div>
 
       <button
@@ -161,18 +151,13 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
       >
         {state.kind === "uploading"
           ? `Indexing ${state.done + 1} of ${state.total} — ${state.current}`
-          : fixedFacilityId
-            ? "Drop documents (agreement, amendment, financials, or certificate), or click to choose files"
-            : "Drop the quarterly package, or click to choose files"}
+          : "Drop documents, or click to choose files"}
       </button>
-      {/* One drop carries ONE document type: the selector above applies to every
-          file in it. Said plainly, because silently tagging an agreement as
-          financials is worse than making the analyst drop twice. */}
       <p className="mt-2 text-label text-text-muted">
-        Several files at once is fine. Every file in one drop is indexed as{" "}
-        <span className="text-text-secondary">{DOC_TYPES.find((d) => d.value === docType)?.label ?? docType}</span> — drop
-        each document type separately.
+        Drop the loan agreement and any amendments to prepare covenant terms. Add financial statements and the
+        compliance certificate for covenant testing. Each file is classified on its own below.
       </p>
+
       <input
         ref={inputRef}
         type="file"
@@ -180,10 +165,78 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
         accept="application/pdf,.pdf,.txt"
         className="sr-only"
         onChange={(e) => {
-          void upload(Array.from(e.target.files ?? []));
+          stage(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
       />
+
+      {/* ONE ROW PER FILE. The type is suggested from the name and confirmed by
+          the analyst — never applied batch-wide, which is how an agreement used
+          to be stored as `financials` and vanish from terms extraction. */}
+      {staged.length > 0 && (
+        <div className="mt-4 space-y-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h4 className="text-label text-text-muted">
+              {staged.length} file{staged.length === 1 ? "" : "s"} to classify
+            </h4>
+            {dupes.length > 0 && (
+              <p className="text-label text-code">Same name twice: {dupes.join(", ")}</p>
+            )}
+          </div>
+
+          {staged.map((f) => (
+            <div key={f.key} className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-surface p-3">
+              <span className="min-w-0 flex-1 truncate font-mono text-label text-text" title={f.name}>{f.name}</span>
+
+              <label className="flex flex-col gap-1 text-label text-text-muted">
+                Document type
+                <select
+                  value={f.docType}
+                  onChange={(e) => setStaged((rows) => rows.map((r) => (r.key === f.key ? { ...r, docType: e.target.value, suggested: false } : r)))}
+                  className={`${field} ${f.docType === "" ? "border-code" : ""}`}
+                >
+                  <option value="">Choose…</option>
+                  {DOC_TYPES.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-label text-text-muted">
+                {DATED_TYPES.includes(f.docType) ? "Effective date (required)" : "Date (optional)"}
+                <input
+                  type="date"
+                  value={f.date}
+                  onChange={(e) => setStaged((rows) => rows.map((r) => (r.key === f.key ? { ...r, date: e.target.value } : r)))}
+                  className={`${field} font-mono ${DATED_TYPES.includes(f.docType) && f.date === "" ? "border-code" : ""}`}
+                />
+              </label>
+
+              {f.suggested && f.docType !== "" && <span className="text-label text-text-muted">suggested</span>}
+
+              <button
+                type="button"
+                onClick={() => setStaged((rows) => rows.filter((r) => r.key !== f.key))}
+                className="text-label text-text-muted underline-offset-2 hover:text-text hover:underline"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => void upload()}
+              disabled={state.kind === "uploading"}
+              className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {state.kind === "uploading" ? "Indexing…" : `Upload ${staged.length} document${staged.length === 1 ? "" : "s"}`}
+            </button>
+            {blockers.length > 0 && <p className="text-label text-text-muted">{blockers[0]}</p>}
+          </div>
+        </div>
+      )}
 
       {state.kind === "results" && <Results results={state.results} />}
       {state.kind === "rejected" && (

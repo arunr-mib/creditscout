@@ -444,7 +444,7 @@ export function CovenantSetup(props: {
           </button>
           <p className="text-label text-text-muted">
             {busy
-              ? "The Credit-scout Agent is extracting the covenant terms from your loan agreement"
+              ? "The CreditScout Agent is extracting the covenant terms from your loan agreement"
               : proposal
               ? "Agent extracts the terms again for approval."
               : "The agent reads the agreement and any amendments. The proposal is saved but governs nothing until a person approves it."}

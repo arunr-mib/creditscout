@@ -50,7 +50,7 @@ export default async function TermsPage() {
       borrower: f.borrower_name,
       approvedVersion: approved?.version ?? null,
       unboarded: unboarded.map((d) => d.title),
-      versions: versions.map((v) => ({ version: v.version, status: v.status, effectiveFrom: v.effective_from })),
+      versions: versions.map((v) => ({ version: v.version, status: v.status, effectiveFrom: v.effective_from, terms: v.terms })),
     };
   });
 

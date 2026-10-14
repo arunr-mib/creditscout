@@ -37,9 +37,9 @@ section named; this table is the index.
 
 | Change | What it means | Where |
 |---|---|---|
-| **Loan onboarding wizard** (Flow A as a product flow) | "+ New borrower" → create loan → upload *all* documents in one place → the Credit-scout Agent extracts terms → review & approve, in one guided sequence. Covenant setup is a screen, not a pre-seeded database row | §2.1, §2.2 US-000 |
+| **Loan onboarding wizard** (Flow A as a product flow) | "+ New borrower" → create loan → upload *all* documents in one place → the CreditScout Agent extracts terms → review & approve, in one guided sequence. Covenant setup is a screen, not a pre-seeded database row | §2.1, §2.2 US-000 |
 | **"Loan", not "facility"** | Every screen says *loan*; the schema keeps `facility` | §2.1 |
-| **"Credit-scout Agent"** | The orchestrator's name in every user-facing surface; the trace reads as its orchestration plan, each step annotated with its purpose and each specialist step marked "delegated by the Credit-scout Agent" | §2.2 |
+| **"CreditScout Agent"** | The orchestrator's name in every user-facing surface; the trace reads as its orchestration plan, each step annotated with its purpose and each specialist step marked "delegated by the CreditScout Agent" | §2.2 |
 | **Specialists are in-process function tools, not Connected Agents** | Connected Agents was tried and dropped — a connected agent's inner run cannot carry a function tool, so specialists could not retrieve for themselves | §1.4, §9.1 |
 | **Orchestrator model is `gpt-4.1-mini`** | The platform forces it: `gpt-5-mini` cannot carry the tool set. Specialists are `gpt-5-mini` | §5.2, §9.1 |
 | **Demo data: Bank of Stoic + 5 onboarding borrowers** | Lender renamed (the prior name resembled a real bank). Five new synthetic upload packages — Zhatsapp Inc, Marcus Tech, Orion Medical Supply, Petworks LLC, Vantage Print Works — never seeded, so onboarding runs for real | §7 |
@@ -431,7 +431,7 @@ date required),
 amendments, financials,
 certificate
 
-"The Credit-scout    ──► definition tool reads the        proposed Terms v1,
+"The CreditScout    ──► definition tool reads the        proposed Terms v1,
  Agent is extracting     definitions article +            every line with a
  the covenant terms      amendments → executable          citation + verbatim
  from your loan          terms; CODE verifies every       quote
@@ -467,7 +467,7 @@ Analyst clicks       ┌─► Load memory: prior cases
                      │     ├ definition_agent      │    it was for, each
                      │     ├ research_agent        │    specialist step
                      │     └ document_agent        │    "delegated by the
-                     │   ◄──────────────────────────┘    Credit-scout Agent"
+                     │   ◄──────────────────────────┘    CreditScout Agent"
                      │
                      ├─► GUARDRAIL (code): every
                      │   number traces? every quote
@@ -505,7 +505,7 @@ against rather than as the trigger.
 1. **Onboard the loan (Flow A).** From "+ New borrower" on the portfolio, a
    four-step wizard: create the loan; upload **all** of its documents in one
    place (the agreement and any amendment must carry an effective date, because
-   that date anchors the terms' effective-from); the Credit-scout Agent extracts
+   that date anchors the terms' effective-from); the CreditScout Agent extracts
    the covenant terms, each with a citation and verbatim quote; the analyst
    reviews each beside its source clause and approves. The loan then appears on
    the portfolio as "Not tested". Later amendments re-enter at the upload step
@@ -521,7 +521,7 @@ against rather than as the trigger.
    (ours passes, theirs differs), or **exception** (ours fails). The borrower's
    reported figure is reconciled, never used as the trigger. This step is
    deliberately deterministic — no model is involved.
-4. **Investigation (agent).** The Credit-scout Agent loads memory, then decides
+4. **Investigation (agent).** The CreditScout Agent loads memory, then decides
    what to inspect. It calls three code tools (document search, the calculator,
    past-case search) and three specialists it delegates to in-process. Every
    tool call appends a step to a live trace, annotated with its purpose. The
@@ -574,7 +574,7 @@ P0 = required to prove the hypothesis · P1 = ship if possible · P2 = stretch
 |---|---|---|---|---|
 | **Ingest & chunking** | Uploaded PDF | Section-level chunks with metadata | Fully autonomous | Extraction failure → document rejected with a reason |
 | **Quarterly test** | Approved terms in force + the period's six financial figures | One `tests` row: our DSCR, the borrower's, pass/fail, variance; an `exceptions` row when ours fails | **Deterministic code — no model** | Missing input → the test records the error, never a zero |
-| **Credit-scout Agent** (the orchestrator; the only agent object, Foundry `gpt-4.1-mini`) | Exception + memory lessons | Casefile: recommendation, explanation, claims, calc IDs | **Suggests; never decides** | **Always** — every casefile goes to a human |
+| **CreditScout Agent** (the orchestrator; the only agent object, Foundry `gpt-4.1-mini`) | Exception + memory lessons | Casefile: recommendation, explanation, claims, calc IDs | **Suggests; never decides** | **Always** — every casefile goes to a human |
 | `document_agent` (specialist, in-process, `gpt-5-mini`) | Question + loan scope | Facts with `{citation, quote}` | Autonomous, quote-verified downstream | — |
 | `definition_agent` (specialist, in-process; also the onboarding extraction) | Agreement + amendments | `terms` JSON, schema-validated, with citations | Autonomous, quote-verified downstream | Mapping failure → missing evidence; in onboarding, an uncited clause is flagged for the analyst |
 | **`dscr_calculator`** | `terms` + six financial figures | `{calc_id, components, dscr, threshold, pass, margin}` | **Deterministic code — no model** | Missing input, denominator ≤ 0, or unknown component → returns an error, never a default |
@@ -776,7 +776,7 @@ terms in the UI.
 
 | Release | Features | Duration |
 |---|---|---|
-| **MVP (demo build) — built** | End-to-end flow: **loan onboarding wizard** with analyst approval → independent quarterly calculation for every loan → exception → investigation by the Credit-scout Agent → governing-first cited casefile → approve/override → memory. **6 seeded loans** — 3 carrying a twist (F1, F3, F5) and 3 performing, each boarded at its own minimum (F7 1.40x, F8 1.10x, F9 1.35x) — + **5 onboarding upload packages**, **10 owner-signed eval cases** (the performing loans raise no exception and are not evaluated), screens: portfolio triage, onboarding, casefile, governance, documents/terms/lessons, global search; deterministic calculator, guardrails, policy; deployed on Vercel behind a demo gate | **Course build** |
+| **MVP (demo build) — built** | End-to-end flow: **loan onboarding wizard** with analyst approval → independent quarterly calculation for every loan → exception → investigation by the CreditScout Agent → governing-first cited casefile → approve/override → memory. **6 seeded loans** — 3 carrying a twist (F1, F3, F5) and 3 performing, each boarded at its own minimum (F7 1.40x, F8 1.10x, F9 1.35x) — + **5 onboarding upload packages**, **10 owner-signed eval cases** (the performing loans raise no exception and are not evaluated), screens: portfolio triage, onboarding, casefile, governance, documents/terms/lessons, global search; deterministic calculator, guardrails, policy; deployed on Vercel behind a demo gate | **Course build** |
 | **In progress** | Eval harness (`evals/run.mjs`): deterministic grading against the signed oracle, cold + warm passes, HHH-grouped scoreboard on the Governance page; live-agent run and Foundry groundedness as an opt-in billable step | Now |
 | **Post-MVP backlog** *(see `docs/parking-lot.md` §4 — first things to restore)* | **Agentic covenant-term extraction** (4.9); memory and guardrail **trace beats**; facilities **F2, F4, F6** (the `abstain`/`request` cases); eval set 10 → 24; Governance page editable; **email intake** (US-011); policy editing in the UI; the "Prepare test" checkpoint; approval gate on uncited clauses | Immediately after the demo |
 | **MVP 1** | Second covenant (fixed-charge coverage); multi-quarter trend view; PDF export of the casefile for the credit file; analyst-configurable notification rules | Months 2–4 |
@@ -867,7 +867,7 @@ metric and the demo's centerpiece.
 calculation accuracy, outcome accuracy, memory effect) is deterministic Node
 code in `evals/run.mjs`, run locally or in CI against the signed oracle; it
 writes `results.csv`, `report.md` and an `eval_runs` row that the Governance
-scoreboard reads. The investigations being graded are real Credit-scout Agent
+scoreboard reads. The investigations being graded are real CreditScout Agent
 runs on Azure. Only **groundedness** — a language judgment — goes to Azure AI
 Foundry Evaluations, via the `foundry.jsonl` the harness exports. The safety
 numbers are therefore computed by code against a human-signed key, not judged
@@ -908,7 +908,7 @@ on the owner's say-so, never automatically.
 
 | Role | Model | Rationale |
 |---|---|---|
-| Orchestrator (the Credit-scout Agent) | **`gpt-4.1-mini`** | **Forced by the platform:** on Foundry Agent Service, `gpt-5-mini` cannot carry the tool set the orchestrator needs. Makes the evidence-sufficiency judgment; the guardrail, not the model, is what keeps that judgment safe. Deployed. |
+| Orchestrator (the CreditScout Agent) | **`gpt-4.1-mini`** | **Forced by the platform:** on Foundry Agent Service, `gpt-5-mini` cannot carry the tool set the orchestrator needs. Makes the evidence-sufficiency judgment; the guardrail, not the model, is what keeps that judgment safe. Deployed. |
 | `document_agent`, `definition_agent`, `research_agent` | **`gpt-5-mini`** | They read and quote rather than judge, every quote is code-verified anyway, and this is where most calls happen. Deployed. |
 | Eval judge (groundedness) | `gpt-4.1-mini` deployed; `gpt-4.1` is backlog 4.8 | A different generation from the specialists, so the judge is not grading its own kind. The full `gpt-4.1` is billable and the owner's call. |
 | Embeddings | `text-embedding-3-small` | **1536 dimensions** — the vector schema depends on this. Deployed. |

@@ -22,7 +22,7 @@ export function ProposeTrace(props: { borrower: string; documents: string[] }) {
 
   return (
     <section aria-label="Proposing terms" aria-live="polite" className="rounded-md border border-border-strong bg-surface p-4">
-      <h2 className="text-card text-text">The Credit-scout Agent is extracting the covenant terms from your loan agreement</h2>
+      <h2 className="text-card text-text">The CreditScout Agent is extracting the covenant terms from your loan agreement</h2>
       <ol className="mt-3 space-y-3">
         <li className="border-l-2 border-model pl-3">
           <p className="flex items-baseline gap-3">

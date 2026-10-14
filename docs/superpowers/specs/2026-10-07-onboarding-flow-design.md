@@ -3,7 +3,7 @@
 **Date:** 2026-10-07
 **Owner:** Arun Rajendiran (product) · Claude Code (engineering)
 **Status:** Proposed — awaiting owner review
-**Context:** A guided UI flow to onboard a new borrower/loan, so the demo can show the Credit-scout Agent **extracting covenant terms from an uploaded loan agreement** (grounded, agentic RAG — not hallucinated), followed by human approval. Extends the design in `docs/superpowers/specs/2026-10-01-creditscout-design.md`.
+**Context:** A guided UI flow to onboard a new borrower/loan, so the demo can show the CreditScout Agent **extracting covenant terms from an uploaded loan agreement** (grounded, agentic RAG — not hallucinated), followed by human approval. Extends the design in `docs/superpowers/specs/2026-10-01-creditscout-design.md`.
 
 ---
 
@@ -35,7 +35,7 @@ A persistent stepper (1→4) sits above every step. State is carried by the URL:
 
 1. **New Borrower** — `/borrowers/new`. Form: borrower name, industry, (optional) loan reference. Submitting calls the **create-loan** action → inserts a `facilities` row → redirects to step 2 for that id.
 2. **Upload documents** — `/borrowers/[id]/onboarding?step=documents`. **All documents in one place**: the loan agreement (required), any amendments, the quarter's financials, and the compliance certificate — each tagged with its **document type + effective date** → `POST /api/ingest` (reuses the existing UploadPackage fields). "Continue" is enabled once the **agreement** is ingested (it is what the agent needs to propose terms); the financials/certificate are ingested here too so they are on file for the first test later, but they are not required to proceed.
-3. **Agent extracts the terms** — same route, `?step=propose`. Copy: *"The Credit-scout Agent is extracting the covenant terms from your loan agreement."* Calls `POST /api/covenant-terms/propose` for the loan; shows a working state while the definition-agent reads the ingested chunks; on success a `proposed` covenant_terms row exists and we advance to step 4.
+3. **Agent extracts the terms** — same route, `?step=propose`. Copy: *"The CreditScout Agent is extracting the covenant terms from your loan agreement."* Calls `POST /api/covenant-terms/propose` for the loan; shows a working state while the definition-agent reads the ingested chunks; on success a `proposed` covenant_terms row exists and we advance to step 4.
 4. **Review & approve** — redirect to the **existing** `/facilities/[id]/covenant-setup` page (rendered inside the stepper chrome, or linked as the final step), which already shows the proposed terms, their citations, uncited-clause warnings, edits, and the approve action. Approving writes the versioned `approved` row.
 
 **Done:** a confirmation that the loan is set up, with a link to the Portfolio, where it now appears (status "Not tested" until the quarter is run).

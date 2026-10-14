@@ -50,7 +50,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
         <header className="space-y-1">
           <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
           <h1 className="text-title text-text">Covenant terms</h1>
-          <p className="max-w-prose text-body text-text-secondary">The Credit-scout Agent reads the loan agreement you uploaded and proposes the covenant terms, each tied to the clause it came from. Review and approve to finish onboarding.</p>
+          <p className="max-w-prose text-body text-text-secondary">The CreditScout Agent reads the loan agreement you uploaded and proposes the covenant terms, each tied to the clause it came from. Review and approve to finish onboarding.</p>
         </header>
         <CovenantSetup {...props} />
         {step === "done" && (
@@ -66,7 +66,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
       <header className="space-y-1">
         <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
         <h1 className="text-title text-text">Upload documents</h1>
-        <p className="max-w-prose text-body text-text-secondary">Upload the loan agreement (required), any amendments, the quarter&rsquo;s financials, and the compliance certificate. The agreement is what the Credit-scout Agent reads to extract the covenant terms.</p>
+        <p className="max-w-prose text-body text-text-secondary">Upload the loan agreement (required), any amendments, the quarter&rsquo;s financials, and the compliance certificate. The agreement is what the CreditScout Agent reads to extract the covenant terms.</p>
       </header>
       <UploadPackage facilities={[{ id: facility.data.id, borrower_name: facility.data.borrower_name }]} fixedFacilityId={facility.data.id} />
 
