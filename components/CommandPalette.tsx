@@ -68,10 +68,10 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-2 rounded-md border border-border-strong bg-surface px-3 py-2 text-label text-text-muted transition-colors hover:text-text-secondary"
+        className="flex w-full items-center justify-between gap-2 rounded-md border border-night-border-strong bg-night-raised px-3 py-2 text-label text-night-muted transition-colors hover:bg-night-hover hover:text-night-text"
       >
         <span>Search…</span>
-        <kbd className="rounded-sm border border-border bg-surface-raised px-1 font-mono text-badge">⌘K</kbd>
+        <kbd className="rounded-sm border border-night-border-strong bg-night-hover px-1 font-mono text-badge">⌘K</kbd>
       </button>
 
       <dialog

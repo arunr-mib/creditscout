@@ -109,7 +109,7 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
         <table className="w-full border-collapse text-left">
           <thead className="bg-model-bg/50">
             <tr className="border-b border-border">

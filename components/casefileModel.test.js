@@ -9,7 +9,12 @@ import {
   calcSectionsOf,
   chipCitation,
   citationState,
+  OUTCOME_CHOICE,
+  TAGS,
+  TAG_LABEL,
   citationsOnScreen,
+  decisionBasis,
+  tagLabel,
   claimsOf,
   clauseMap,
   exceptionNeedsClosing,
@@ -495,4 +500,136 @@ test("the recommendation headline is composed from branches, never generated", (
   const plain = investigationSummary([sec("c1", 1.4, true, 1.25)], []);
   assert.equal(plain.headline, plain.steps[0].detail);
   assert.equal(investigationSummary([], []).headline, null);
+});
+
+// ------------------------------------------------ the decision narrative
+
+const DB_SUMMARY = (over = {}) => ({
+  initial: { calcId: "c1", dscr: 1.12 },
+  governing: { calcId: "c2", dscr: 1.12, passes: false },
+  required: 1.25,
+  onAmendedTerms: false,
+  addback: null,
+  steps: [],
+  comparison: [],
+  headline: "",
+  ...over,
+});
+
+const DB_OVERRIDE = { layer: "guardrail", check: "resolve_requires_evidence", action: "escalate", detail: "the governing calculation does not pass" };
+
+test("decisionBasis: a guardrail override is reported as policy-directed, not as the agent's view", () => {
+  // Harbor Logistics, live: the agent drafted `resolve` arguing Amendment No. 2
+  // permits a capped add-back, and the guardrail downgraded it. Attributing the
+  // escalation to the agent would misdescribe who decided.
+  const d = decisionBasis(DB_SUMMARY(), [DB_OVERRIDE], "resolve", 2);
+  assert.equal(d.policyDirected, true);
+  assert.equal(d.draft, "resolve");
+  assert.match(d.overrideReason, /does not pass/);
+  assert.equal(d.basis, "1.12x calculated against a 1.25x minimum.");
+  assert.equal(d.outstanding, "2 items to review before recording a decision.");
+});
+
+const AMD_PENDING = [{ title: "Amendment No. 2", effectiveDate: "2026-04-01", effectiveForPeriod: true, boarded: false }];
+
+test("decisionBasis: the pending amendment is explained as the REASON to escalate, not a doubt about it", () => {
+  // The gap the owner identified: an escalation shown beside a pending
+  // amendment, with nothing saying how the two relate.
+  const d = decisionBasis(
+    DB_SUMMARY({ onAmendedTerms: true, addback: { name: "restructuring charges", cap: 500000 } }),
+    [DB_OVERRIDE],
+    "resolve",
+    2,
+    AMD_PENDING,
+  );
+  assert.match(d.amendmentEffect, /Amendment No\. 2/);
+  assert.match(d.amendmentEffect, /restructuring charges/);
+  assert.match(d.amendmentEffect, /terms in force/);
+  assert.match(d.amendmentEffect, /what there is to review/);
+});
+
+test("decisionBasis: an unboarded amendment is explained even when no drift note was raised", () => {
+  // The live Harbor casefile has notes calc_id_unknown + resolve_requires_evidence
+  // and NO terms-drift note, yet the panel beside the recommendation still says
+  // "Amendment No. 2 — not reflected in approved terms". Keying only off the
+  // note left exactly that case unexplained.
+  const d = decisionBasis(DB_SUMMARY(), [DB_OVERRIDE], "resolve", 2, AMD_PENDING);
+  assert.match(d.amendmentEffect, /Amendment No\. 2 is on file but is not reflected/);
+});
+
+test("decisionBasis: an amendment that is boarded, or not yet effective, is not raised", () => {
+  const boarded = [{ title: "Amendment No. 2", effectiveDate: "2026-04-01", effectiveForPeriod: true, boarded: true }];
+  const future = [{ title: "Amendment No. 3", effectiveDate: "2027-01-01", effectiveForPeriod: false, boarded: false }];
+  assert.equal(decisionBasis(DB_SUMMARY(), [], null, 0, boarded).amendmentEffect, null);
+  assert.equal(decisionBasis(DB_SUMMARY(), [], null, 0, future).amendmentEffect, null);
+});
+
+test("decisionBasis: says nothing it cannot support", () => {
+  // No override -> the recommendation is the agent's own and must not be
+  // labelled policy-directed. No drift note -> no amendment sentence at all.
+  const d = decisionBasis(DB_SUMMARY(), [], "escalate", 0);
+  assert.equal(d.policyDirected, false);
+  assert.equal(d.draft, null);
+  assert.equal(d.overrideReason, null);
+  assert.equal(d.amendmentEffect, null, "no amendment sentence without a drift note");
+  assert.equal(d.outstanding, null, "no '0 items' line");
+});
+
+test("decisionBasis: a missing figure yields no basis sentence rather than a half-written one", () => {
+  const d = decisionBasis(DB_SUMMARY({ governing: null, required: null }), [DB_OVERRIDE], "resolve", 1);
+  assert.equal(d.basis, null);
+  assert.equal(d.outstanding, "1 item to review before recording a decision.");
+});
+
+// -------------------------------------- the analyst's vocabulary, not the model's
+
+test("tagLabel: the pattern tag an analyst confirms is never shown as an identifier", () => {
+  // `amendment_addback` is the guardrail enum's and must not change. It is also
+  // not something to put in front of a credit analyst.
+  assert.equal(tagLabel("amendment_addback"), "Amendment-related add-back");
+  assert.equal(tagLabel("true_breach"), "Genuine covenant breach");
+  assert.equal(tagLabel("missing_waiver"), "Missing or unexecuted waiver");
+});
+
+test("tagLabel: an unmapped tag is humanised rather than leaked raw", () => {
+  // PATTERN_TAGS is owned by guardrails/casefile-schema.js. If a value is added
+  // there and not here, the dialog must still read as English.
+  assert.equal(tagLabel("some_new_pattern"), "Some new pattern");
+});
+
+test("every pattern tag the agent can emit has an analyst-facing label", () => {
+  // A missing label would surface the identifier in the override dialog.
+  for (const t of TAGS) {
+    assert.notEqual(TAG_LABEL[t], undefined, `${t} has no analyst-facing label`);
+  }
+});
+
+test("OUTCOME_CHOICE: each decision is an action with what recording it means", () => {
+  for (const o of CORRECTED_OUTCOMES) {
+    assert.ok(OUTCOME_CHOICE[o].title.length > 0, `${o} title`);
+    assert.match(OUTCOME_CHOICE[o].detail, /^Record that/, `${o} says what recording it does`);
+  }
+});
+
+// ------------------------------------------------- a superseded casefile is history
+
+test("reviewMode: superseded is HISTORY, not 'not ready'", () => {
+  // It rendered a bare "kept as history" notice, so a completed investigation's
+  // findings, calculations and agent activity became unreachable the moment a
+  // later run replaced it — odd in a product whose claim is that every figure
+  // is traceable.
+  assert.equal(reviewMode("superseded"), "history");
+  assert.equal(reviewMode("pending_review"), "active");
+  assert.equal(reviewMode("approved"), "read_only");
+  assert.equal(reviewMode("overridden"), "read_only");
+  assert.equal(reviewMode("investigating"), "not_ready");
+  assert.equal(reviewMode("failed"), "not_ready");
+});
+
+test("reviewMode: history is its own mode, so it can never offer the decision actions", () => {
+  // The guarantee: a superseded casefile must be readable but not actionable.
+  // Sharing `read_only` with approved/overridden would have given it their bar.
+  const history = reviewMode("superseded");
+  assert.notEqual(history, "active");
+  assert.notEqual(history, "read_only");
 });

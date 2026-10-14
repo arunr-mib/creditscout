@@ -3,12 +3,14 @@
 @tailwind utilities;
 
 @layer base {
-  html { color-scheme: dark; }
+  html { color-scheme: light; }
   body { @apply bg-bg text-text-secondary antialiased; }
   /* Numeric columns must align — analysts scan columns of ratios. */
   .font-mono { font-variant-numeric: tabular-nums; }
   /* docs/design.md: focus rings are never removed. */
-  :focus-visible { @apply outline-none ring-2 ring-model-bright ring-offset-2 ring-offset-bg; }
+  /* Keyboard focus only (`:focus-visible`, never `:focus`), so a mouse click
+     does not leave a ring behind on every button. */
+  :focus-visible { @apply outline-none ring-2 ring-model ring-offset-2 ring-offset-bg; }
 }
 
 @media (prefers-reduced-motion: reduce) {

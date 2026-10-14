@@ -13,7 +13,9 @@
 export type LessonSource = "approved" | "override" | "evaluation";
 
 export const SOURCE_LABEL: Record<LessonSource, string> = {
-  approved: "Approved recommendation",
+  // "Accepted" describes what the ANALYST did. "Approved recommendation" read
+  // as the outcome itself, which is a different fact.
+  approved: "Recommendation accepted",
   override: "Analyst override",
   evaluation: "Evaluation example",
 };
@@ -133,4 +135,57 @@ export function groupLessons(rows: readonly LessonRow[]): LessonGroup[] {
     g.records.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   }
   return [...byKey.values()];
+}
+
+// ------------------------------------------------- what a record actually is
+
+/**
+ * Whether a record is reusable precedent or merely a decision that was taken.
+ *
+ * The distinction the Lessons screen was blurring. A casefile approved without
+ * the analyst writing anything records WHAT was decided and nothing about WHY;
+ * calling that a "lesson" overstates it, and an analyst scanning for precedent
+ * learns nothing from it. An evaluation example is a third thing again: it is a
+ * harness fixture, never an analyst's judgement.
+ *
+ * `reusable` is also the honest answer to "is this available to the agent's
+ * retrieval?" — `match_lessons` can return any of these rows, but only one kind
+ * carries reasoning worth retrieving.
+ */
+export type RecordKind = "analyst_lesson" | "decision_record" | "evaluation_example";
+
+export const RECORD_KIND_LABEL: Record<RecordKind, string> = {
+  analyst_lesson: "Analyst lesson",
+  decision_record: "Decision record",
+  evaluation_example: "Evaluation example",
+};
+
+export const RECORD_KIND_NOTE: Record<RecordKind, string> = {
+  analyst_lesson: "An analyst wrote the reasoning. Retrieved as precedent on similar investigations.",
+  decision_record: "The decision was recorded without written reasoning. It shows what was decided, not why.",
+  evaluation_example: "Produced by the evaluation harness, not by an analyst. Not analyst precedent.",
+};
+
+export function recordKind(source: LessonSource, reason: string | null): RecordKind {
+  if (source === "evaluation") return "evaluation_example";
+  return isAnalystReasoning(source, reason) ? "analyst_lesson" : "decision_record";
+}
+
+/** Only an analyst's written reasoning is precedent worth retrieving. */
+export const isReusablePrecedent = (kind: RecordKind): boolean => kind === "analyst_lesson";
+
+/** Counts for the result line: "3 case groups · 17 records", reconciling with what is shown. */
+export function recordCounts(rows: readonly { source: LessonSource; analystReasoning: string | null }[]): {
+  total: number;
+  analystLessons: number;
+  decisionRecords: number;
+  evaluationExamples: number;
+} {
+  const kinds = rows.map((r) => recordKind(r.source, r.analystReasoning));
+  return {
+    total: rows.length,
+    analystLessons: kinds.filter((k) => k === "analyst_lesson").length,
+    decisionRecords: kinds.filter((k) => k === "decision_record").length,
+    evaluationExamples: kinds.filter((k) => k === "evaluation_example").length,
+  };
 }

@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   PATTERN_LABEL,
+  RECORD_KIND_LABEL,
+  RECORD_KIND_NOTE,
   SOURCE_LABEL,
+  isReusablePrecedent,
+  recordCounts,
+  recordKind,
   groupLessons,
   outcomeLabel,
   patternLabel,
@@ -63,6 +68,7 @@ export function LessonList({ rows }: { rows: LessonRow[] }) {
   }, [rows, query, source, pattern]);
 
   const shown = groups.reduce((n, g) => n + g.records.length, 0);
+  const counts = recordCounts(rows);
   const field = "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
 
   return (
@@ -91,7 +97,7 @@ export function LessonList({ rows }: { rows: LessonRow[] }) {
         <label>
           <span className="sr-only">Filter by pattern</span>
           <select value={pattern} onChange={(e) => setPattern(e.target.value)} className={field}>
-            <option value="all">All patterns</option>
+            <option value="all">All case categories</option>
             {patterns.map((p) => (
               <option key={p} value={p}>
                 {PATTERN_LABEL[p] ?? p}
@@ -102,17 +108,25 @@ export function LessonList({ rows }: { rows: LessonRow[] }) {
       </div>
 
       <p className="text-label text-text-muted">
-        {shown === rows.length ? `${rows.length} records` : `${shown} of ${rows.length} records`}
+        {/* The count must reconcile with what is on screen AND say how much of
+            it is actually precedent — 17 records reads as 17 lessons, when most
+            carry no analyst reasoning at all. */}
+        {shown === rows.length ? `${groups.length} case groups · ${rows.length} records` : `${shown} of ${rows.length} records`}
+        {counts.analystLessons > 0 && (
+          <span className="text-text-muted">
+            {" · "}{counts.analystLessons} with analyst reasoning
+          </span>
+        )}
       </p>
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-6 text-body text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">
           No prior cases match those filters.
         </p>
       ) : (
         <ul className="space-y-3">
           {groups.map((g) => (
-            <li key={g.key} className="rounded-lg border border-border-strong bg-surface">
+            <li key={g.key} className="rounded-lg border border-border bg-surface shadow-card shadow-card">
               <Record row={g.records[0]} borrower={g.borrower} period={g.period} />
               {g.records.length > 1 && (
                 <details className="border-t border-border-strong">
@@ -165,6 +179,20 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
         <span className={`rounded-md border px-3 py-px text-label ${SOURCE_TONE[row.source]}`}>
           {SOURCE_LABEL[row.source]}
         </span>
+        {/* What this record IS. An approval with no written reasoning records
+            what was decided and nothing about why; calling it a lesson
+            overstates it, and an analyst scanning for precedent learns nothing
+            from it. */}
+        <span
+          title={RECORD_KIND_NOTE[recordKind(row.source, row.analystReasoning)]}
+          className={`rounded-md border px-3 py-px text-label ${
+            isReusablePrecedent(recordKind(row.source, row.analystReasoning))
+              ? "border-model bg-model-bg text-model"
+              : "border-border-strong text-text-muted"
+          }`}
+        >
+          {RECORD_KIND_LABEL[recordKind(row.source, row.analystReasoning)]}
+        </span>
         {/* Colour only for an outcome someone actually recorded. */}
         {outcome && row.source !== "evaluation" && (
           <span className={`rounded-md border px-3 py-px text-label ${OUTCOME_TONE[row.outcome ?? ""] ?? "border-border-strong text-text-secondary"}`}>
@@ -193,9 +221,7 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
       <p className="mt-3 max-w-prose text-body text-text-secondary">
         {row.analystReasoning ?? (
           <span className="text-text-muted">
-            {row.source === "evaluation"
-              ? "Generated during evaluation. This is not an analyst decision."
-              : "No analyst rationale recorded. Open the casefile to review the supporting investigation."}
+            {RECORD_KIND_NOTE[recordKind(row.source, row.analystReasoning)]}
           </span>
         )}
       </p>

@@ -11,7 +11,7 @@
 
 | Layer | Who | The one rule |
 |---|---|---|
-| **Reasoning** | The model — shown in the product as the **Credit-scout Agent** | Decides what evidence to look at next. **Never produces a number.** |
+| **Reasoning** | The model — shown in the product as the **CreditScout Agent** | Decides what evidence to look at next. **Never produces a number.** |
 | **Calculation** | Code | Produces every number. **Never decides anything.** |
 | **Approval** | The human | Decides. **Always.** |
 
@@ -82,7 +82,7 @@ the guardrail downgraded it to `escalate`, with the reason shown on screen.
 
 ### 1.6 Where the agent actually lives
 
-One agent object exists: the **Credit-scout Agent**, an Azure AI Foundry Agent
+One agent object exists: the **CreditScout Agent**, an Azure AI Foundry Agent
 Service orchestrator (`gpt-4.1-mini`). It carries **six function tools**:
 
 | Tool | Kind | What it does |
@@ -99,7 +99,7 @@ was dropped during the build: a connected agent's inner run cannot carry a
 function tool, so a specialist could not retrieve for itself and every
 delegation was a step spent re-reading text the orchestrator already held. As
 in-process tools, each specialist retrieves for itself. The trace labels every
-specialist step "delegated by the Credit-scout Agent", so the orchestration is
+specialist step "delegated by the CreditScout Agent", so the orchestration is
 visible, not implied.
 
 ---
@@ -124,7 +124,7 @@ four-step, route-driven wizard; entry is **"+ New borrower"** on the Portfolio.
         · financials, certificate
         "Continue" unlocks once the agreement is indexed
 
-  3     "The Credit-scout      ──▶  definition tool reads the       proposed Terms v1,
+  3     "The CreditScout      ──▶  definition tool reads the       proposed Terms v1,
          Agent is extracting        definitions article +           each line with a
          the covenant terms         amendments → executable         citation + verbatim
          from your loan             terms; code verifies every      quote; uncited
@@ -316,14 +316,14 @@ leads straight into the same quarterly loop, and that the agent investigates
 
 ## 5. Demo storyboard (3 minutes)
 
-The pitch objective is to show the **power of the Credit-scout Agent as an
+The pitch objective is to show the **power of the CreditScout Agent as an
 orchestrator**. Beats are prioritised **A (orchestration) → C (memory) →
 B (guardrail)**.
 
 | Time | What's on screen | The point being made |
 |---|---|---|
 | 0:00–0:30 | Portfolio triage table — a quarter closing, statuses at a glance | Rules flag the breach; the investigation is the hard part |
-| 0:30–0:55 | **Flow A** — "+ New borrower", upload the package, *"The Credit-scout Agent is extracting the covenant terms…"*, approve side-by-side with the clause | The agent's source is the analyst's own documents; four-eyes control |
+| 0:30–0:55 | **Flow A** — "+ New borrower", upload the package, *"The CreditScout Agent is extracting the covenant terms…"*, approve side-by-side with the clause | The agent's source is the analyst's own documents; four-eyes control |
 | 0:55–1:10 | "Run Q2" — the calculator runs on every loan; F1 fails, F3 fails *despite reporting compliant* | *We* compute it, not the borrower |
 | 1:10–1:55 | **Beat A** — F1 investigation: the trace reads as an orchestration plan; each step annotated; the agent delegates to a specialist, finds Amendment No. 2, recomputes, resolves. Click a citation → the clause, quote highlighted | The agent decides what to read next; the code calculates; every claim checkable |
 | 1:55–2:15 | **Beat C** — analyst approves with a reason → F5 runs → "seen similar", fewer steps | The system learns from the human |
@@ -353,7 +353,7 @@ refuses to run while any row is unsigned.
 | Layer | Where | Produces |
 |---|---|---|
 | Oracle grading (false-resolve gate, calc accuracy, outcome accuracy, memory effect) | **Node, local/CI** — `evals/run.mjs`, deterministic code against the signed key | `results.csv`, `report.md`, an `eval_runs` row that lights up the Governance scoreboard |
-| The investigations being graded | **Azure** — the real Credit-scout Agent, cold pass (memory cleared) and warm pass (lessons loaded) | the recommendations the oracle grades |
+| The investigations being graded | **Azure** — the real CreditScout Agent, cold pass (memory cleared) and warm pass (lessons loaded) | the recommendations the oracle grades |
 | Groundedness (does every figure trace to a cited source) | **Azure AI Foundry Evaluations**, LLM judge | consumes the `foundry.jsonl` the harness writes |
 
 The safety numbers are computed by code against a human-signed key — not

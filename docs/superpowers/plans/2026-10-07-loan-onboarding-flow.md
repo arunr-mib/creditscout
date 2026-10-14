@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A route-driven wizard that onboards a new borrower/loan — create borrower → upload all documents → the Credit-scout Agent extracts cited covenant terms from the loan agreement → review & approve — reusing the existing ingest, propose, and covenant-setup machinery.
+**Goal:** A route-driven wizard that onboards a new borrower/loan — create borrower → upload all documents → the CreditScout Agent extracts cited covenant terms from the loan agreement → review & approve — reusing the existing ingest, propose, and covenant-setup machinery.
 
 **Architecture:** New routes under `app/borrowers/` wrap existing pieces in a stepper. The only new backend is a `createLoan` server action (inserts a `facilities` row). Document upload reuses `UploadPackage`/`POST /api/ingest`; term extraction + review + approval reuse the self-contained `CovenantSetup` component (which already calls `POST /api/covenant-terms/propose` and the `approveTerms` action). The covenant-setup page's data loader is extracted so the standalone page and the wizard share it.
 
@@ -363,7 +363,7 @@ export default function NewBorrowerPage() {
       <header className="space-y-1">
         <p className="text-label text-text-muted">Onboard a loan</p>
         <h1 className="text-title text-text">New borrower</h1>
-        <p className="max-w-prose text-body text-text-secondary">Create the borrower and their loan. Next you&rsquo;ll upload the loan agreement and the Credit-scout Agent will extract the covenant terms from it.</p>
+        <p className="max-w-prose text-body text-text-secondary">Create the borrower and their loan. Next you&rsquo;ll upload the loan agreement and the CreditScout Agent will extract the covenant terms from it.</p>
       </header>
       <NewBorrowerForm />
     </div>
@@ -445,7 +445,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
       <header className="space-y-1">
         <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
         <h1 className="text-title text-text">Upload documents</h1>
-        <p className="max-w-prose text-body text-text-secondary">Upload the loan agreement (required), any amendments, the quarter&rsquo;s financials, and the compliance certificate. The agreement is what the Credit-scout Agent reads to extract the covenant terms.</p>
+        <p className="max-w-prose text-body text-text-secondary">Upload the loan agreement (required), any amendments, the quarter&rsquo;s financials, and the compliance certificate. The agreement is what the CreditScout Agent reads to extract the covenant terms.</p>
       </header>
       <UploadPackage facilities={[{ id: facility.data.id, borrower_name: facility.data.borrower_name }]} fixedFacilityId={facility.data.id} />
       <div className="flex items-center gap-3">
@@ -477,7 +477,7 @@ git commit -m "feat(onboarding): documents step with agreement gate (reuses Uplo
 
 **Files:**
 - Modify: `app/borrowers/[id]/onboarding/page.tsx` (fill the `terms`/`done` branch with embedded `CovenantSetup`)
-- Modify: `components/CovenantSetup.tsx` (copy only: the propose action/working state reads "The Credit-scout Agent is extracting the covenant terms from your loan agreement")
+- Modify: `components/CovenantSetup.tsx` (copy only: the propose action/working state reads "The CreditScout Agent is extracting the covenant terms from your loan agreement")
 - Test: none new (reuses the component's own propose/approve + error handling)
 
 **Interfaces:**
@@ -498,7 +498,7 @@ if (step === "terms" || step === "done") {
       <header className="space-y-1">
         <p className="text-label text-text-muted">{facility.data.borrower_name}</p>
         <h1 className="text-title text-text">Covenant terms</h1>
-        <p className="max-w-prose text-body text-text-secondary">The Credit-scout Agent reads the loan agreement you uploaded and proposes the covenant terms, each tied to the clause it came from. Review and approve to finish onboarding.</p>
+        <p className="max-w-prose text-body text-text-secondary">The CreditScout Agent reads the loan agreement you uploaded and proposes the covenant terms, each tied to the clause it came from. Review and approve to finish onboarding.</p>
       </header>
       <CovenantSetup {...props} />
       {step === "done" && (
@@ -511,7 +511,7 @@ if (step === "terms" || step === "done") {
 
 - [ ] **Step 2: Update the propose copy in `CovenantSetup`**
 
-Find the propose button label / working-state text in `components/CovenantSetup.tsx` (the `propose()` path and `ProposeTrace` heading) and make it read "The Credit-scout Agent is extracting the covenant terms from your loan agreement" (and the button "Extract covenant terms"). Copy only — do not change the `propose()` fetch or `approve()` logic.
+Find the propose button label / working-state text in `components/CovenantSetup.tsx` (the `propose()` path and `ProposeTrace` heading) and make it read "The CreditScout Agent is extracting the covenant terms from your loan agreement" (and the button "Extract covenant terms"). Copy only — do not change the `propose()` fetch or `approve()` logic.
 
 - [ ] **Step 3: Verify + build**
 

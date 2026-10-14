@@ -4,8 +4,15 @@ import { useState, useTransition } from "react";
 import { reviewCasefile } from "@/app/casefiles/actions";
 import type { ReviewOutcome } from "@/lib/review-action";
 import { humanReviewNotice, type OverrideDraft } from "./casefileModel";
-import { LockedPolicyValue } from "./LockedPolicyValue";
 import { OverrideDialog } from "./OverrideDialog";
+
+/** The recommendation as one word, for the dialog's context line. */
+const RECOMMENDATION_WORD: Record<string, string> = {
+  resolve: "Resolve",
+  escalate: "Escalate",
+  request: "Request documents",
+  abstain: "Abstain",
+};
 
 /**
  * design.md 12.11. Approve (primary), Override and Request docs (secondary),
@@ -37,8 +44,11 @@ export function ReviewActions(props: {
   suggestedTag: string | null;
   humanReviewRequired: boolean | null;
   recommendation?: string | null;
+  /** Context for the override dialog, so the analyst sees what they decide against. */
+  borrower?: string | null;
+  period?: string | null;
 }) {
-  const { casefileId, suggestedTag, humanReviewRequired, recommendation } = props;
+  const { casefileId, suggestedTag, humanReviewRequired, recommendation, borrower, period } = props;
   const approveLabel = (recommendation && APPROVE_LABEL[recommendation]) || "Approve";
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState(false);
@@ -67,10 +77,16 @@ export function ReviewActions(props: {
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
-    <section aria-label="Review the recommendation" className="rounded-lg border border-border-strong bg-surface p-4">
+    <section aria-label="Review the recommendation" className="rounded-lg border border-border bg-surface shadow-card p-4">
+      {/* The raw policy key was leaking into the analyst's view. The fact it
+          states still holds — `humanReviewNotice` reads the ACTUAL policy
+          value, never a hard-coded "mandatory" — it is just said in words. */}
       <div className="mb-3 space-y-1">
-        <LockedPolicyValue name="require_human_review" value={humanReviewRequired} />
-        <p className="text-label text-text-muted">{notice.text}</p>
+        <h2 className="text-card text-text">Record your decision</h2>
+        <p className="text-body text-text-secondary">
+          Review the recommendation and outstanding items before recording your decision.
+        </p>
+        <p className="text-label text-text-muted">{notice.text} Your decision and rationale are saved to the casefile.</p>
       </div>
 
       {outcome && !dialog && <OutcomeNote outcome={outcome} />}
@@ -99,6 +115,9 @@ export function ReviewActions(props: {
         suggestedTag={suggestedTag}
         sending={pending}
         error={dialogError}
+        borrower={borrower}
+        period={period}
+        currentRecommendation={recommendation ? RECOMMENDATION_WORD[recommendation] ?? recommendation : null}
         onCancel={() => setDialog(false)}
         onSubmit={(draft) => send("override", draft)}
       />

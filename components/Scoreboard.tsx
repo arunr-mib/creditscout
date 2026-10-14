@@ -27,7 +27,7 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
       {!bare && <h2 className="text-section text-text">Eval scoreboard</h2>}
 
       {state === "awaiting" ? (
-        <div className="space-y-2 rounded-lg border border-border bg-surface p-6">
+        <div className="space-y-2 rounded-lg border border-border bg-surface shadow-card p-6">
           <p className="text-body text-text-secondary">Not measured yet.</p>
           <p className="max-w-prose text-label text-text-muted">
             The harness runs every labelled case twice — once with memory cleared (cold) and once with prior analyst
@@ -46,14 +46,16 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
 
 function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: MetricCell[] | null }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       <table className="w-full border-collapse">
-        <thead className="bg-model-bg/50">
+        <thead className="bg-surface-raised">
           <tr className="border-b border-border">
-            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-model-bright">Metric</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Target</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Cold</th>
-            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">Warm</th>
+            <th className="px-4 py-2 text-left text-label uppercase tracking-wide text-text-muted">Metric</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Target</th>
+            {/* The analyst-facing names. `cold`/`warm` are the harness's words
+                and stay in the metadata line beneath the card's heading. */}
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">Without lessons</th>
+            <th className="px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">With lessons</th>
           </tr>
         </thead>
         <tbody>

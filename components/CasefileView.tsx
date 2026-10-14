@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
@@ -36,6 +36,8 @@ export interface CasefileViewModel {
   period: string;
   recommendation: string | null;
   explanation: string | null;
+  /** What the agent proposed, before enforcement. Null when it never produced one. */
+  draftRecommendation: string | null;
   seenSimilar: number;
   claims: ClaimView[];
   sections: CalcSection[];
@@ -72,6 +74,7 @@ export interface CasefileViewModel {
 export function CasefileView({ view }: { view: CasefileViewModel }) {
   const mode = reviewMode(view.status);
 
+  // History shows everything the decided view shows; it simply offers no actions.
   const showRec = mode !== "not_ready";
   // Enforcement overruled the agent: its prose argues a conclusion that was
   // rejected, so it is labelled a draft rather than left reading as the answer.
@@ -88,6 +91,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           : "border-l-border-strong";
 
   const summary = investigationSummary(view.sections, view.notes);
+  // WHY this recommendation, given the amendment and the open notices. Derived
+  // from the notes and the calculation log; never written by the model.
+  const basis = decisionBasis(summary, view.notes, view.draftRecommendation, view.notes.length, view.amendments);
   const statusPill =
     mode === "active"
       ? { label: "Ready for analyst decision", tone: "border-success bg-success-bg text-success" }
@@ -127,6 +133,7 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           humanReviewRequired={view.humanReviewRequired}
           explanation={view.explanation}
           overridden={overridden}
+          basis={basis}
         />
       )}
 
@@ -174,11 +181,11 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         />
       )}
 
-      {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
-      {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
+      {mode === "history" && <Superseded currentId={view.supersededBy} />}
+      {mode === "not_ready" && <NotReady status={view.status} />}
 
       {mode === "active" && (
-        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} />
+        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} borrower={view.borrower} period={view.period} />
       )}
       {mode === "read_only" && (
         <Decided

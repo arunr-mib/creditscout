@@ -242,11 +242,11 @@ test("a pass is a pass, and a missing figure is never read as a pass", () => {
 
 test("review status carries the agent's suggestion only while a human still has to decide", () => {
   assert.deepEqual(reviewStatusOf({ status: "in_review", recommendation: "resolve", hasApprovedTerms: true }), {
-    label: "Ready for review",
-    detail: "Suggests resolution",
+    label: "Ready for analyst review",
+    detail: "Recommendation: Resolve",
     tone: "human",
   });
-  assert.equal(reviewStatusOf({ status: "in_review", recommendation: "escalate", hasApprovedTerms: true }).detail, "Suggests escalation");
+  assert.equal(reviewStatusOf({ status: "in_review", recommendation: "escalate", hasApprovedTerms: true }).detail, "Recommendation: Escalate");
   // Decided: the suggestion is history, and showing it beside a recorded
   // decision invites reading the agent's view as the outcome.
   assert.equal(reviewStatusOf({ status: "decided", recommendation: "escalate", hasApprovedTerms: true }).detail, null);
@@ -271,9 +271,27 @@ test("queueCounts: tested is a ratio of the book, and terms-approval counts loan
   ];
   assert.deepEqual(queueCounts(rows), {
     readyForReview: 2,
+    awaitingInvestigation: 0,
+    needsAttention: 2,
     tested: 3,
     total: 5,
     termsApprovalNeeded: 2,
     untested: 2,
   });
+});
+
+test("queueCounts: an open breach with no casefile is COUNTED — the band used to omit it", () => {
+  // The defect: `readyForReview` only ever counted `in_review`, so a loan whose
+  // exception was raised but never investigated appeared in no count at all.
+  // The header read "1 to do" when two loans wanted a decision, and
+  // under-reporting an analyst's workload is the worst way for it to be wrong.
+  const rows = [
+    { ours: 1.12, required: 1.25, status: "in_review", recommendation: "escalate", hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "breach_investigate", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.59, required: 1.35, status: "compliant", recommendation: null, hasApprovedTerms: true },
+  ];
+  const c = queueCounts(rows);
+  assert.equal(c.readyForReview, 1);
+  assert.equal(c.awaitingInvestigation, 1, "the uninvestigated breach must be counted");
+  assert.equal(c.needsAttention, 2, "both are work in front of the analyst");
 });

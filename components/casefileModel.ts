@@ -397,7 +397,7 @@ export function seenSimilarLabel(count: unknown): string | null {
 
 // ------------------------------------------------------------- review state
 
-export type ReviewMode = "active" | "read_only" | "not_ready";
+export type ReviewMode = "active" | "read_only" | "history" | "not_ready";
 
 export const DECIDED_STATUSES = ["approved", "overridden", "awaiting_docs"] as const;
 
@@ -410,6 +410,12 @@ export const DECIDED_STATUSES = ["approved", "overridden", "awaiting_docs"] as c
 export function reviewMode(status: unknown): ReviewMode {
   if (status === "pending_review") return "active";
   if ((DECIDED_STATUSES as readonly unknown[]).includes(status)) return "read_only";
+  // A superseded casefile is HISTORY, not an empty page. It showed only a
+  // "kept as history" notice, which meant a completed investigation's findings,
+  // calculations and agent activity became unreachable the moment a later run
+  // replaced it — odd in a product whose claim is that every figure is
+  // traceable. It renders in full, read-only, with no actions.
+  if (status === "superseded") return "history";
   return "not_ready";
 }
 
@@ -450,7 +456,36 @@ export const OUTCOME_LABEL: Record<(typeof CORRECTED_OUTCOMES)[number], string> 
   escalate: "Escalate: this is a breach",
 };
 
+/** The decision as an action the analyst is taking, with what recording it means. */
+export const OUTCOME_CHOICE: Record<(typeof CORRECTED_OUTCOMES)[number], { title: string; detail: string }> = {
+  resolve: { title: "Resolve exception", detail: "Record that the evidence supports resolution." },
+  escalate: { title: "Escalate for review", detail: "Record that further credit review is required." },
+  request: { title: "Defer decision", detail: "Record that additional evidence or assessment is needed." },
+};
+
 export const TAGS: readonly string[] = PATTERN_TAGS as string[];
+
+/**
+ * The analyst-facing name for each pattern tag.
+ *
+ * The identifier is the data layer's and must not change — `guardrails/
+ * casefile-schema.js` owns the enum and the agent emits it. But an analyst
+ * confirming a category should not be asked to read `amendment_addback`; that
+ * is the model's vocabulary leaking onto a credit screen.
+ */
+export const TAG_LABEL: Record<string, string> = {
+  amendment_addback: "Amendment-related add-back",
+  period_mismatch: "Test-period mismatch",
+  missing_waiver: "Missing or unexecuted waiver",
+  borrower_calc_error: "Borrower calculation error",
+  true_breach: "Genuine covenant breach",
+  other: "Other",
+};
+
+/** Never leaks an unlabelled identifier: an unmapped tag reads as itself, humanised. */
+export function tagLabel(tag: string): string {
+  return TAG_LABEL[tag] ?? tag.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
 
 export interface OverrideDraft {
   reason: string;
@@ -688,4 +723,92 @@ export function investigationSummary(
   }
 
   return { initial, governing, required, onAmendedTerms, addback, steps, comparison, headline };
+}
+
+// -------------------------------------------------- why THIS recommendation
+
+/**
+ * The decision narrative: why the recommendation stands, given everything else
+ * on the screen.
+ *
+ * The screen was showing an escalation beside a pending amendment, two
+ * validation notices and a rejected agent draft, and saying nothing about how
+ * those relate. For a credit analyst that gap matters more than any amount of
+ * visual polish: without it they cannot tell whether the amendment undermines
+ * the recommendation or is the very reason for it.
+ *
+ * Every field here is DERIVED from the guardrail notes and the calculation log.
+ * Nothing is written by the model and nothing is inferred — if the data does not
+ * support a sentence, the field is null and the UI shows nothing rather than a
+ * plausible-sounding one.
+ */
+export interface DecisionBasis {
+  /** True when a code rule replaced what the agent proposed. */
+  policyDirected: boolean;
+  /** What the agent itself put forward, when a rule overrode it. */
+  draft: string | null;
+  /** The rule that overrode it, in the analyst's words. */
+  overrideReason: string | null;
+  /** The numbers the recommendation rests on. */
+  basis: string | null;
+  /** How the unboarded amendment bears on the result — the missing link. */
+  amendmentEffect: string | null;
+  /** What is still open, counted not characterised. */
+  outstanding: string | null;
+}
+
+const OVERRIDE_REASON: Record<string, string> = {
+  resolve_requires_evidence:
+    "the calculation the recommendation must rest on does not pass, so a resolve was not earned",
+  figure_traceable: "a figure in the explanation traces to no calculation and no cited quote",
+  quote_verbatim: "a supporting claim quoted text that is not in the document it cited",
+  schema: "the answer did not match the required shape after one retry",
+};
+
+export function decisionBasis(
+  summary: InvestigationSummary,
+  notes: readonly Notice[],
+  draftRecommendation: string | null,
+  openItems: number,
+  /** Amendments on file. An unboarded one that bears on this period is the fact
+   *  the analyst most needs connected to the recommendation. */
+  amendments: readonly AmendmentStatus[] = [],
+): DecisionBasis {
+  const override = notes.find((n) => n.action === "escalate" || n.action === "abstain") ?? null;
+  const policyDirected = override !== null;
+
+  const gov = summary.governing;
+  const basis =
+    gov && gov.dscr != null && summary.required != null
+      ? `${gov.dscr.toFixed(2)}x calculated against a ${summary.required.toFixed(2)}x minimum.`
+      : null;
+
+  // The link the analyst actually needs. An amendment on file but not boarded
+  // does not soften the breach — it is the reason the governing terms still
+  // produce one, and therefore the thing to review. Only said when the
+  // guardrail actually flagged the drift.
+  // Driven by the amendment list as well as the drift note. Keying only off the
+  // note left the commonest case silent: the panel beside the recommendation
+  // says "Amendment No. 2 — not reflected in approved terms" while the
+  // recommendation says nothing about it, which is the gap that made the
+  // escalation hard to assess.
+  const pending = amendments.find((a) => a.effectiveForPeriod && !a.boarded) ?? null;
+  const tail =
+    "The covenant test must run on the terms in force, so it does not change this period's result until someone boards it — which is what there is to review.";
+  const amendmentEffect = pending
+    ? summary.addback
+      ? `${pending.title} permits an add-back (${summary.addback.name}) that approved terms do not carry. ${tail}`
+      : `${pending.title} is on file but is not reflected in the approved terms. ${tail}`
+    : summary.onAmendedTerms
+      ? `The governing calculation used terms the approved version does not carry. ${tail}`
+      : null;
+
+  return {
+    policyDirected,
+    draft: policyDirected && draftRecommendation ? draftRecommendation : null,
+    overrideReason: override ? OVERRIDE_REASON[override.check] ?? null : null,
+    basis,
+    amendmentEffect,
+    outstanding: openItems > 0 ? `${openItems} item${openItems === 1 ? "" : "s"} to review before recording a decision.` : null,
+  };
 }

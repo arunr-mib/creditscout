@@ -31,3 +31,91 @@ export function longDate(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
+
+// ------------------------------------------- the terms themselves, readable
+
+/**
+ * The covenant as an analyst reads it, from the stored `terms` JSON.
+ *
+ * The Covenant terms screen showed version numbers, statuses and effective
+ * dates — everything ABOUT a version and nothing IN it. An analyst could not
+ * see the minimum, the permitted add-backs or their caps without opening
+ * another screen, on a page titled "Covenant terms".
+ *
+ * Pure and defensive: the JSON is whatever was approved, possibly from an older
+ * shape, so every field is read optionally and a missing one is omitted rather
+ * than rendered as "undefined".
+ */
+export interface TermLine {
+  label: string;
+  value: string;
+  /** The clause it came from, when the stored terms carry one. */
+  citation: string | null;
+}
+
+const obj = (v: unknown): Record<string, unknown> | null =>
+  typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
+const str = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v : null);
+const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/** 500000 -> "$500,000". Caps are money; the ratio is not. */
+export const money = (n: number): string => `$${n.toLocaleString("en-US")}`;
+
+/** A list of snake_case component names as prose. */
+const names = (v: unknown): string | null => {
+  if (!Array.isArray(v) || v.length === 0) return null;
+  const parts = v.filter((x): x is string => typeof x === "string").map((x) => x.replace(/_/g, " "));
+  return parts.length > 0 ? parts.join(", ") : null;
+};
+
+export function summariseTerms(terms: unknown): TermLine[] {
+  const t = obj(terms);
+  if (!t) return [];
+  const out: TermLine[] = [];
+
+  const threshold = obj(t.threshold);
+  const min = num(threshold?.min_dscr);
+  if (min != null) out.push({ label: "Minimum DSCR", value: `${min.toFixed(2)}x`, citation: str(threshold?.citation) });
+
+  const period = obj(t.test_period);
+  const basis = str(period?.basis);
+  if (basis) out.push({ label: "Measurement basis", value: basis, citation: null });
+
+  const numerator = obj(t.numerator);
+  const base = str(numerator?.base);
+  if (base) out.push({ label: "Numerator base", value: base, citation: null });
+
+  // An add-back with no cap is UNCAPPED. Reading a missing cap as zero is the
+  // documented trap that flips a correct resolve into a false escalation, so
+  // the screen says "uncapped" rather than leaving it blank.
+  const addbacks = Array.isArray(numerator?.addbacks) ? numerator.addbacks : [];
+  for (const a of addbacks) {
+    const row = obj(a);
+    const name = str(row?.name);
+    if (!name) continue;
+    const cap = num(row?.cap);
+    out.push({
+      label: "Permitted add-back",
+      value: cap == null ? `${name} — uncapped` : `${name} — capped at ${money(cap)}`,
+      citation: str(row?.citation),
+    });
+  }
+  if (addbacks.length === 0) out.push({ label: "Permitted add-backs", value: "None", citation: null });
+
+  const deductions = names(numerator?.deductions);
+  if (deductions) out.push({ label: "Deductions", value: deductions, citation: null });
+
+  const denominator = obj(t.denominator);
+  const components = names(denominator?.components);
+  if (components) out.push({ label: "Debt service", value: components, citation: str(denominator?.citation) });
+
+  const amendments = Array.isArray(t.effective_amendments) ? t.effective_amendments : [];
+  if (amendments.length > 0) {
+    const titles = amendments
+      .map((a) => str(obj(a)?.doc))
+      .filter((x): x is string => x !== null);
+    if (titles.length > 0) out.push({ label: "Amendments applied", value: titles.join(", "), citation: null });
+  }
+
+  return out;
+}

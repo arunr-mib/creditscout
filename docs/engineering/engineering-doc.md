@@ -45,7 +45,7 @@ agent loop.** Model choice is open to anything available on Azure.
    ┌─────────────────────────────────┴──────┐
    │  Azure AI Foundry Agent Service        │   ← the loop runs HERE
    │                                         │
-   │   Credit-scout Agent (the orchestrator, │
+   │   CreditScout Agent (the orchestrator, │
    │   gpt-4.1-mini — the ONLY agent object) │
    │     ├─ fn tool: document_agent    ──────┼──┐ specialists serviced
    │     ├─ fn tool: definition_agent  ──────┼──┤ IN-PROCESS by us
@@ -75,8 +75,8 @@ creates `covenant_terms` v2, and re-running the test then produces a **new**
 **Why this satisfies both goals.** Foundry runs the loop, so the owner sees the
 orchestrator decide, delegate to a named specialist, and choose what to do next
 — in the Foundry portal and, more usefully, in the app's own trace, which reads
-as the Credit-scout Agent's orchestration plan with every step annotated and
-every specialist step marked "delegated by the Credit-scout Agent". That is the
+as the CreditScout Agent's orchestration plan with every step annotated and
+every specialist step marked "delegated by the CreditScout Agent". That is the
 learning goal, met. The calculator and the guardrails stay in our own code,
 called as tools and run after the agent respectively, so the model still never
 produces a number and code still has the last word before a human sees
@@ -165,7 +165,7 @@ The original design used Foundry's **Connected Agents** for the three
 specialists. It was spiked, worked, and was then dropped for the documented
 fallback (spec §12): a connected agent's inner run cannot carry a function tool,
 so a specialist could not retrieve for itself. The built wiring is one agent
-object — the **Credit-scout Agent** (`lib/agent/foundry.ts`,
+object — the **CreditScout Agent** (`lib/agent/foundry.ts`,
 `orchestratorDefinition`) — carrying six function tools:
 
 | Spec §4.2 tool | Built as | Serviced by | Job |
