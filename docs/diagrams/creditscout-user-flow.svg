@@ -11,20 +11,20 @@
   <text x="1497.4" y="52" fill="#CBD5E1" font-size="12" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">Human approval</text>
   <rect x="1313.2" y="41" width="13" height="13" rx="3" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
   <text x="1333.2" y="52" fill="#CBD5E1" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">Deterministic code</text>
-  <rect x="1183.5" y="41" width="13" height="13" rx="3" fill="#171a3a" stroke="#818CF8" stroke-width="1.25"/>
+  <rect x="1183.5" y="41" width="13" height="13" rx="3" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
   <text x="1203.5" y="52" fill="#CBD5E1" font-size="12" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">Agent / model</text>
-  <text x="64" y="140" fill="#818CF8" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW A — LOAN ONBOARDING</text>
+  <text x="64" y="140" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW A — LOAN ONBOARDING</text>
   <text x="294.79999999999995" y="140" fill="#94A3B8" font-size="12">once per loan · re-runs when an amendment arrives</text>
   <line x1="64" y1="152" x2="1600" y2="152" stroke="#2A3A52" stroke-width="1"/>
   <rect x="64" y="166" width="232" height="104" rx="7" fill="#11243D" stroke="#94A3B8" stroke-width="1.25" stroke-dasharray="5 4"/>
   <text x="180.0" y="186" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ANALYST</text>
-  <text x="180.0" y="208" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Upload documents</text>
-  <text x="180.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">agreement, amendment,</text>
-  <text x="180.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">financials, certificate</text>
+  <text x="180.0" y="208" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Add a borrower</text>
+  <text x="180.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">name + documents on ONE</text>
+  <text x="180.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">screen; each file classified</text>
   <line x1="302" y1="218.0" x2="336" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="342" y="166" width="256" height="104" rx="7" fill="#171a3a" stroke="#818CF8" stroke-width="1.25"/>
+  <rect x="342" y="166" width="256" height="104" rx="7" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
   <text x="470.0" y="186" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">EXTRACT</text>
-  <text x="470.0" y="208" fill="#A5B4FC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">definition_agent</text>
+  <text x="470.0" y="208" fill="#8FD8D1" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">definition_agent</text>
   <text x="470.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">reads the definitions article</text>
   <text x="470.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">and every amendment on file</text>
   <line x1="604" y1="218.0" x2="638" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
@@ -45,7 +45,7 @@
   <text x="1406.0" y="208" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">covenant_terms v1 — approved</text>
   <text x="1406.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">versioned, effective-dated; an amendment creates v2</text>
   <text x="1406.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">and supersedes, it never overwrites</text>
-  <text x="64" y="336" fill="#818CF8" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW B — QUARTERLY COVENANT TEST</text>
+  <text x="64" y="336" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW B — QUARTERLY COVENANT TEST</text>
   <text x="360.4" y="336" fill="#94A3B8" font-size="12">every loan, every quarter · no model involved</text>
   <line x1="64" y1="348" x2="1600" y2="348" stroke="#2A3A52" stroke-width="1"/>
   <rect x="64" y="362" width="232" height="104" rx="7" fill="#11243D" stroke="#94A3B8" stroke-width="1.25" stroke-dasharray="5 4"/>
@@ -72,7 +72,7 @@
   <rect x="934" y="420" width="666" height="46" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
   <text x="1267.0" y="450" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Below minimum — exception raised</text>
   <text x="1267.0" y="471" fill="#94A3B8" font-size="12.5" text-anchor="middle">OUR figure raises it, never theirs: a borrower whose arithmetic favours them is invisible otherwise</text>
-  <text x="64" y="532" fill="#818CF8" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW C — INVESTIGATION</text>
+  <text x="64" y="532" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW C — INVESTIGATION</text>
   <text x="278.4" y="532" fill="#94A3B8" font-size="12">only on an exception · the agent decides what to read next</text>
   <line x1="64" y1="544" x2="1600" y2="544" stroke="#2A3A52" stroke-width="1"/>
   <rect x="64" y="558" width="232" height="150" rx="7" fill="#11243D" stroke="#94A3B8" stroke-width="1.25" stroke-dasharray="5 4"/>
@@ -81,9 +81,9 @@
   <text x="180.0" y="621" fill="#94A3B8" font-size="12.5" text-anchor="middle">analyst starts it;</text>
   <text x="180.0" y="638" fill="#94A3B8" font-size="12.5" text-anchor="middle">nothing runs unasked</text>
   <line x1="302" y1="633.0" x2="336" y2="633.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="342" y="558" width="388" height="150" rx="7" fill="#171a3a" stroke="#818CF8" stroke-width="1.25"/>
+  <rect x="342" y="558" width="388" height="150" rx="7" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
   <text x="536.0" y="578" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">REASON</text>
-  <text x="536.0" y="600" fill="#A5B4FC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Credit-scout Agent</text>
+  <text x="536.0" y="600" fill="#8FD8D1" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">CreditScout Agent</text>
   <text x="536.0" y="621" fill="#94A3B8" font-size="12.5" text-anchor="middle">gpt-4.1-mini orchestrator, six function tools.</text>
   <text x="536.0" y="638" fill="#94A3B8" font-size="12.5" text-anchor="middle">Plans, reads, delegates, re-calculates —</text>
   <text x="536.0" y="655" fill="#94A3B8" font-size="12.5" text-anchor="middle">then decides whether the evidence is enough.</text>
@@ -115,14 +115,14 @@
   <text x="648.0" y="774" fill="#CBD5E1" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">dscr_calculator</text>
   <rect x="758" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#2A3A52" stroke-width="1"/>
   <text x="856.0" y="774" fill="#CBD5E1" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">search_past_cases</text>
-  <rect x="966" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#4C51BF" stroke-width="1"/>
-  <text x="1064.0" y="774" fill="#818CF8" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">definition_agent</text>
-  <rect x="1174" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#4C51BF" stroke-width="1"/>
-  <text x="1272.0" y="774" fill="#818CF8" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">research_agent</text>
-  <rect x="1382" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#4C51BF" stroke-width="1"/>
-  <text x="1480.0" y="774" fill="#818CF8" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">document_agent</text>
+  <rect x="966" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
+  <text x="1064.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">definition_agent</text>
+  <rect x="1174" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
+  <text x="1272.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">research_agent</text>
+  <rect x="1382" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
+  <text x="1480.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">document_agent</text>
   <line x1="64" y1="826" x2="1600" y2="826" stroke="#2A3A52" stroke-width="1"/>
-  <text x="64" y="858" fill="#CBD5E1" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#818CF8">search_past_cases</tspan> on the next similar exception.</text>
+  <text x="64" y="858" fill="#CBD5E1" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#5EC2BA">search_past_cases</tspan> on the next similar exception.</text>
   <text x="64" y="880" fill="#94A3B8" font-size="12.5">Measured across three live runs it has not shortened investigations — the effect is neutral, and the claim that memory saves steps is not made.</text>
   <text x="64" y="934" fill="#5A6B86" font-size="11.5">CreditScout · synthetic data only · the agent recommends, a human decides</text>
 </svg>

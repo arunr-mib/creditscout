@@ -236,13 +236,27 @@ passing number. A decided breach reads **"Decided"**, never "Compliant".
 
 ### What the casefile screen leads with
 
-The casefile is **governing-first**: the top banner states the test period's
-figure under the terms that *governed* that period (the approved version), and
-a separate **amendment panel** says whether an amendment on file is boarded,
-unboarded, or superseded. Any narrative that depends on an unboarded amendment
-is labelled **provisional** until the analyst boards it. A credit analyst
-reviewer asked for exactly this ordering: the governing number first, the story
-second.
+The casefile is **governing-first**, and since 2026-10-14 it says so in one
+card rather than four stacked bands:
+
+1. **The recommendation**, as the action it proposes — *"Escalate for credit
+   review"* — with a solid outcome mark, one sentence of what the agent found,
+   and three facts on the same row: **test result · terms used · reporting
+   period**. The terms named here are the ones that *governed* that period.
+2. **One amber line** for everything still open — *"Outstanding review:
+   Amendment No. 2 · 1 notice"* — linking to the items. Amber is spent here and
+   nowhere else on the screen.
+3. **Investigation findings**, one row each, with the calculation that produced
+   each figure one click away in place.
+4. **Supporting evidence** — the documents themselves, each with its date named
+   for what it is, each opening its indexed source.
+5. **Record your decision.**
+
+Any narrative that depends on an unboarded amendment is still labelled
+**provisional**, and the explanation of *why the pending amendment does not
+change this period's result* sits on the amendment finding, where it is about
+something. A credit analyst reviewer asked for the governing number first and
+the story second; this is that, with the story shortened to a sentence.
 
 ---
 
@@ -370,10 +384,11 @@ outcome accuracy + the memory effect.
 | Screen | Route | What it is for |
 |---|---|---|
 | Landing | `/welcome` | The one-line thesis; shared-credential demo gate |
-| **Portfolio** | `/` | Triage table of every loan with status badges, "Needs action" filter, KPI band, **+ New borrower**, **Run Q{N}** |
-| **Onboarding wizard** | `/borrowers/new`, `/borrowers/[id]/onboarding` | Flow A, steps 1–4 (§2) |
-| Covenant setup | `/facilities/[id]/covenant-setup` | Review/approve proposed terms (also embedded as wizard step 4) |
-| **Casefile** | `/casefiles/[id]` | Two-column canvas: decision + governing figure + amendment status on the left; persistent **Source \| Trace** pane on the right; retry on a failed run |
+| **Credit Analysis Queue** | `/` | One table of every loan, 64px rows, **exactly one next action per row**; summary strip; filter tabs; search; the uploader below |
+| **Onboarding** | `/borrowers/new`, `/borrowers/[id]/onboarding` | Flow A. **Step 1 carries the borrower's details AND the documents** — one primary action creates the borrower and uploads in a single gesture |
+| Covenant terms review | `/facilities/[id]/covenant-setup` | *What this proposal changes* (approved vN vs proposed vN+1, with sources), the review checklist, the terms beside their clauses, the approval bar |
+| **Casefile** | `/casefiles/[id]` | Recommendation card → findings (2/3) + evidence and outstanding items (1/3) → *Record your decision*. While an investigation runs, the same URL shows the live screen instead |
+| **Document** | `/documents/[id]` | The document as the agent read it — its indexed sections in order. The original file is not retained, and the page says so |
 | Governance | `/governance` | The Risk Officer's policy (human review locked) + the eval scoreboard |
 | Documents / Terms / Lessons | `/documents`, `/terms`, `/lessons` | Browse what is on file, every terms version, every lesson |
 | Global search | left rail | Borrowers, casefiles, documents, terms, lessons, pages |

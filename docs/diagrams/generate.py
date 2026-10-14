@@ -6,17 +6,21 @@ Writes creditscout-user-flow.svg and creditscout-architecture.svg beside this
 file. Hand-editing the SVGs is a mistake — edit here and regenerate, so the
 coordinates stay consistent.
 
-Restraint is the point: ONE accent (indigo, the product's model colour) and
-nothing else. The model / code / human distinction is load-bearing in this
-product, so it is carried by line treatment and typeface rather than by three
-competing hues — indigo border for the agent, plain light border plus a
-monospace label for deterministic code, dashed border for a human step.
+Restraint is the point: ONE accent (teal, the product's model colour since the
+2026-10-13 palette change) and nothing else. The model / code / human
+distinction is load-bearing in this product, so it is carried by line treatment
+and typeface rather than by three competing hues — teal border for the agent,
+plain light border plus a monospace label for deterministic code, dashed border
+for a human step.
+
+The diagrams stay dark on purpose: they are read in documents and decks, not in
+the lit workspace the application itself now uses.
 """
 from html import escape
 
 BG, PANEL, BORDER = "#0A1628", "#11243D", "#2A3A52"
 TEXT, SECOND, MUTED = "#F8FAFC", "#CBD5E1", "#94A3B8"
-ACCENT, ACCENT_DIM, ACCENT_FILL = "#818CF8", "#4C51BF", "#171a3a"
+ACCENT, ACCENT_DIM, ACCENT_FILL = "#5EC2BA", "#146C67", "#10302E"
 MONO = "ui-monospace, SFMono-Regular, Menlo, monospace"
 SANS = "Inter, -apple-system, Helvetica, Arial, sans-serif"
 
@@ -26,7 +30,7 @@ def box(x, y, w, h, title, lines=(), kind="plain", tag=None):
     """kind: plain | model | code | human"""
     o = []
     if kind == "model":
-        fill, stroke, dash, tcol = ACCENT_FILL, ACCENT, "", "#A5B4FC"
+        fill, stroke, dash, tcol = ACCENT_FILL, ACCENT, "", "#8FD8D1"
     elif kind == "human":
         fill, stroke, dash, tcol = PANEL, MUTED, ' stroke-dasharray="5 4"', TEXT
     else:
@@ -100,7 +104,7 @@ def legend(xr, y):
 P = []
 P.append(lane(140, "Flow A — Loan onboarding", "once per loan · re-runs when an amendment arrives"))
 ay, ah = 166, 104
-P.append(box(64, ay, 232, ah, "Upload documents", ["agreement, amendment,", "financials, certificate"], "human", tag="Analyst"))
+P.append(box(64, ay, 232, ah, "Add a borrower", ["name + documents on ONE", "screen; each file classified"], "human", tag="Analyst"))
 P.append(arrow(302, ay+ah/2, 336, ay+ah/2))
 P.append(box(342, ay, 256, ah, "definition_agent", ["reads the definitions article", "and every amendment on file"], "model", tag="Extract"))
 P.append(arrow(604, ay+ah/2, 638, ay+ah/2))
@@ -128,7 +132,7 @@ P.append(lane(532, "Flow C — Investigation", "only on an exception · the agen
 cy, ch = 558, 150
 P.append(box(64, cy, 232, ch, "Investigate", ["analyst starts it;", "nothing runs unasked"], "human", tag="Analyst"))
 P.append(arrow(302, cy+ch/2, 336, cy+ch/2))
-P.append(box(342, cy, 388, ch, "Credit-scout Agent", ["gpt-4.1-mini orchestrator, six function tools.", "Plans, reads, delegates, re-calculates —", "then decides whether the evidence is enough."], "model", tag="Reason"))
+P.append(box(342, cy, 388, ch, "CreditScout Agent", ["gpt-4.1-mini orchestrator, six function tools.", "Plans, reads, delegates, re-calculates —", "then decides whether the evidence is enough."], "model", tag="Reason"))
 P.append(arrow(736, cy+ch/2, 770, cy+ch/2))
 P.append(box(776, cy, 300, ch, "guardrails/*.js", ["six checks, zero dependencies.", "A figure with no logged calculation", "and no cited quote forces abstain."], "code", tag="Enforce"))
 P.append(arrow(1082, cy+ch/2, 1116, cy+ch/2))
@@ -170,20 +174,20 @@ def band(y, name, note):
 y1 = 132
 band(y1, "Analyst", "browser")
 A.append(box(CX, y1, CW, 72, "Credit Analysis Queue · Casefile · Onboarding · Documents · Covenant terms · Lessons · Governance",
-             ["Server-rendered. Reads use the anon key under RLS; every write goes through a route handler or Server Action."], "human"))
+             ["Server-rendered behind a session gate. Reads use the anon key under RLS; every write goes through a Server Action or a key-gated route."], "human"))
 
 y2 = 262
 band(y2, "Application", "Next.js on Vercel")
 A.append(arrow(CX+216, y1+72, CX+216, y2-6))
-A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · review · approve terms", "service-role key, server-side only"], "plain", tag="Private"))
-A.append(box(CX+450, y2, 432, 108, "Agent tool routes", ["OpenAPI 3.0 · key-gated", "the only surface the agent can reach"], "code", tag="Public to Foundry"))
+A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · review · approve terms · propose", "session-gated; service-role key stays server-side"], "plain", tag="Signed-in analyst"))
+A.append(box(CX+450, y2, 432, 108, "Agent tool routes", ["OpenAPI 3.0 · CREDITSCOUT_TOOL_KEY", "the only surface the agent can reach"], "code", tag="Key-gated"))
 A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings", ["chunk by section, 1536-dim vectors", "text-embedding-3-small"], "code", tag="Pipeline"))
 
 y3 = 432
 band(y3, "Reasoning", "Azure AI Foundry")
 A.append(arrow(CX+216, y2+108, CX+216, y3-6, "starts a run"))
 A.append(arrow(CX+666, y3+104, CX+666, y2+114, "six function tools over HTTPS"))
-A.append(box(CX, y3, CW, 104, "Credit-scout Agent — gpt-4.1-mini", 
+A.append(box(CX, y3, CW, 104, "CreditScout Agent — gpt-4.1-mini", 
              ["One orchestrator. It chooses what to read next, delegates, re-calculates, and stops when the evidence is enough.",
               "Connected Agents was dropped 2026-10-06: a connected agent cannot carry a function tool, so specialists could not retrieve."], "model", tag="Orchestrator"))
 
@@ -202,8 +206,8 @@ band(y5, "Data", "Supabase · cloud only")
 A.append(arrow(CX+340, y4+118, CX+340, y5-6))
 A.append(arrow(CX+1020, y4+118, CX+1020, y5-6))
 A.append(box(CX, y5, CW, 96, "Postgres + pgvector",
-             ["facilities · documents · doc_chunks (vector 1536) · covenant_terms (versioned, approved) · tests · exceptions",
-              "casefiles · trace_steps · calculations · reviews · lessons · policy · eval_runs"], "plain", tag="Row-level security"))
+             ["facilities · documents · doc_chunks (vector 1536, chunk_index) · covenant_terms (versioned, approved) · tests · exceptions",
+              "casefiles · calc_log · reviews · lessons · policy · eval_runs.  The uploaded FILE is not retained: a document is its indexed sections."], "plain", tag="Row-level security"))
 
 A.append(f'<line x1="{RAIL}" y1="{y5+134}" x2="1600" y2="{y5+134}" stroke="{BORDER}" stroke-width="1"/>')
 A.append(f'<text x="{RAIL}" y="{y5+166}" fill="{SECOND}" font-size="13.5">The boundary that matters: <tspan fill="{ACCENT}">the model never produces a number.</tspan> It decides what to inspect; <tspan font-family="{MONO}">calc/dscr.js</tspan> computes and <tspan font-family="{MONO}">guardrails/*.js</tspan> enforces — both zero-dependency, neither reachable by the model.</text>')

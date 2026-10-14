@@ -303,7 +303,20 @@ are `timestamptz default now()`.
 | `document_id` | uuid FK → `documents` | ON DELETE CASCADE |
 | `content` | text NOT NULL | The chunk text — the UI reads this for the citation panel |
 | `embedding` | **vector(1536)** | `text-embedding-3-small`. The dimension is load-bearing. |
-| `metadata` | jsonb NOT NULL | `{facility_id, document_id, doc_type, section, doc_title}` |
+| `metadata` | jsonb NOT NULL | `{facility_id, document_id, doc_type, section, doc_title, chunk_index}` |
+
+**`chunk_index` (added 2026-10-13) is the document's reading order.** Chunk ids
+are UUIDs and carry no sequence, so without it a document could not be
+reassembled in the order it was written. `/documents/[id]` renders the stored
+sections in `chunk_index` order; rows ingested before the field sort last and
+the page says they may be out of sequence.
+
+**The uploaded FILE is never retained.** Ingest extracts text, chunks, embeds
+and discards the upload: `documents` has no bytes column and no storage path.
+"View source" therefore opens the *indexed sections* — which, for an audit
+product, is the better artifact, because those sections are exactly what the
+agent read and what every citation resolves to. The page states this outright
+rather than implying it is the original.
 
 **Index:** `ivfflat (embedding vector_cosine_ops)`. **Always filtered by
 `metadata->>'facility_id'`** — one borrower's agreement must never be cited in
@@ -492,23 +505,52 @@ Three consequences, stated explicitly because they are easy to get wrong:
 
 ## 7. API design
 
-Four analyst-facing routes, three tool routes called by the Foundry agent, and
-one internal route.
+Analyst-facing routes and Server Actions, tool routes called by the Foundry
+agent, and one internal route.
+
+### 7.0 Who may call what — REVISED 2026-10-14
+
+Three authentication surfaces, and the rule that keeps them apart:
+
+| Caller | Mechanism | Surface |
+|---|---|---|
+| A signed-in analyst's browser | Session cookie, enforced in `middleware.ts` via `isPublicPath` | Every page, every Server Action, and every `/api/*` route **not** in `AGENT_API_PATHS` |
+| Azure AI Foundry | `X-CreditScout-Tool-Key`, enforced by `requireToolKey` in the route itself | Only the routes listed in `AGENT_API_PATHS` |
+| Nobody | — | `/`, `/login`, `/icon.svg`, and `/api/tools/openapi` (a schema, no data, read before a key can be presented) |
+
+**The defect this replaced.** The gate exempted `/api/*` wholesale on the
+reasoning that Foundry calls those server-to-server with no cookie. True of the
+tool routes — and false of four browser-facing routes that sit under the same
+prefix with no key of their own: `/api/tests/run`, `/api/tests/run-quarter`,
+`/api/covenant-terms/propose`, `/api/casefiles/[id]/trace`. On the deployed demo
+anyone could run covenant tests, spend a model call proposing terms, or read any
+casefile's trace without signing in.
+
+The exemption is now an explicit list, and `lib/auth/gate.test.js` **fails if a
+path is added to it without `requireToolKey` in the route file**. The two must
+move together or not at all.
+
+The browser never calls a key-gated route. Where it needs one of those
+capabilities it goes through a Server Action that runs the same function
+in-process — `approveTerms` → `runApprove`, `reviewCasefile` → `runReview` —
+behind the page's own session.
 
 ### 7.1 Analyst-facing
 
 | Route | Method | Body | Returns | Auth |
 |---|---|---|---|---|
-| `/api/ingest` | POST | multipart: `file`, `facility_id`, `doc_type` | `{document_id, chunks_created}` | service-role, server-side |
-| `/api/covenant-terms/propose` | POST | `{facility_id}` | `{terms_id, terms, source_citations}` — status `proposed` | service-role |
-| `/api/covenant-terms/approve` | POST | `{terms_id, approved_by, edits?}` | `{terms_id, version, effective_from}` — status `approved` | service-role |
-| `/api/tests/run` | POST | `{facility_id, test_period_end, run_id?}` | `{test_id, computed_dscr, passed, variance_flagged, exception_id?}` | service-role |
+| `/api/ingest` | POST | multipart: `file`, `facility_id`, `doc_type` | `{document_id, chunks_created}` | **tool key** |
+| `/api/covenant-terms/propose` | POST | `{facility_id}` | `{terms_id, terms, source_citations}` — status `proposed` | **session** |
+| `/api/covenant-terms/approve` | POST | `{terms_id, approved_by, edits?}` | `{terms_id, version, effective_from}` — status `approved` | **tool key** (the UI uses the `approveTerms` Server Action) |
+| `/api/tests/run` | POST | `{facility_id, test_period_end, run_id?}` | `{test_id, computed_dscr, passed, variance_flagged, exception_id?}` | **session** |
+| `/api/tests/run-quarter` | POST | `{test_period_end}` | one result per loan | **session** |
+| `/api/investigate` | POST | `{exception_id}` | `{casefile_id}` **immediately** — work continues in Foundry | **tool key** |
+| `/api/review` | POST | `{casefile_id, decision, reason?, corrected_outcome?, confirmed_tag?}` | `{status}` | **tool key** (the UI uses the `reviewCasefile` Server Action) |
+| `/api/casefiles/[id]/trace` | GET | — | `{status, view}` for the live trace poll | **session** |
 
-**A-1 — the analyst triggers a test per borrower.** There is deliberately no
-"run the whole quarter" route. The analyst picks a borrower and a period. It
-costs three clicks in the demo instead of one, and it keeps the human visibly in
-control of when a covenant gets tested, which is the posture the whole product
-takes.
+**A-1 — the analyst triggers a test.** `/api/tests/run` is per borrower;
+`run-quarter` runs the book from one button. The analyst picks when a covenant
+gets tested, which is the posture the whole product takes.
 
 **A-3 — ingesting a certificate does not auto-trigger a test.** Upload and test
 stay separate actions. Auto-running would hide the independent-computation
@@ -517,12 +559,9 @@ moment, which is the thing worth seeing.
 **A-6 — no certificate on file:** `reported_dscr` is NULL, `variance` NULL,
 `variance_flagged` false. **The test still runs on our number.** We do not need
 the borrower's figure to determine compliance; we only need it to reconcile.
-| `/api/investigate` | POST | `{exception_id}` | `{casefile_id}` **immediately** — work continues in Foundry | service-role |
-| `/api/review` | POST | `{casefile_id, decision, reason?, corrected_outcome?, confirmed_tag?}` | `{status}` | service-role |
 
-**Reads do not go through the API.** The browser queries Supabase directly with
-the anon key under the RLS read policies above. This is what makes the
-1-second trace poll cheap.
+**Reads do not go through the API.** Pages are server-rendered and query
+Supabase with the anon key under the RLS read policies above.
 
 ### 7.2 Tool routes — called by the Foundry agent over HTTPS
 

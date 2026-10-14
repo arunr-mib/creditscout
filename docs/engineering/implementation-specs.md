@@ -584,8 +584,42 @@ An OpenAPI 3.0 document at `app/api/tools/openapi.json` is what Foundry register
 - [~] **F10** Deploy + eval — public URL ✓, scoreboard ✓, calc accuracy 100% recorded ✓; **live cold/warm passes pending (billable)**
 - [x] **F11** Loan onboarding wizard — spec `docs/superpowers/specs/2026-10-07-onboarding-flow-design.md`; verified live with the five synthetic packages
 
-**Status 2026-10-07:** F0–F11 built and deployed. The remaining open box is the
-billable live eval. Backlog in `docs/parking-lot.md` §4.
+- [x] **F10** Deploy + eval — closed 2026-10-08: four live passes recorded, zero false resolves, calc accuracy 100%
+
+**Status 2026-10-07:** F0–F11 built and deployed.
+**Status 2026-10-14:** F0–F11 built, deployed and reviewed. Backlog in
+`docs/parking-lot.md` §4.
+
+---
+
+## F12 — the analyst surface, rebuilt (2026-10-13 / 2026-10-14)
+
+No new feature. The screens were rebuilt around what an analyst does with them,
+and one security defect was closed. Files, with the defect each addresses:
+
+| File | What it is for |
+|---|---|
+| `lib/auth/gate.ts` | `AGENT_API_PATHS` — the explicit list of routes that may skip the session gate, each of which enforces `requireToolKey`. `safeNext`, hardened against the `/\evil.com` normalisation. One implementation, shared by the login action and the login page |
+| `components/RecommendationCard.tsx` | One header row: eyebrow, outcome mark, headline, three facts. 381px → 174px. The stacked decision-basis list moved to the findings that produced it |
+| `components/CasefileFindings.tsx` | Findings as rows with an icon, a title, one line and a right-aligned link; supporting evidence is the **documents**, each linking to its indexed source; outstanding items are the anchor target of the card's one amber line |
+| `components/termsDiff.ts` + `TermsDiffTable.tsx` | What approving a proposal would change. Add-backs and amendments aligned **by name**, never by index — a positional diff reports four changes when one add-back is inserted at the front |
+| `components/noticeGroups.ts` + `ReviewNotices.tsx` | The review checklist grouped by consequence (must resolve / acknowledge / information), decided by the validation rules. Field paths moved into technical details |
+| `components/traceModel.ts` | `activityState`, `investigationIssue`, `activitySummary`, `freshnessLabel`, `evidenceLinks`, `exceptionFacts`, `investigationStalled`. A refused calculation is an *attempt*, never a completed calculation; the amber notice distinguishes the three recovery cases |
+| `components/uploadModel.ts` | Per-file classification, `UploadStatus`, `oversizeNames`, `uploadSummary`. `MAX_UPLOAD_BYTES` is asserted equal to `lib/ingest`'s `MAX_BYTES` so the stated limit cannot drift from the enforced one |
+| `components/UploadPackage.tsx` | One row per file with its own state and retry; bytes keyed by the **row's own key**, never by `name + size`; `resolveFacility` creates the borrower in the same gesture that uploads |
+| `components/NewBorrowerForm.tsx` | Borrower details and documents on one screen; nothing stored until the single primary action |
+| `app/documents/[id]/page.tsx` | The document, reconstructed from `doc_chunks` in `chunk_index` order, with per-section anchors and an explicit note that the original file is not retained |
+| `scripts/reset-demo.mjs` | Puts the demo queue back: Coastal to *Investigate*, strays removed. **Reports** Harbor rather than writing `pending_review` — only `lib/agent/enforce.ts` may, and a structural test enforces it |
+
+**Rules this stretch added to the codebase:**
+
+1. A figure or a date is Inter with `tabular-nums`; monospace is for identifiers
+   (`docs/design.md` §3).
+2. Amber on the investigation screen means exactly one thing: the calculation
+   cannot proceed.
+3. Green is a verified pass or a recorded resolution — never a screen state.
+4. A path added to `AGENT_API_PATHS` must enforce the tool key, and the test
+   says so.
 
 **F7 is the floor.** If everything after it collapses, F0–F7 is still a working
 product: ingest, human-approved covenant terms, deterministic quarterly testing,

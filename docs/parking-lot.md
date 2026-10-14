@@ -156,6 +156,40 @@ is unset, not only when the header mismatches.
 
 ---
 
+## 7c. Control review — 2026-10-14
+
+Audited against the owner's five criteria (hierarchy, traceability, control,
+density, operational trust). **Product decisions, not clean-ups — none of these
+are bugs, and none were taken without a decision.**
+
+| # | Finding | Why it is not just a UI fix |
+|---|---|---|
+| **7c.1** | 🟠 **No due date anywhere.** Nothing on the queue carries a deadline, an age or an "as of" — `exceptions` has `created_at` and no reporting deadline. An analyst cannot tell which of three breaches is oldest or what is overdue | Needs a field with an owner: a covenant certificate due date is a contractual term, so it belongs in `covenant_terms`, which means an extraction change and a re-approval |
+| **7c.2** | 🟠 **No defer action.** Approve, override and hold-for-documents exist; there is no way to park a case to a date | Depends on 7c.1 — a defer with no date to defer *to* is a hidden backlog |
+| **7c.3** | 🟡 **"Hold for borrower documents" takes no reason code**, where override requires a pattern tag, a corrected outcome and a rationale | The asymmetry is deliberate today (hold is reversible, override is the decision of record); if holds are to be audited they need the same treatment |
+| 7c.4 | ⚪ **No confidence score, deliberately.** The product shows the *basis* instead — terms version, citation count, calculation count | A number nobody can calibrate invites exactly the deference the product exists to prevent. Recorded here so the absence is a decision, not an omission |
+| 7c.5 | ⚪ The covenant is never **named** per queue row — it is implied by the `COMPUTED DSCR` column | Fine while DSCR is the only covenant; breaks the moment a second type lands |
+| 7c.6 | ⚪ **Citation → highlighted passage** exists on the terms screen (clause panel) but not on the casefile, where a citation opens a claim list | The last substantive item from the 2026-10-13 briefs |
+
+---
+
+## 7d. Fixed 2026-10-14 — recorded so they are not re-found
+
+Twelve code-review findings, all fixed in `3145c44`. The two that mattered:
+
+- 🔴 **The session gate exempted `/api/*` wholesale**, leaving four
+  browser-facing routes open on the deployed demo. Now an explicit list of the
+  agent's key-gated routes, with a test that fails if one is added without
+  `requireToolKey`. Verified in production.
+- 🔴 **Open redirect on sign-in** — `safeNext` admitted `/\evil.com`, which
+  browsers normalise to `//evil.com`.
+
+And the one worth remembering: **the false-resolve gate read `cold ?? warm`**,
+so a warm-pass false resolve exited 0 whenever cold was 0. The product's one
+hard gate, satisfied by the run that did not fail.
+
+---
+
 ## 8. Housekeeping
 
 | # | Item |
@@ -164,4 +198,4 @@ is unset, not only when the header mismatches.
 | 8.2 | ⚪ Review the one-pager "as an engineer, as a designer, as a skeptic" — the `/prd` skill offers this |
 | 8.3 | ⚪ Making the GitHub repo public — **owner decision, not made** |
 | 8.4 | ⚪ Add a Stage 6 "Impact Review" section to the PRD after the demo, per the `/prd` skill's lifecycle |
-| 8.5 | 🟠 **Re-run `/security-foundation` before deploy** — RLS, tool endpoints and file upload could not be assessed at stage 3 |
+| 8.5 | 🟠 **Re-run `/security-foundation` before deploy** — RLS, tool endpoints and file upload could not be assessed at stage 3. *Partly answered 2026-10-14: the route/auth surface was audited and fixed (7d); RLS and the upload path were not re-assessed.* |

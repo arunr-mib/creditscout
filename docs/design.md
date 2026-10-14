@@ -4,7 +4,11 @@
 any screen. Never work from memory, and never invent a colour, spacing value or
 radius that isn't here.
 
-**Date:** 2026-10-05 · **Stack:** Next.js + Tailwind CSS
+**Date:** 2026-10-14 · **Stack:** Next.js + Tailwind CSS
+
+> **Rewritten 2026-10-13/14.** The workspace went from dark-native to a lit,
+> graphite-and-teal surface, and figures moved off monospace. Sections 2, 3 and
+> 4 below are the current truth; §9 records what changed and why.
 
 ---
 
@@ -18,10 +22,10 @@ reading a word**. That is what the colour system is for.
 
 | Hue | Means | Never used for |
 |---|---|---|
-| **Indigo** | A model did this — an agent step, a retrieved quote, a judgment | Anything deterministic |
+| **Teal** | A model did this — an agent step, a retrieved quote, a judgment. Also the product's one interaction colour | Anything deterministic; anything that means *compliant* |
 | **Amber** | **Code did this** — a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
 | **Slate / white** | A human did this, or must | System output |
-| **Rose** | A breach, a failure, an escalation | General emphasis |
+| **Red** | A breach, a failure, an escalation | General emphasis |
 | **Green** | Compliant, passing | Success toasts (use slate) |
 
 If you catch yourself reaching for amber because a number "feels important",
@@ -36,79 +40,129 @@ a style choice.
 
 ## 2. Colour tokens
 
-Dark theme only. There is no light theme in the MVP — don't build one.
+**The analyst workspace is LIGHT.** It was dark-native through 2026-10-12; the
+rooms commercial credit analysts work in are lit, and the dark build read as a
+developer tool. The marketing pages and the nav rail stay dark on purpose and
+carry their own `night-*` set — they are light-on-dark surfaces and cannot
+borrow the tokens below.
 
-### Surfaces
+### Surfaces — the workspace
 
 | Token | Hex | Use |
 |---|---|---|
-| `sunken` | `#060E1A` | The nav rail — one step *below* the page, so it recedes |
-| `bg` | `#0A1628` | Page background |
-| `surface` | `#11243D` | Cards, panels |
-| `surface-raised` | `#1E293B` | Modals, popovers, hovered rows |
-| `border` | `#1E293B` | Default borders |
-| `border-strong` | `#334155` | Dividers that must read |
+| `bg` | `#F7F9FA` | Page background |
+| `surface` | `#FFFFFF` | Cards, panels, table bodies |
+| `surface-raised` | `#F1F4F6` | Table headers, hovered rows, inset blocks |
+| `border` | `#C7D3DA` | Hairlines inside a panel |
+| `border-strong` | `#94A6B0` | A panel's own edge, and dividers that must read |
+
+Borders were two steps lighter until 2026-10-14. At `#DCE4E8` on `#F7F9FA` a
+card edge all but vanished and panels read as floating text.
+
+### Surfaces — the dark shell
+
+| Token | Hex | Use |
+|---|---|---|
+| `sunken` | `#182126` | The nav rail |
+| `night` | `#141C21` | Landing and login background |
+| `night-raised` | `#26373D` | Chips and counts on the rail |
+| `night-hover` | `#223136` | Hovered rail rows |
+| `night-text` / `night-secondary` / `night-muted` | `#F8FAFC` / `#CBD5E1` / `#9AAAB2` | Foregrounds on dark |
+| `night-border` / `night-border-strong` | `#2C3B41` / `#3E4F56` | Edges on dark |
 
 ### Text
 
-| Token | Hex | Use | Min size |
+| Token | Hex | Use | On white |
 |---|---|---|---|
-| `text` | `#F8FAFC` | Headings, primary values | — |
-| `text-secondary` | `#CBD5E1` | Body copy | — |
-| `text-muted` | `#94A3B8` | Labels, captions, metadata | 12px |
+| `text` | `#19282F` | Headings, primary values | 15.2:1 |
+| `text-secondary` | `#52646D` | Body copy | 7.0:1 |
+| `text-muted` | `#6B7C85` | Labels, captions, metadata (12px floor) | 4.7:1 |
 
 ### Semantic
 
 | Token | Hex | Bg pair | Meaning |
 |---|---|---|---|
-| `model` | `#818CF8` | `#1E1B4B` | Agent / model step |
-| `model-bright` | `#A5B4FC` | — | Model headings, active trace step |
-| `code` | `#F59E0B` | `#3B2A0A` | **Deterministic computation** |
-| `code-bright` | `#FBBF24` | — | Calculation headings, `calc_id` badges |
-| `human` | `#E2E8F0` | `#1E293B` | Approval, review, analyst action |
-| `danger` | `#F87171` | `#3F1D1D` | Breach, failed test, escalate |
-| `success` | `#86EFAC` | `#0F3B2A` | Compliant, passing |
+| `model` | `#146C67` | `model-bg` `#E8F2F1` | Agent / model step — **and every interactive affordance** |
+| `model-bright` | `#105A56` | — | Model text on a light surface, links |
+| `model-night` | `#5EC2BA` | `model-night-bg` `#10302E` | The accent ON the dark shell |
+| `code` | `#B45309` | `code-bg` `#FFFBEB` | **Deterministic computation**, and the one unresolved review item |
+| `code-bright` | `#92400E` | — | Calculation headings, `calc_id` badges |
+| `human` | `#334155` | `human-bg` `#F1F5F9` | Approval, review, analyst action |
+| `danger` | `#C81E1E` | `danger-bg` `#FBE3E3` | Breach, failed test, escalate |
+| `danger-strong` | `#A31A1A` | — | **Solid fill** of the escalate mark |
+| `success` | `#15803D` | `success-bg` `#E8F7EE` | Compliant, passing |
+| `success-strong` | `#156B37` | — | **Solid fill** of the resolve mark |
+
+Every value is re-derived for a light page, not inverted. The old dark `model`
+reads 2.98:1 on white, `code` 2.15, `success` 1.40 — all three would have
+failed.
+
+**The `-bg` tints are contrast-bound, not taste.** `success` on `success-bg` is
+badge text with about 0.3 of headroom over 4.5:1; darkening those tints for
+looks took the success badge to 4.10 and the danger badge to 4.29. They sit as
+deep as AA allows. The `-strong` pair exists for the one element that carries no
+small text — the outcome mark on the recommendation card — where white reads
+6.6:1 and 7.7:1.
+
+**Teal is interaction AND model.** Green is reserved for a verified pass or a
+recorded resolution; a screen state such as "ready for analyst decision" is
+neutral, never green, or it reads as *compliant*.
 
 ### Accessibility
 
 - Body text must hit **4.5:1** against its surface; UI elements and large text
   **3:1**. The pairs above clear it, but re-check any new combination.
 - **Never encode meaning in colour alone.** Every semantic colour is paired with
-  an icon or a text label — indigo steps carry an agent name, amber values carry
+  an icon or a text label — teal steps carry an agent name, amber values carry
   `computed by code`, breaches carry the word *breach*. A colour-blind analyst
   must read the same information.
-- Focus ring: `2px solid #A5B4FC`, `offset 2px`. Visible on every interactive
+- Focus ring: `2px solid` `model` (`#146C67`), `offset 2px`, and on the dark
+  shell `model-night` (`#5EC2BA`). Visible on every interactive
   element. Do not remove it.
 
 ---
 
 ## 3. Typography
 
-| Role | Font | Size / Line | Weight |
+One family, Inter, across the product. A narrow scale, and nothing off it — the
+Tailwind `fontSize` scale is **replaced**, so an off-scale class does not exist.
+
+| Role | Token | Size / Line | Weight |
 |---|---|---|---|
-| Display (landing hero **only**) | Inter | 56 / 58 | 600 |
-| Page title | Inter | 28 / 34 | 700 |
-| Section heading | Inter | 20 / 28 | 600 |
-| Card title | Inter | 16 / 24 | 600 |
-| Body | Inter | 14 / 22 | 400 |
-| Label / caption | Inter | 12 / 16 | 500, `text-muted` |
-| **Numeric values** | **JetBrains Mono** | 14 / 20 | 500 |
-| **Clause quotes** | **JetBrains Mono** | 13 / 21 | 400 |
+| Display (landing hero **only**) | `text-display` | 56 / 58 | 600 |
+| Page title | `text-title` | 28 / 34 | 700 |
+| Section heading | `text-section` | 20 / 28 | 600 |
+| Card title | `text-card` | 16 / 24 | 600 |
+| Body | `text-body` | 14 / 22 | 400 |
+| Numeric value | `text-num` | 14 / 20 | 500 |
+| Quoted clause | `text-quote` | 13 / 21 | 400 |
+| Label / caption | `text-label` | 12 / 16 | 500 |
+| Badge | `text-badge` | 11 / 16 | 500 |
 
-**Two rules that aren't negotiable:**
+**The numeral rule, rewritten 2026-10-14:**
 
-1. **Every financial figure, ratio and `calc_id` is monospace.** Tabular figures
-   so columns align; an analyst scans columns of ratios and misalignment costs
-   real time.
-2. **Every verbatim clause quote is monospace**, so a quote is visually distinct
-   from the model's prose about it. This is how the eye separates *evidence*
-   from *interpretation*.
+1. **Every financial figure and date is set in Inter with `tabular-nums`.**
+   Columns still align — that is what tabular numerals are for — without the
+   product looking like a terminal. A covenant figure in monospace reads as a
+   machine's output, which is the opposite of what this screen claims.
+2. **Monospace is reserved for things you would retype**: `calc_id`, citations
+   (`CA §7.11`), rule names, field paths (`numerator.addbacks[0].cap`), tool
+   names, credentials, a key cap.
+3. **A verbatim clause quote is NOT monospace.** It is prose — `text-quote`,
+   with the cited span highlighted. Setting a covenant in the same face as a
+   stack trace made the one artifact an analyst must actually read look like a
+   log.
 
----
+Before this pass the app ran 90 `font-mono` usages against 14 `tabular-nums`,
+split by screen: queue DSCRs monospace, casefile DSCRs proportional.
 
 ## 4. Spacing, radius, elevation
 
-**4px base scale.** Use only: `4, 8, 12, 16, 24, 32, 48, 64`. No arbitrary values.
+**4px base scale.** The Tailwind `spacing` scale is **replaced**, so only these
+exist: `0, px, 1 (4px), 2 (8px), 3 (12px), 4 (16px), 6 (24px), 8 (32px),
+12 (48px), 16 (64px)`. `h-10`, `mt-10` and `gap-10` are not classes — they fail
+silently at render, which is the single most common mistake made in this
+codebase.
 
 | Radius | Value | Use |
 |---|---|---|
@@ -116,8 +170,17 @@ Dark theme only. There is no light theme in the MVP — don't build one.
 | `md` | 8px | Cards, inputs, buttons |
 | `lg` | 12px | Modals, side panels |
 
-**Elevation is borders, not shadows.** On a dark background shadows read as mud.
-Depth comes from surface lightness plus a `border-strong` edge.
+**Elevation is a border first, a hairline shadow second.** On the old dark page
+shadows read as mud and the scale was `none`. On a lit page a 1px border alone
+reads flat, so the scale came back — deliberately small, two steps:
+
+| Token | Use |
+|---|---|
+| `shadow-card` | Every panel. `0 1px 2px / 0 1px 3px` at 4–6% |
+| `shadow-raised` | Modals and popovers only |
+
+A big diffuse shadow is the other half of the generated-template look. There is
+no third step and there will not be one.
 
 Layout: 1280px max content width, 24px page gutter, 16px grid gap.
 
@@ -145,21 +208,22 @@ and colouring it as an error would train analysts to see caution as malfunction.
 │  DSCR   1.31  ⟡ code · calc_a3f9 │   ← amber value, mono, badge
 └──────────────────────────────────┘
 ```
-Value in `code-bright` monospace; badge in `code` on `#3B2A0A` at 11px. The
+Value in `code-bright`, Inter with `tabular-nums`; badge in `code` on `code-bg` at 11px. The
 `calc_id` is clickable and opens the calculation log for that computation.
 
 ### 5.3 Citation chip
 
-Inline, indigo, `radius-sm`, 12px: `CA §7.11 ↗`. Clicking opens the clause panel.
-Hover raises background to `#1E1B4B`. **A claim without a chip must not render** —
+Inline, `model` on `model-bg`, `radius-sm`, 12px, **monospace** — a citation is
+an identifier: `CA §7.11 ↗`. Clicking opens the clause panel. **A claim without a chip must not render** —
 if the data lacks a citation that is a guardrail failure and should surface as
 one, not render silently.
 
 ### 5.4 Clause panel
 
 Right-hand drawer, 480px, `surface-raised`, `radius-lg`. Document title and
-section as header; full chunk text in monospace; **the quoted span highlighted
-with `#1E1B4B` background and a 2px `model` left border**. The analyst's job here
+section as header; full chunk text in **Inter** (`text-quote`) — a covenant is
+prose, not code; **the quoted span highlighted with `model-bg` and a 2px `model`
+left border**. The analyst's job here
 is a two-second verification — the highlight is the whole point.
 
 ### 5.5 Step trace
@@ -167,17 +231,17 @@ is a two-second verification — the highlight is the whole point.
 Vertical timeline, one row per step, polled every 1s.
 
 ```
- ①  definition_agent        indigo      2.3s
+ ①  definition_agent        teal        2.3s
  │   mapped DSCR terms from CA §1.01
  ②  dscr_calculator         AMBER     0.1s
  │   1.12 — below 1.25 threshold
- ③  research_agent          indigo      4.1s
+ ③  research_agent          teal        4.1s
  │   found Amendment No. 2 §3(a)
  ④  dscr_calculator         AMBER     0.1s
      1.31 — passes
 ```
 
-Agent steps indigo, calculator steps amber. **The alternation is the product
+Agent steps teal, calculator steps amber. **The alternation is the product
 demo** — it shows reasoning and computation interleaving, which is the thesis
 made visible. Active step pulses `model-bright`; completed steps settle to
 `text-secondary`.
@@ -197,14 +261,14 @@ them would be hiding the best evidence the product has.
 
 | Variant | Fill | Text | Use |
 |---|---|---|---|
-| Primary | `#818CF8` | `#0A1628` | Approve, Investigate, Run test |
+| Primary | `model` `#146C67` | `bg` | Approve, Investigate, Run test |
 | Secondary | transparent, `border-strong` | `text` | Override, Request docs |
 | Danger | transparent, `danger` border | `danger` | Escalate |
 
 Height 36px, padding 16px, `radius-md`, 14px/500. Disabled: 40% opacity,
 `cursor: not-allowed`.
 
-**Two button colours in a row of actions, and they mean something.** Indigo
+**Two button colours in a row of actions, and they mean something.** Teal
 (`model`) is reserved for *doing work* — Run test, Investigate. Beige
 (`human`) is for *opening something* — Review, View decision, Review terms. A
 third colour in the same column would make the distinction decorative. Where a
@@ -218,7 +282,7 @@ stretched too, not just the `<button>`.
 `surface` background, `border` row dividers, 40px rows. Column headers are
 12px in `model-bright` on a `model-bg/50` wash — the header row is the one
 element that repeats on every screen, so it is where the brand accent earns its
-keep. Numeric columns **right-aligned, monospace, tabular-nums**. Hover
+keep. Numeric columns **right-aligned, Inter, `tabular-nums`**. Hover
 `surface-raised`. Status via badge, never via row tint.
 
 ### 5.9 Locked policy value
@@ -253,13 +317,13 @@ Respect `prefers-reduced-motion`: drop transforms, keep opacity.
 
 | Screen | Layout |
 |---|---|
-| **Portfolio queue** | KPI strip (4 tiles) → data table of borrowers. Columns: borrower, period, **our DSCR**, reported DSCR, variance, status, "seen similar" badge |
-| **Covenant setup** | Split: proposed terms left, source clause right. Approve / Edit footer, pinned |
-| **Investigation** | Step trace left (60%), casefile placeholder right (40%), filling as it completes |
-| **Casefile review** | Recommendation badge → explanation → calculation table → claims with citation chips → guardrail notices → action bar pinned bottom |
-| **Governance** | Policy table (read-only, human-review locked) + eval scoreboard, cold vs warm |
-
----
+| **Credit Analysis Queue** | Period line → title + two actions → summary strip → filter tabs + search → one table, 64px rows. Columns: borrower (+ industry, terms version), computed DSCR, reported DSCR, minimum, covenant test result, review status, **next action** (exactly one button). The uploader sits below the table |
+| **Live investigation** | Breadcrumb + *Back to queue* → title + ONE status badge → "Original test result" strip (calculated / minimum / shortfall / terms version) → amber notice naming the single blocking issue → 65/35 split: investigation timeline left, pending recommendation + evidence right |
+| **Casefile review** | Breadcrumb → title + one neutral status pill → **recommendation card in four bands** (eyebrow + mark + headline + one sentence; three facts; one outstanding line; the agent's reasoning) → 2/3 findings + 1/3 evidence and outstanding items → *Record your decision* |
+| **Covenant terms review** | Header names the decision and the version → *What this proposal changes* (Term / Approved vN / Proposed vN+1 / Source) → review checklist grouped by consequence → proposed terms left, source clause right → compact approval bar |
+| **Documents** | Search → borrower and type filters → *Upload documents*. Table: document, borrower, type, **relevant date** (named for the type), terms review state. A title opens the indexed document |
+| **Onboarding** | Stepper (Borrower & documents → Review terms → Complete). Step 1 carries the name fields **and** the uploader, with one primary action that creates the borrower and uploads in a single gesture |
+| **Governance** | Investigation limits + enforcement rules + eval scoreboard (cold vs warm, with the run's date and n) |
 
 ## 8. Writing style in the UI
 
@@ -277,13 +341,26 @@ Respect `prefers-reduced-motion`: drop transforms, keep opacity.
 
 ## 9. What not to do
 
-- Don't add a light theme.
-- Don't use amber for anything that isn't code output.
+- Don't use amber for anything that isn't code output **or the one unresolved
+  review item**. On the live investigation screen amber means exactly one
+  thing: the calculation cannot proceed.
 - Don't introduce a new hue. If something needs emphasis, use weight or size.
 - Don't hide guardrail notices behind a disclosure.
 - Don't render a number without its `calc_id` or its quote.
-- Don't use shadows for elevation.
+- Don't reach past the two-step shadow scale.
 - Don't animate longer than 240ms, and don't fake progress.
+- Don't set a figure, a date or a clause in monospace (§3).
+- Don't use green for a screen state. Green is a verified pass or a recorded
+  resolution; "ready for analyst decision" is neutral.
+- Don't use a spacing or type class that is not in §3/§4 — the scales are
+  replaced, so it will silently not exist.
+
+### Superseded 2026-10-13
+
+> *"Don't add a light theme. There is no light theme in the MVP."*
+
+The workspace IS the light theme now. The dark tokens survive as the `night-*`
+set for the nav rail and the marketing pages, and nothing else.
 
 ---
 
@@ -399,7 +476,7 @@ Inline pill, `rounded-sm`, `text-badge` mono. Shows the **signed** delta.
 
 ### 12.3 `SeenSimilarBadge`
 
-Indigo pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
+Teal pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
 
 **Rule:** renders only when at least one lesson matched. **Never renders empty or as "0 prior cases"** — an empty memory badge implies the feature is broken rather than new.
 
@@ -493,12 +570,12 @@ One row of the step trace. Number · tool name · duration · one-line summary.
 
 | Step type | Token |
 |---|---|
-| Agent / specialist | `text-model`, indigo left rule |
+| Agent / specialist | `text-model`, teal left rule |
 | **Calculator** | `text-code`, amber left rule |
 | Active | `text-model-bright`, subtle pulse |
 | Complete | settles to `text-text-secondary` |
 
-**Rule:** the indigo/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
+**Rule:** the teal/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
 
 ### 12.16 `Scoreboard`
 

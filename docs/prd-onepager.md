@@ -1,6 +1,6 @@
 # CreditScout — One-Pager
 
-**Author:** Arun Rajendiran · **Date:** 2026-10-07 (revised from 2026-10-05) · **Status:** Built and deployed — `https://credit-scout.vercel.app`
+**Author:** Arun Rajendiran · **Date:** 2026-10-14 (revised from 2026-10-07) · **Status:** Built and deployed — `https://credit-scout.vercel.app`
 
 > The companion to `docs/prd.md`. That document is the full nine-section cohort
 > PRD. **This is the version for someone who will not read it** — leadership, a
@@ -161,6 +161,9 @@ TAM (loan compliance monitoring) ~$2.87B in 2026.
 | ~~Validate the three facility twists~~ | Owner | **Done 2026-10-05** |
 | ~~Verify + sign off the expected DSCR values~~ | Owner | **Done 2026-10-07** — 10 rows signed |
 | ~~Does Foundry Connected Agents (preview) work reliably?~~ | Claude | **Resolved** — works, but a specialist cannot carry a tool; specialists run as in-process function tools instead |
-| Run the live cold + warm eval passes (billable) | Owner's go | Before the pitch |
+| ~~Run the live cold + warm eval passes (billable)~~ | Owner | **Done 2026-10-08** — four passes, zero false resolves, calc accuracy 100%; outcome accuracy 60% against a ≥85% target |
+| Re-measure the live eval after the provenance fix (~$0.20, billable) | Owner's go | Open |
+| Does a covenant **due date** belong in `covenant_terms`? It is a contractual term, so adding it is an extraction change and a re-approval — and nothing in the product can age or prioritise work without it | Owner | Open (parking-lot 7c.1) |
+| Should *hold for borrower documents* require a reason code, as override does? | Owner | Open (parking-lot 7c.3) |
 | 5 analyst interviews + 3 customer quotes | Owner | Launch gate |
 | Loaded analyst cost/hr; hours per contested exception | Owner | Before the pitch |

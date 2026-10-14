@@ -2,7 +2,7 @@
 
 A decision-support agent for commercial credit analysts investigating DSCR covenant exceptions. It recommends; a human analyst always decides.
 
-**Start with `docs/HANDOFF.md` §0** — the current state (2026-10-08), what is left, and how to run things. Then the spec, then the engineering doc. The product is **built and deployed** at `https://credit-scout.vercel.app`; the next open item is the billable live eval run (HANDOFF §0.3).
+**Start with `docs/HANDOFF.md` §0.0** — the current state (2026-10-14), what is left, and how to run things. Then the spec, then the engineering doc. The product is **built and deployed** at `https://credit-scout.vercel.app`. The live eval ran 2026-10-08 (four passes, zero false resolves); the open items are a re-measure after the provenance fix and three product decisions recorded in `docs/parking-lot.md` §7c.
 
 | | |
 |---|---|
@@ -13,7 +13,7 @@ A decision-support agent for commercial credit analysts investigating DSCR coven
 | File-by-file blueprint (LLD, features F0–F11) | `docs/engineering/implementation-specs.md` |
 | Product docs | `docs/prd.md`, `docs/prd-onepager.md`, `docs/mental-model.md` (flows, storyboard, screen inventory) |
 | Everything deferred, with reasons | `docs/parking-lot.md` |
-| Design tokens (no shadows — dark-native depth) | `docs/design.md` |
+| Design tokens (light workspace, graphite shell, one teal accent) | `docs/design.md` |
 | Diagrams — user flow + architecture | `docs/diagrams/` — **generated**; edit `generate.py` and re-run, never the SVG |
 | Eval harness + signed oracle | `evals/run.mjs`, `evals/grade.mjs`, `data/expected-values-template.csv` |
 | Original plan 1 (stale: six facilities, n8n, CommonJS) | `docs/superpowers/plans/2026-10-02-creditscout-deterministic-core.md` |
@@ -47,6 +47,10 @@ Azure AI Foundry Agent Service runs one orchestrator — the **CreditScout Agent
 - **The eval oracle is owner-signed and owner-owned.** `data/expected-values-template.csv` — never regenerate or edit its expected columns; `generate()` refuses to overwrite it. The eval runner refuses to run on any unsigned row. Unmeasured metrics are `null` → "—", never 0.
 - **The live eval is billable** (`npm run eval -- --live`): confirm with the owner before running; needs a local `npm run dev` for the agent's tool self-calls. Deterministic `npm run eval` is free.
 - **`.env` is gitignored.** Never commit it. `.env.example` lists what's needed.
+- **A route added to `AGENT_API_PATHS` must enforce `requireToolKey`.** That list is the only thing exempt from the session gate, and `lib/auth/gate.test.js` fails if the two drift apart. Everything else under `/api/*` is browser-facing and sits behind the cookie.
+- **Figures and dates are Inter with `tabular-nums`; monospace is for identifiers** (`calc_id`, citations, field paths, tool names). A verbatim clause is prose, not code. `docs/design.md` §3.
+- **Green means a verified pass or a recorded resolution** — never a screen state. On the live investigation screen **amber means exactly one thing**: the calculation cannot proceed.
+- **Tailwind's `spacing`, `fontSize` and `boxShadow` scales are REPLACED, not extended.** `h-10`, `mt-10` and `gap-10` do not exist and fail silently at render — the most common mistake made in this codebase.
 
 ## Execution
 

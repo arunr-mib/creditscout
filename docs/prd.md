@@ -47,6 +47,24 @@ section named; this table is the index.
 | **Portfolio triage table; governing-first casefile** | Status badges and a "Needs action" filter on the portfolio; the casefile leads with the governing test-period figure and an amendment-status panel, and labels any amendment-dependent narrative *provisional* | §2.1 |
 | **Deployed with a demo gate** | Vercel, service-principal auth into Foundry, shared-credential landing page. Not multi-user auth | §4, §8 |
 
+### Scope changes since 2026-10-08 — the analyst surface
+
+No capability changed. The screens were rebuilt around what an analyst does
+with them, and one security defect was closed.
+
+| Change | What it means | Where |
+|---|---|---|
+| **Light workspace, graphite shell, one teal accent** | Dark-native was dropped 2026-10-13: the rooms analysts work in are lit, and the dark build read as a developer tool. Every semantic colour re-derived for a light page, not inverted | `docs/design.md` §2 |
+| **Figures are Inter with tabular numerals** | Monospace is reserved for identifiers — `calc_id`, citations, field paths. A verbatim clause is prose, not code | `docs/design.md` §3 |
+| **One next action per queue row** | The queue is one table of six loans with exactly one button per row. "What do I do about this loan" is answered without opening it | §2.1 |
+| **Casefile in one card** | Recommendation, three facts, one outstanding line — 381px → 174px, whole page ~1300px → 1000px. The duplicate metric strip was deleted, not restyled | §2.1 |
+| **The live investigation names the blocking issue** | One amber notice distinguishing an input the agent omitted from its own request, a passage absent from the filed documents, and a document never uploaded. Only the third is an upload request | §2.2 |
+| **What a terms proposal changes** | Approved vN beside proposed vN+1, aligned by name; review notices grouped by what they demand | §2.2 |
+| **Documents are openable** | The uploaded file is never retained; a document opens as its indexed sections in order, and the page says so | §2.1 |
+| **Onboarding is one screen** | Borrower details and documents together; the record is created in the same gesture that uploads, so an abandoned form leaves nothing behind | §2.1 |
+| **API auth corrected** | The session gate had exempted `/api/*` wholesale, leaving four browser-facing routes open on the deployed demo. Now an explicit list of the agent's key-gated routes, enforced by a test | HLD §7.0 |
+| **Known gaps, recorded not hidden** | No due date, no defer, no reason code on *hold*, no confidence score (the last by choice) | parking-lot 7c |
+
 ---
 
 # Week 1

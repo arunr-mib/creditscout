@@ -1,19 +1,59 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06 · **Current-state handoff (§0):** 2026-10-08
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14
 **Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
-**Start at §0.** It is the current state and the next actions. §1–§5 are the
+**Start at §0.0.** It is the current state and the next actions. §1–§5 are the
 design reasoning (still true), §8–§9 are the gotchas and lessons (still true),
-and the rest has been refreshed to 2026-10-08.
+and §0.1–§0.6 are the 2026-10-08 build-out record, still accurate on the agent,
+the evals and the data.
 
 ---
 
-## 0. Current state — 2026-10-08 — START HERE
+## 0. Current state — 2026-10-14 — START HERE
 
-### 0.1 What is done
+### 0.0 What changed since 2026-10-08
+
+Nothing about the agent, the calculator, the guardrails, the schema or the
+oracle changed. **Everything in this section is the analyst-facing surface, one
+security fix, and the docs.**
+
+| Area | State |
+|---|---|
+| Tests | **1,139 / 1,139** `npm test`, `tsc --noEmit` clean, `npm run build` clean |
+| Live | `https://credit-scout.vercel.app`, deployed from `arunr-mib/creditscout` via explicit `vercel --prod` |
+| **Palette** | **Light workspace, graphite shell, one deep-teal accent.** Dark-native was dropped 2026-10-13 — the rooms analysts work in are lit, and the dark build read as a developer tool. The `night-*` tokens survive for the nav rail and the marketing pages. `docs/design.md` §2 is the truth |
+| **Typography** | One family. **Figures and dates are Inter with `tabular-nums`; monospace is reserved for identifiers** (`calc_id`, citations, field paths, tool names). A verbatim clause is prose, not code. `docs/design.md` §3 |
+| **Queue** | One table, 64px rows, exactly one *next action* per row; summary strip; filter tabs. `COMPUTED DSCR` / `REPORTED DSCR` / `MINIMUM` / `COVENANT TEST RESULT` / `REVIEW STATUS` / `NEXT ACTION` |
+| **Casefile** | Rebuilt to the owner's reference composition. Recommendation card **381px → 174px** in one header row; the duplicate metric strip deleted; findings as rows, not a numbered timeline; **supporting evidence is the documents themselves**, each linking to its indexed source; whole page ~1300px → **1000px** |
+| **Live investigation** | Exception-context strip; per-activity state (Completed / Needs input / In progress); **one amber notice that distinguishes the three recovery cases** (input omitted from the request · passage absent from filed documents · document never uploaded); connection health reported separately from run state |
+| **Covenant terms** | *What this proposal changes* — Term / Approved vN / Proposed vN+1 / Source, aligned **by name** not index; review checklist grouped by consequence; approval states its effect and offers (never prefills) the signed-in name |
+| **Documents** | A document title opens it. The uploaded FILE is not retained — the preview is reconstructed from indexed chunks, in order, via `doc_chunks.metadata.chunk_index`, and the page says so |
+| **Onboarding** | Step 1 is **borrower details AND documents on one screen**; one primary button creates the borrower and uploads in a single gesture, so an abandoned form no longer leaves an empty borrower behind |
+| **Uploads** | One row per file, each with its own type, date and state (Not uploaded → Uploading and indexing → Ready / Failed), per-file retry, real 10 MB limit stated up front |
+| **SECURITY — fixed 2026-10-14** | The session gate exempted `/api/*` wholesale, leaving `/api/tests/run`, `/api/tests/run-quarter`, `/api/covenant-terms/propose` and `/api/casefiles/[id]/trace` **open on the deployed demo**. The exemption is now an explicit list of the agent's own key-gated routes, with a test that fails if one is added without `requireToolKey`. `/api/review` was on that list with no key and now has one. Verified in production: `/api/tests/run` → 307, `/api/review` → 401 |
+| **SECURITY — fixed 2026-10-14** | `safeNext` admitted `/\evil.com`, which browsers normalise to `//evil.com` — an open redirect on sign-in. One hardened implementation in `lib/auth/gate.ts`, shared by the action and the page |
+| Code review | 12 findings raised 2026-10-14, **all 12 fixed** in `3145c44` with 10 new tests |
+| Diagrams | Regenerated 2026-10-14 (teal, the session/key boundary, `chunk_index`, the one-screen onboarding step) |
+
+**What did NOT change, and is still the 2026-10-08 record below:** the agent and
+its six tools, `calc/dscr.js`, `guardrails/*.js`, the schema, the six seeded
+loans, the signed oracle, and every eval number in §0.6.
+
+**Still open, unchanged:** outcome accuracy 60% against a ≥85% target
+(parking-lot 7.7), blocker 7.10, and the eval has **not** been re-measured live
+since `chunksForCalcProvenance` landed (~$0.20, billable, owner's call).
+
+**New, from the 2026-10-14 control review** — product decisions, not clean-ups:
+no **due date** exists anywhere in the data model or the queue; there is no
+**defer** action; and *Hold for borrower documents* records a state with **no
+reason code**, where override requires one.
+
+---
+
+### 0.1 What was done by 2026-10-08
 
 The product is **built, deployed and verified live** at `https://credit-scout.vercel.app`
 (one Vercel project, deploys `main`; shared-credential demo gate,
@@ -31,10 +71,10 @@ Preview and nothing else.
 | Eval harness | ✅ `evals/run.mjs` + `evals/grade.mjs` (17 tests). `npm run eval` · `--write` · `--live`. |
 | Deterministic eval pass | ✅ **run and recorded** — calculation accuracy **100%** (12/12 signed figures), code path 100%; `eval_runs` row (`mode: cold`, `pass: "deterministic"`) → the Governance scoreboard shows it, everything agent-level reads "—". |
 | Live cold + warm eval passes | ✅ **run twice 2026-10-08** (owner's go; billable). Latest: `eval-20261008T041142Z-cold` + `eval-20261008T041702Z-warm`, exit 0. **Zero false resolves across all four passes.** Calc accuracy 100%. Outcome accuracy **60% cold, 60% warm** (target ≥85%); avg steps **7.0 cold, 8.0 warm** — the memory effect is **negative and now cleanly measured**. The step-cap fix worked; rule 8 half-worked. See §0.6. |
-| Tests | 1,010/1,010 `npm test`, `tsc --noEmit` clean. |
-| Docs | PRD, one-pager, mental model, HLD, LLD, parking lot, `CLAUDE.md` all refreshed to the built state, last swept 2026-10-08. |
+| Tests | 1,010/1,010 at 2026-10-08. **1,139 as of 2026-10-14.** |
+| Docs | Swept 2026-10-08, and again **2026-10-14** (design system, HLD, LLD, mental model, PRD, one-pager, parking lot, diagrams). |
 | **Seeded book (2026-10-08)** | ✅ **6 loans.** F1/F3/F5 carry the twists; **F7 Dokusign Inc (1.40x), F8 Peat's Coffee Company (1.10x), F9 Costko Wholesale (1.35x)** are performing loans added so the book is not made only of exceptions and the minimum reads as per-loan, not a constant. Not evaluated — no oracle rows, no eval denominator moved. |
-| **UI sweep (2026-10-08)** | ✅ Indigo brand accent throughout incl. all table headers; queue, casefile, Lessons, Governance and Documents rebuilt on the owner's mockups; equal-width row actions; two button colours only (indigo = act, beige = open). |
+| **UI sweep (2026-10-08)** | ✅ Indigo brand accent throughout; queue, casefile, Lessons, Governance and Documents rebuilt on the owner's mockups. **Superseded 2026-10-13 by the light/teal palette — see §0.0.** |
 
 ### 0.2 Key decisions since 2026-10-06 (all owner-approved)
 
@@ -106,12 +146,14 @@ Preview and nothing else.
 
 | | |
 |---|---|
-| Tests | `npm test` (971) · `npx tsc --noEmit` |
+| Tests | `npm test` (**1,139**) · `npx tsc --noEmit` · `npm run build` |
 | Deterministic eval | `npm run eval` (free) · `npm run eval -- --write` (records the row) |
 | Live eval | `npm run dev` (background) then `npm run eval -- --live` (billable; see 0.3) |
 | Groundedness | `npm run eval:groundedness` (billable; `--dry-run` is free, `--mode cold\|warm` for one pass). Needs a completed `--live` run first. |
 | Regenerate synthetic docs | `npm run generate:data` — safe: will not touch the signed oracle |
-| Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
+| Reset the demo queue | `node --env-file=.env scripts/reset-demo.mjs` — Coastal back to *Investigate*, strays removed; **reports** Harbor rather than writing `pending_review` (only `lib/agent/enforce.ts` may) |
+| Regenerate the diagrams | `python3 docs/diagrams/generate.py` — never hand-edit the SVGs |
+| Deploy | `git push origin HEAD` then **`npx vercel --prod --yes`** — this branch is not the project's production branch, so a push alone builds a Preview. Confirm with `npx vercel ls creditscout-nrb7 --prod`. Runbook: `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
 ### 0.5b Credentials that expire — check before they bite (verified 2026-10-13)
