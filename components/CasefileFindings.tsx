@@ -7,8 +7,7 @@ import { ClaimList } from "./ClaimList";
 import { GuardrailNotice } from "./GuardrailNotice";
 import { TraceArc } from "./TraceArc";
 import { TraceStep } from "./TraceStep";
-import type { Clause } from "./termsReview";
-import type { LiveTraceView } from "./traceModel";
+import { activityState, type LiveTraceView } from "./traceModel";
 import { dateLabel, longDate } from "@/lib/terms-labels";
 import type { AmendmentStatus, CalcSection, ClaimView, InvestigationSummary, Notice } from "./casefileModel";
 
@@ -47,7 +46,6 @@ export function CasefileFindings({
   amendments,
   notes,
   claims,
-  clauses,
   trace,
   termsVersion,
   facilityId,
@@ -60,7 +58,6 @@ export function CasefileFindings({
   amendments: AmendmentStatus[];
   notes: Notice[];
   claims: ClaimView[];
-  clauses: Record<string, Clause | null>;
   trace: LiveTraceView;
   termsVersion: number | null;
   facilityId: string;
@@ -82,6 +79,10 @@ export function CasefileFindings({
   const unboarded = amendments.filter((a) => a.effectiveForPeriod && !a.boarded);
   const termsNote = notes.find((n) => n.check === "terms_differ_from_approved") ?? null;
   const unboardedTitles = new Set(unboarded.map((a) => a.title));
+  // The step the citations hang off: the one that weighed the evidence, or the
+  // last one when the investigation had no such step.
+  const citationStep =
+    summary.steps.find((st) => st.kind === "addback")?.n ?? summary.steps[summary.steps.length - 1]?.n ?? null;
   const shownDocs = allDocs ? documents : documents.slice(0, EVIDENCE_SHOWN);
 
   // items-start: without it the grid stretches every column to the tallest, so a
@@ -136,8 +137,12 @@ export function CasefileFindings({
 
                     {/* Citations open in the same place, on the same gesture as
                         the evidence above them — the clause a claim rests on is
-                        no use three sections away from the claim. */}
-                    {step.kind === "addback" && claims.length > 0 && (
+                        no use three sections away from the claim.
+                        ON THE STEP THAT CARRIES THE EVIDENCE, or on the last
+                        step when no step does: a true breach (F3) has no
+                        add-back step, and its cited quotes had no route in at
+                        all. */}
+                    {step.n === citationStep && claims.length > 0 && (
                       <div className="mt-2">
                         <button
                           type="button"
@@ -206,7 +211,10 @@ export function CasefileFindings({
                 <TraceArc steps={trace.steps} />
                 <ol className="space-y-0">
                   {trace.steps.map((st, i) => (
-                    <TraceStep key={st.n} step={st} last={i === trace.steps.length - 1} />
+                    // `state`, or every row reads "Completed" — including a
+                    // calculator call that returned `missing input: …` and
+                    // produced no ratio at all.
+                    <TraceStep key={st.n} step={st} state={activityState(st)} last={i === trace.steps.length - 1} />
                   ))}
                 </ol>
               </div>

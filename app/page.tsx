@@ -70,13 +70,6 @@ function latestCompleteQuarterEnd(today: Date): string {
   return `${year}-${endMonthDay}`;
 }
 
-/** The quarter end after `periodEnd`. DSCR is tested quarterly, so this is the next test. */
-function nextQuarterEnd(periodEnd: string): string {
-  const d = new Date(`${periodEnd}T00:00:00Z`);
-  const nextQ = (Math.floor(d.getUTCMonth() / 3) + 1) % 4;
-  const year = nextQ === 0 ? d.getUTCFullYear() + 1 : d.getUTCFullYear();
-  return `${year}-${["03-31", "06-30", "09-30", "12-31"][nextQ]}`;
-}
 
 /**
  * The portfolio — the analyst's landing screen.
@@ -112,7 +105,6 @@ export default async function Home() {
   const periods = tests.map((t) => t.test_period_end).sort();
   const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
   const targetLabel = quarterLabel(targetPeriod);
-  const nextLabel = quarterLabel(nextQuarterEnd(targetPeriod));
 
   const casefileByException = currentCasefiles(casefiles);
   const rows = portfolioRows({
@@ -151,14 +143,14 @@ export default async function Home() {
 
         <SummaryStrip
           items={[
-            { label: "ready for analyst review", value: counts.readyForReview, filter: "review" },
+            { label: "ready for analyst review", value: counts.readyForReview },
             // Counted separately and deliberately: an open breach with no
             // casefile is work, and the band used to omit it entirely.
-            { label: "awaiting investigation", value: counts.awaitingInvestigation, filter: "investigate" },
+            { label: "awaiting investigation", value: counts.awaitingInvestigation },
             // A ratio, not a bare count: "3" alone never says how much of the
             // book is still untested.
-            { label: "loans tested", value: `${counts.tested} of ${counts.total}`, filter: null },
-            { label: "awaiting terms approval", value: counts.termsApprovalNeeded, filter: null },
+            { label: "loans tested", value: `${counts.tested} of ${counts.total}` },
+            { label: "awaiting terms approval", value: counts.termsApprovalNeeded },
           ]}
         />
       </header>
@@ -200,7 +192,7 @@ export default async function Home() {
 function SummaryStrip({
   items,
 }: {
-  items: { label: string; value: number | string; filter: string | null }[];
+  items: { label: string; value: number | string }[];
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3">

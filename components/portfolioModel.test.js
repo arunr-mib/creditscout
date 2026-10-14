@@ -295,3 +295,39 @@ test("queueCounts: an open breach with no casefile is COUNTED — the band used 
   assert.equal(c.awaitingInvestigation, 1, "the uninvestigated breach must be counted");
   assert.equal(c.needsAttention, 2, "both are work in front of the analyst");
 });
+
+test("a closed exception with no casefile is not a recorded decision", () => {
+  // It was closed by a LATER PASSING TEST, not by an analyst. Grading it
+  // `decided` put a "View decision" link to /casefiles/null on the queue.
+  const base = {
+    facilities: [{ id: "f1", borrower_name: "Harbor Logistics", industry: null }],
+    exceptions: [{ id: "e1", facility_id: "f1", status: "closed", test_period_end: "2026-06-30", computed_dscr: 1.4, reported_dscr: 1.4, required_dscr: 1.25 }],
+    casefileByException: new Map(),
+    tests: [{ facility_id: "f1", test_period_end: "2026-06-30", computed_dscr: 1.4, reported_dscr: 1.4, threshold: 1.25, passed: true }],
+    approvedTerms: [{ facility_id: "f1", version: 1 }],
+    targetPeriod: "2026-06-30",
+  };
+  const [row] = portfolioRows(base);
+  assert.equal(row.status, "compliant");
+  assert.equal(row.casefileId, null);
+
+  // With a casefile it IS a decision, and still links somewhere real.
+  const decided = portfolioRows({
+    ...base,
+    casefileByException: new Map([["e1", { id: "c1", status: "approved", recommendation: "resolve" }]]),
+  })[0];
+  assert.equal(decided.status, "decided");
+  assert.equal(decided.casefileId, "c1");
+});
+
+test("a closed exception with no casefile and no passing test reads as untested", () => {
+  const [row] = portfolioRows({
+    facilities: [{ id: "f1", borrower_name: "Harbor Logistics", industry: null }],
+    exceptions: [{ id: "e1", facility_id: "f1", status: "closed", test_period_end: "2026-06-30", computed_dscr: null, reported_dscr: null, required_dscr: 1.25 }],
+    casefileByException: new Map(),
+    tests: [],
+    approvedTerms: [{ facility_id: "f1", version: 1 }],
+    targetPeriod: "2026-06-30",
+  });
+  assert.equal(row.status, "not_tested");
+});

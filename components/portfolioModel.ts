@@ -284,8 +284,15 @@ export function portfolioRows(input: {
       theirs = toNum(ex.reported_dscr);
       required = toNum(ex.required_dscr);
       status =
+        // A closed exception with NO casefile was closed by a later passing
+        // test, not by an analyst. Grading it "decided" rendered a
+        // `View decision` link to /casefiles/null — a 404 on the queue.
         ex.status === "closed"
-          ? "decided"
+          ? cf
+            ? "decided"
+            : test?.passed === true
+              ? "compliant"
+              : "not_tested"
           : !cf
             ? "breach_investigate"
             : cf.status === "pending_review"

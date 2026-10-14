@@ -272,9 +272,15 @@ async function main() {
     }
   }
 
-  const gate = metrics.cold?.false_resolves ?? metrics.warm?.false_resolves ?? null;
-  if (gate !== null && gate > 0) {
-    log(`\nFALSE-RESOLVE GATE FAILED: ${gate}`);
+  // EVERY mode, not the first one present. `cold ?? warm` let a warm-pass false
+  // resolve exit 0 whenever cold happened to be 0 — the one hard gate this
+  // product has, silently satisfied by the run that did not fail.
+  const gates = ["cold", "warm"]
+    .map((mode) => ({ mode, n: metrics[mode]?.false_resolves }))
+    .filter((g) => typeof g.n === "number");
+  const failed = gates.filter((g) => g.n > 0);
+  if (failed.length > 0) {
+    log(`\nFALSE-RESOLVE GATE FAILED: ${failed.map((g) => `${g.mode}=${g.n}`).join(", ")}`);
     process.exit(2);
   }
   if (calcSummary.calc_accuracy !== 1) {

@@ -230,16 +230,23 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
         </Link>
       );
     case "awaiting_docs":
-      return (
+      return row.casefileId ? (
         <Link href={`/casefiles/${row.casefileId}`} className={open}>
           Open casefile
         </Link>
+      ) : (
+        <span className="text-label text-text-muted">Awaiting documents</span>
       );
     case "decided":
-      return (
+      // `casefileId` is null when the exception was closed without one. The
+      // grading above should prevent that reaching here; this makes a
+      // regression a visibly inert cell rather than a link to /casefiles/null.
+      return row.casefileId ? (
         <Link href={`/casefiles/${row.casefileId}`} className={open}>
           View decision
         </Link>
+      ) : (
+        <span className="text-label text-text-muted">Closed</span>
       );
     default: {
       // compliant / not_tested

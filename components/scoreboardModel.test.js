@@ -182,3 +182,22 @@ test("comparisonSummary: nothing scored yields no summary rather than a 0% claim
   assert.equal(comparisonSummary(null, null), null);
   assert.equal(comparisonSummary(run("cold", [kase("a", { counted: false })]), null), null);
 });
+
+test("the date and the sample size describe the SAME run", () => {
+  // THE BUG: the newest date and the first non-null case count were collected
+  // independently, so the line read "recorded 8 Oct · n=1" where n came from a
+  // different, older run. A provenance line that describes no run that happened.
+  const runs = [
+    { mode: "cold", created_at: "2026-10-01T00:00:00Z", metrics: { cases: [{ counted: true }] } },
+    { mode: "warm", created_at: "2026-10-08T04:17:02Z", metrics: { cases: [{ counted: true }, { counted: true }, { counted: true }] } },
+  ];
+  assert.deepEqual(runProvenance(runs), { recordedAt: "2026-10-08T04:17:02Z", cases: 3 });
+});
+
+test("a run with no usable stamp reports neither fact", () => {
+  // A case count with no date says nothing about when it was measured.
+  assert.deepEqual(runProvenance([{ mode: "warm", created_at: null, metrics: { cases: [{ counted: true }] } }]), {
+    recordedAt: null,
+    cases: null,
+  });
+});

@@ -177,14 +177,23 @@ export function caseCount(metrics: unknown): number | null {
  */
 export function runProvenance(runs: readonly EvalRunLike[] | null | undefined): { recordedAt: string | null; cases: number | null } {
   const list = Array.isArray(runs) ? runs : [];
-  let recordedAt: string | null = null;
-  let cases: number | null = null;
+  // BOTH FACTS FROM THE SAME ROW. Taking the newest date and the first
+  // non-null case count independently paired "recorded 14 Oct" with a case
+  // count from a different, older run — a provenance line that describes no
+  // run that ever happened.
+  let newest: EvalRunLike | null = null;
   for (const r of list) {
     const at = typeof r.created_at === "string" ? r.created_at : null;
-    if (at && (recordedAt === null || at > recordedAt)) recordedAt = at;
-    if (cases === null) cases = caseCount(r.metrics);
+    if (!at) continue;
+    const held = typeof newest?.created_at === "string" ? newest.created_at : null;
+    if (held === null || at > held) newest = r;
   }
-  return { recordedAt, cases };
+  if (!newest) {
+    // No row carries a usable stamp. A case count alone says nothing about
+    // when it was measured, so neither is reported.
+    return { recordedAt: null, cases: null };
+  }
+  return { recordedAt: newest.created_at as string, cases: caseCount(newest.metrics) };
 }
 
 // ------------------------------------------------ the paired case comparison

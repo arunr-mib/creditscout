@@ -34,6 +34,7 @@ import {
   overrideBlockers,
   reviewMode,
   outstandingSummary,
+  statusHeadline,
   seenSimilarCount,
   seenSimilarLabel,
 } from "./casefileModel.ts";
@@ -696,4 +697,22 @@ test("outstandingSummary: a boarded amendment is not outstanding, and nothing op
   assert.equal(outstandingSummary(boarded, []), null);
   assert.equal(outstandingSummary([], []), null);
   assert.deepEqual(outstandingSummary([], [{ check: "a" }]), { label: "1 notice", count: 1 });
+});
+
+test("statusHeadline covers every status the pill can be handed", () => {
+  // It fell through to the raw column value, so the screen's one status object
+  // read "superseded" — the database's word, in lower case, as a label.
+  const CHECKS = {
+    investigating: "Investigation running",
+    pending_review: "Ready for analyst decision",
+    approved: "Approved by an analyst",
+    overridden: "Overridden by an analyst",
+    awaiting_docs: "Awaiting documents",
+    superseded: "Superseded by a later investigation",
+    failed: "Investigation failed",
+  };
+  for (const [status, label] of Object.entries(CHECKS)) {
+    assert.equal(statusHeadline(status), label, status);
+    assert.doesNotMatch(statusHeadline(status), /_/, `${status} leaks an identifier`);
+  }
 });

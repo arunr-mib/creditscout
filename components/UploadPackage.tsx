@@ -81,7 +81,16 @@ export function UploadPackage({
   const [staged, setStaged] = useState<Row[]>([]);
   const [state, setState] = useState<State>({ kind: "idle" });
   const [dragover, setDragover] = useState(false);
-  const [picked, setPicked] = useState<File[]>([]);
+  /**
+   * The bytes behind each staged row, keyed by the ROW's key.
+   *
+   * THE DEFECT: the file was looked up by `name + size`. Two files with the
+   * same name and size — a re-exported statement, two quarters generated from
+   * one template — are indistinguishable by that pair, so one row's bytes were
+   * uploaded under the other row's `doc_type`. That is precisely the misfiling
+   * this component exists to prevent, arriving by the back door.
+   */
+  const [picked, setPicked] = useState<Record<string, File>>({});
   const inputRef = useRef<HTMLInputElement>(null);
   const baseId = useId();
 
@@ -125,8 +134,9 @@ export function UploadPackage({
   function stage(files: readonly File[]) {
     if (files.length === 0) return;
     setState({ kind: "idle" });
-    setPicked((p) => [...p, ...files]);
-    setStaged((rows) => [...rows, ...files.map((f) => ({ ...stageFile(f), status: "staged" as UploadStatus }))]);
+    const rows = files.map((f) => ({ ...stageFile(f), status: "staged" as UploadStatus, file: f }));
+    setPicked((p) => Object.fromEntries([...Object.entries(p), ...rows.map((r) => [r.key, r.file] as const)]));
+    setStaged((prev) => [...prev, ...rows.map(({ file: _file, ...row }) => row)]);
   }
 
   /**
@@ -159,7 +169,7 @@ export function UploadPackage({
       return;
     }
     for (const meta of queue) {
-      const file = picked.find((f) => f.name === meta.name && f.size === meta.size);
+      const file = picked[meta.key];
       if (!file) {
         patch(meta.key, { status: "failed", error: "The file is no longer available in this tab. Add it again." });
         continue;
@@ -317,7 +327,14 @@ export function UploadPackage({
 
               <button
                 type="button"
-                onClick={() => setStaged((rows) => rows.filter((r) => r.key !== f.key))}
+                onClick={() => {
+                  setStaged((rows) => rows.filter((r) => r.key !== f.key));
+                  setPicked((p) => {
+                    const next = { ...p };
+                    delete next[f.key];
+                    return next;
+                  });
+                }}
                 className="text-label text-text-muted underline-offset-2 hover:text-text hover:underline"
               >
                 Remove

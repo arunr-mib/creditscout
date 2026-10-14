@@ -1,9 +1,8 @@
-import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, tagLabel } from "./casefileModel";
+import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
-import { GuardrailNotices } from "./GuardrailNotice";
 import Link from "next/link";
 
 import { longDate } from "@/lib/terms-labels";
@@ -83,21 +82,18 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // Enforcement overruled the agent: its prose argues a conclusion that was
   // rejected, so it is labelled a draft rather than left reading as the answer.
   const overridden = recommendationOverridden(view.notes);
-  // The governing calculation used terms the approved version does not carry.
-  // The guardrail already flags it below; the header must not contradict it.
-  const onAmendedTerms = view.notes.some((n) => n.check === "terms_differ_from_approved");
   const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
   const summary = investigationSummary(view.sections, view.notes);
   // WHY this recommendation, given the amendment and the open notices. Derived
   // from the notes and the calculation log; never written by the model.
   const basis = decisionBasis(summary, view.notes, view.draftRecommendation, view.notes.length, view.amendments);
   const outstanding = outstandingSummary(view.amendments, view.notes);
-  const statusPill =
-    mode === "active"
-      ? { label: "Ready for analyst decision", tone: "border-border-strong bg-surface text-text" }
-      : mode === "read_only"
-        ? { label: decidedHeadline(view.status), tone: "border-border-strong text-text-muted" }
-        : { label: view.status, tone: "border-border-strong text-text-muted" };
+  const statusPill = {
+    // Never the raw column value: `superseded` and `failed` fell through to it
+    // and the screen's one status object spoke the database's words.
+    label: statusHeadline(view.status),
+    tone: mode === "active" ? "border-border-strong bg-surface text-text" : "border-border-strong text-text-muted",
+  };
 
   return (
     <article className="space-y-4">
@@ -152,14 +148,20 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       )}
 
       {/* ---------------------------------- findings, evidence and attention */}
-      {showRec && (summary.steps.length > 0 || view.amendments.length > 0 || view.notes.length > 0) && (
+      {/* `missingEvidence` lives in this panel, so a `request` casefile with no
+          steps, no amendments and no notes said NOTHING about what it was
+          waiting for. */}
+      {showRec &&
+        (summary.steps.length > 0 ||
+          view.amendments.length > 0 ||
+          view.notes.length > 0 ||
+          view.missingEvidence.length > 0) && (
         <CasefileFindings
           summary={summary}
           sections={view.sections}
           amendments={view.amendments}
           notes={view.notes}
           claims={view.claims}
-          clauses={view.clauses}
           trace={view.trace}
           termsVersion={view.termsVersion}
           facilityId={view.facilityId}

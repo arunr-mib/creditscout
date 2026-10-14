@@ -447,6 +447,21 @@ export function decidedHeadline(status: string): string {
   return `Casefile is ${status}`;
 }
 
+/**
+ * The status pill's words, for EVERY status a casefile can reach.
+ *
+ * The pill fell through to the raw column value for `superseded` and `failed`,
+ * so the screen's one status object read "superseded" in lower case — the
+ * database's word, not the analyst's.
+ */
+export function statusHeadline(status: string): string {
+  if (status === "investigating") return "Investigation running";
+  if (status === "pending_review") return "Ready for analyst decision";
+  if (status === "superseded") return "Superseded by a later investigation";
+  if (status === "failed") return "Investigation failed";
+  return decidedHeadline(status);
+}
+
 // ------------------------------------------------------------------ override
 
 export const CORRECTED_OUTCOMES = ["resolve", "request", "escalate"] as const;

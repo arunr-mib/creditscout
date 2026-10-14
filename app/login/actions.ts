@@ -2,13 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AUTH_COOKIE, LANDING_PATH, demoCredentials, expectedToken } from "@/lib/auth/gate";
-
-/** A safe internal path to return to after login: same-origin, no protocol-relative escape. */
-function safeNext(next: unknown): string {
-  const value = typeof next === "string" ? next : "";
-  return value.startsWith("/") && !value.startsWith("//") ? value : "/";
-}
+import { AUTH_COOKIE, LANDING_PATH, demoCredentials, expectedToken, safeNext } from "@/lib/auth/gate";
 
 export interface SignInState {
   error: string | null;

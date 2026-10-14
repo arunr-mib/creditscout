@@ -1,15 +1,9 @@
 import Link from "next/link";
 import { LoginForm } from "./LoginForm";
 import { Logo } from "@/components/Logo";
-import { demoCredentials } from "@/lib/auth/gate";
+import { demoCredentials, safeNext } from "@/lib/auth/gate";
 
 export const dynamic = "force-dynamic";
-
-/** Only a safe internal path is echoed back into the form. */
-function safeNext(next: string | string[] | undefined): string {
-  const value = Array.isArray(next) ? next[0] : next;
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/";
-}
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
@@ -27,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
           {/* The form and the demo-credential card share state (one click fills
               and submits), so the card is rendered by LoginForm, not here. */}
-          <LoginForm next={safeNext(next)} demo={creds} />
+          <LoginForm next={safeNext(Array.isArray(next) ? next[0] : next)} demo={creds} />
 
           <Link href="/welcome" className="text-label text-night-muted underline-offset-2 hover:underline">
             ← Back to overview

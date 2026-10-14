@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pollInvestigation } from "@/app/casefiles/actions";
@@ -91,7 +91,16 @@ export function LiveTrace(props: LiveTraceProps) {
   /** Seconds since the last successful read, so "updated" is a measurement. */
   const [sinceUpdate, setSinceUpdate] = useState(0);
   const [reconnecting, setReconnecting] = useState(false);
-  const nudge = useRef(0);
+  /**
+   * Restarting the drive loop.
+   *
+   * THE DEFECT: this was a `useRef` listed in the effect's deps. Mutating
+   * `.current` does not re-run an effect, so once the loop had exited —
+   * which is exactly when "Reconnect to updates" is offered — the button
+   * re-rendered the page and nothing restarted. State, so the dependency
+   * actually changes.
+   */
+  const [nudge, setNudge] = useState(0);
 
   // DRIVE: advance the run until the casefile is no longer `investigating`. A
   // transient fetch error is not a conclusion — it keeps polling.
@@ -182,7 +191,7 @@ export function LiveTrace(props: LiveTraceProps) {
   const reconnect = useCallback(() => {
     setReconnecting(true);
     setSyncError(null);
-    nudge.current += 1;
+    setNudge((n) => n + 1);
     router.refresh();
   }, [router]);
 
