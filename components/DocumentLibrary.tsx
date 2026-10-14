@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { MIXED_DATE_HEADING, NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, dateLabel, longDate } from "@/lib/terms-labels";
 
 export interface DocumentRowView {
@@ -133,7 +134,12 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
             {shown.map((r) => (
               <tr key={r.id} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
                 <td className="px-4 align-middle text-body text-text">
-                  {r.title}
+                  {/* The title is the way in. A document row that could not be
+                      opened made the library a list of things the analyst had
+                      to take on trust. */}
+                  <Link href={`/documents/${r.id}`} className="text-text underline-offset-2 hover:text-model hover:underline">
+                    {r.title}
+                  </Link>
                   {/* A waiver REQUEST is not a granted waiver. The title alone
                       carried that distinction; on a row among executed
                       documents it needs to be a state, not a reading exercise.

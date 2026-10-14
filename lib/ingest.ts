@@ -124,7 +124,11 @@ export async function ingestDocument(input: IngestInput): Promise<IngestResult> 
     document_id: documentId,
     content: c.content,
     embedding: vectors[i],
-    metadata: c.metadata,
+    // `chunk_index` is the document's own order. Chunk ids are UUIDs and the
+    // table has no sequence, so without it a document cannot be reassembled in
+    // the order it was written — which is what a reader needs when they open a
+    // citation and want the clause in context.
+    metadata: { ...c.metadata, chunk_index: i },
   }));
 
   // Ruling 2: a re-ingest REPLACES the document's chunks. New rows go in first
