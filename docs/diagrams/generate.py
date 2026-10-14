@@ -33,6 +33,11 @@ def write(name, svg):
 BG, PANEL, BORDER = "#0A1628", "#11243D", "#2A3A52"
 TEXT, SECOND, MUTED = "#F8FAFC", "#CBD5E1", "#94A3B8"
 ACCENT, ACCENT_DIM, ACCENT_FILL = "#5EC2BA", "#146C67", "#10302E"
+# A HUMAN step is LIGHTER than everything else on the page. It used to share
+# `PANEL` with the deterministic-code boxes and differ only by a dashed stroke,
+# which is not a difference you can see across a room — and the human/code
+# distinction is the one the whole diagram exists to make.
+HUMAN_FILL, HUMAN_STROKE, HUMAN_TEXT = "#2B4A6B", "#C3D5E8", "#FFFFFF"
 MONO = "ui-monospace, SFMono-Regular, Menlo, monospace"
 SANS = "Inter, -apple-system, Helvetica, Arial, sans-serif"
 
@@ -44,20 +49,22 @@ def box(x, y, w, h, title, lines=(), kind="plain", tag=None):
     if kind == "model":
         fill, stroke, dash, tcol = ACCENT_FILL, ACCENT, "", "#8FD8D1"
     elif kind == "human":
-        fill, stroke, dash, tcol = PANEL, MUTED, ' stroke-dasharray="5 4"', TEXT
+        fill, stroke, dash, tcol = HUMAN_FILL, HUMAN_STROKE, ' stroke-dasharray="5 4"', HUMAN_TEXT
     else:
         fill, stroke, dash, tcol = PANEL, BORDER, "", TEXT
     o.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="7" fill="{fill}" stroke="{stroke}" stroke-width="1.25"{dash}/>')
     cx = x + w / 2
     ty = y + (26 if tag else 30)
     if tag:
-        o.append(f'<text x="{cx}" y="{y+20}" fill="{MUTED}" font-size="10.5" letter-spacing="1.3" text-anchor="middle">{esc(tag.upper())}</text>')
+        tagcol = "#DCE7F2" if kind == "human" else MUTED
+        o.append(f'<text x="{cx}" y="{y+20}" fill="{tagcol}" font-size="10.5" letter-spacing="1.3" text-anchor="middle">{esc(tag.upper())}</text>')
         ty = y + 42
     tf = MONO if kind == "code" else SANS
     fs = 14 if kind == "code" else 15
     o.append(f'<text x="{cx}" y="{ty}" fill="{tcol}" font-size="{fs}" font-weight="600" font-family="{tf}" text-anchor="middle">{esc(title)}</text>')
+    lcol = "#DCE7F2" if kind == "human" else MUTED
     for i, ln in enumerate(lines):
-        o.append(f'<text x="{cx}" y="{ty+21+i*17}" fill="{MUTED}" font-size="12.5" text-anchor="middle">{esc(ln)}</text>')
+        o.append(f'<text x="{cx}" y="{ty+21+i*17}" fill="{lcol}" font-size="12.5" text-anchor="middle">{esc(ln)}</text>')
     return "\n  ".join(o)
 
 def arrow(x1, y1, x2, y2, label=None, dashed=False, mid_dx=0):
@@ -103,7 +110,7 @@ def legend(xr, y):
         if kind == "model":
             sw = f'fill="{ACCENT_FILL}" stroke="{ACCENT}"'
         elif kind == "human":
-            sw = f'fill="{PANEL}" stroke="{MUTED}" stroke-dasharray="3 2.5"'
+            sw = f'fill="{HUMAN_FILL}" stroke="{HUMAN_STROKE}" stroke-dasharray="3 2.5"'
         else:
             sw = f'fill="{PANEL}" stroke="{BORDER}"'
         out.append(f'<rect x="{x}" y="{y-11}" width="13" height="13" rx="3" {sw} stroke-width="1.25"/>')
@@ -179,32 +186,63 @@ print("user flow written")
 A = []
 RAIL, CX, CW = 64, 238, 1362
 
-def band(y, name, note):
-    A.append(f'<text x="{RAIL}" y="{y+22}" fill="{SECOND}" font-size="13" font-weight="600">{esc(name)}</text>')
-    A.append(f'<text x="{RAIL}" y="{y+41}" fill="#5A6B86" font-size="11.5">{esc(note)}</text>')
+def mark(kind, x, y, col):
+    """A 20px glyph for the rail.
+
+    SIMPLIFIED MARKS, DRAWN HERE — not the vendors' brand assets. They evoke
+    the platform (a triangle for Vercel, a hexagon for Node, a bolt for
+    Supabase, a chevron pair for Azure) without shipping a trademark into a
+    document we redraw at will. Swap in official SVGs if this ever leaves
+    internal use.
+    """
+    g = {
+        # a browser window
+        "browser": f'<rect x="{x}" y="{y}" width="20" height="16" rx="2.5" fill="none" stroke="{col}" stroke-width="1.6"/>'
+                   f'<line x1="{x}" y1="{y+5.5}" x2="{x+20}" y2="{y+5.5}" stroke="{col}" stroke-width="1.6"/>'
+                   f'<circle cx="{x+3.4}" cy="{y+2.9}" r="1" fill="{col}"/>',
+        # Vercel-style triangle
+        "vercel": f'<path d="M{x+10},{y+1} L{x+20},{y+17} L{x},{y+17} Z" fill="{col}"/>',
+        # Azure-style chevrons
+        "azure": f'<path d="M{x+8},{y+1} L{x+1},{y+17} L{x+8},{y+17} Z" fill="{col}"/>'
+                 f'<path d="M{x+12},{y+5} L{x+6.5},{y+17} L{x+20},{y+17} L{x+16},{y+12.5} Z" fill="{col}"/>',
+        # Node-style hexagon
+        "node": f'<path d="M{x+10},{y} L{x+19},{y+4.8} L{x+19},{y+13.2} L{x+10},{y+18} L{x+1},{y+13.2} L{x+1},{y+4.8} Z" fill="none" stroke="{col}" stroke-width="1.7"/>',
+        # Supabase-style bolt
+        "supabase": f'<path d="M{x+12},{y} L{x+2},{y+10.5} L{x+9},{y+10.5} L{x+8},{y+18} L{x+18},{y+7.5} L{x+11},{y+7.5} Z" fill="{col}"/>',
+    }
+    return g.get(kind, "")
+
+
+def band(y, name, note, glyph=None):
+    tx = RAIL + (30 if glyph else 0)
+    if glyph:
+        A.append(mark(glyph, RAIL, y + 7, SECOND))
+    A.append(f'<text x="{tx}" y="{y+22}" fill="{TEXT}" font-size="16" font-weight="700" letter-spacing="-0.2">{esc(name)}</text>')
+    A.append(f'<text x="{RAIL}" y="{y+44}" fill="{MUTED}" font-size="13" font-weight="500">{esc(note)}</text>')
 
 y1 = 132
-band(y1, "Analyst", "browser")
-A.append(box(CX, y1, CW, 72, "Credit Analysis Queue · Casefile · Onboarding · Documents · Covenant terms · Lessons · Governance",
-             ["Server-rendered behind a session gate. Reads use the anon key under RLS; every write goes through a Server Action or a key-gated route."], "human"))
+band(y1, "Analyst", "Browser", "browser")
+A.append(box(CX, y1, CW, 78, "Onboarding · Credit Analysis Queue · Recommendation · Documents · Covenant terms · Lessons · Governance",
+             ["User sign-in required.",
+              "The browser can only read what the rules allow it to see. Every change is made by the server, never by the browser."], "human"))
 
 y2 = 262
-band(y2, "Application", "Next.js on Vercel")
+band(y2, "Application", "Next.js · Vercel", "vercel")
 A.append(arrow(CX+216, y1+72, CX+216, y2-6))
 A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · review · approve terms · propose", "session-gated; service-role key stays server-side"], "plain", tag="Signed-in analyst"))
 A.append(box(CX+450, y2, 432, 108, "Agent tool routes", ["OpenAPI 3.0 · CREDITSCOUT_TOOL_KEY", "the only surface the agent can reach"], "code", tag="Key-gated"))
 A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings", ["chunk by section, 1536-dim vectors", "text-embedding-3-small"], "code", tag="Pipeline"))
 
 y3 = 432
-band(y3, "Reasoning", "Azure AI Foundry")
+band(y3, "Reasoning", "Azure AI Foundry", "azure")
 A.append(arrow(CX+216, y2+108, CX+216, y3-6, "starts a run"))
 A.append(arrow(CX+666, y3+104, CX+666, y2+114, "six function tools over HTTPS"))
 A.append(box(CX, y3, CW, 104, "CreditScout Agent — gpt-4.1-mini", 
-             ["One orchestrator. It chooses what to read next, delegates, re-calculates, and stops when the evidence is enough.",
-              "Connected Agents was dropped 2026-10-06: a connected agent cannot carry a function tool, so specialists could not retrieve."], "model", tag="Orchestrator"))
+             ["One orchestrator. It chooses what to read next, delegates, re-calculates,",
+              "and stops when the evidence is enough."], "model", tag="Orchestrator"))
 
 y4 = 600
-band(y4, "In process", "same Node process")
+band(y4, "In process", "Same Node process", "node")
 A.append(arrow(CX+216, y3+104, CX+216, y4-6, "delegates"))
 A.append(box(CX, y4, 648, 118, "Three specialists — gpt-5-mini", 
              ["definition_agent · research_agent · document_agent", "Serviced in-process by lib/agent/specialists.ts.", "facility_id is never a tool parameter — it comes from the casefile."], "model", tag="Delegation"))
@@ -214,7 +252,7 @@ A.append(box(CX+678, y4, 684, 118, "calc/dscr.js   ·   guardrails/*.js",
               "calculation and no cited quote forces the recommendation to abstain."], "code", tag="Deterministic core"))
 
 y5 = 786
-band(y5, "Data", "Supabase · cloud only")
+band(y5, "Data", "Supabase · cloud only", "supabase")
 A.append(arrow(CX+340, y4+118, CX+340, y5-6))
 A.append(arrow(CX+1020, y4+118, CX+1020, y5-6))
 A.append(box(CX, y5, CW, 96, "Postgres + pgvector",
