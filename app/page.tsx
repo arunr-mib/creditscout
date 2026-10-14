@@ -173,8 +173,9 @@ export default async function Home() {
       </section>
 
       {/* -------------------------------------------------------------- upload */}
-      <section aria-label="Upload a package" className="space-y-3">
-        <h2 className="text-section text-text">Add borrower documents</h2>
+      {/* The panel carries its own heading; a second one above it said the
+          same words twice. */}
+      <section aria-label="Add borrower documents">
         <UploadPackage facilities={uploadFacilities} />
       </section>
     </div>

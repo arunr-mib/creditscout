@@ -95,6 +95,14 @@ export function stagingBlockers(files: readonly StagedFile[], hasBorrower: boole
   const out: string[] = [];
   if (!hasBorrower) out.push("Choose a borrower.");
   if (files.length === 0) return out;
+  const big = oversizeNames(files);
+  if (big.length > 0) {
+    out.push(
+      big.length === 1
+        ? `${big[0]} is larger than ${MAX_UPLOAD_BYTES / 1024 / 1024} MB and cannot be uploaded.`
+        : `${big.length} files are larger than ${MAX_UPLOAD_BYTES / 1024 / 1024} MB and cannot be uploaded.`,
+    );
+  }
   const untyped = files.filter((f) => f.docType === "");
   if (untyped.length > 0) {
     out.push(
@@ -126,7 +134,7 @@ export function duplicateNames(files: readonly StagedFile[]): string[] {
  * from whether it can be tested. A borrower reaches the first state with an
  * agreement alone; testing also needs the period's financials.
  */
-export function readiness(files: readonly StagedFile[]): {
+export function readiness(files: readonly Pick<StagedFile, "docType">[]): {
   termsReview: boolean;
   covenantTests: boolean;
 } {
@@ -135,4 +143,54 @@ export function readiness(files: readonly StagedFile[]): {
     termsReview: has("agreement") || has("amendment"),
     covenantTests: has("financials"),
   };
+}
+
+// ------------------------------------------------- what happened to each file
+
+/**
+ * Where one file has got to.
+ *
+ * THE DEFECT: a batch reported itself as one banner and the rows disappeared.
+ * A file that failed left a sentence behind and no row, so "retry" meant
+ * finding the file in Finder and dragging it in again — and a partial failure
+ * in a four-file package was a line of text under a cleared list.
+ *
+ NO SEPARATE "PROCESSING" STATE, deliberately. The server extracts, chunks and
+ * embeds after the bytes arrive, and that is the slow part — but it happens
+ * inside ONE Server Action call, and the browser gets no signal at the
+ * boundary. A state that switched on a timer would be a progress animation
+ * dressed as a measurement, which is the one thing this product does not do.
+ * The in-flight state is named for everything it covers instead.
+ */
+export type UploadStatus = "staged" | "uploading" | "ready" | "failed";
+
+export const UPLOAD_STATUS_LABEL: Record<UploadStatus, string> = {
+  staged: "Not uploaded",
+  uploading: "Uploading and indexing",
+  ready: "Ready",
+  failed: "Failed",
+};
+
+/** The real limits, stated to the analyst rather than discovered on a 413. */
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const ACCEPTED_FORMATS = "PDF or plain text";
+export const LIMITS_NOTE = `${ACCEPTED_FORMATS}, up to ${MAX_UPLOAD_BYTES / 1024 / 1024} MB each. A scanned PDF with no text layer cannot be indexed.`;
+
+/** Files the server will refuse on size — named here, before anything is sent. */
+export function oversizeNames(files: readonly { name: string; size: number }[]): string[] {
+  return files.filter((f) => f.size > MAX_UPLOAD_BYTES).map((f) => f.name);
+}
+
+/**
+ * The batch in one line, counting only what actually happened. A file still
+ * staged is not counted as anything: it has not been attempted.
+ */
+export function uploadSummary(rows: readonly { status: UploadStatus }[]): string | null {
+  const n = (s: UploadStatus) => rows.filter((r) => r.status === s).length;
+  const parts: string[] = [];
+  if (n("ready") > 0) parts.push(`${n("ready")} ready`);
+  if (n("failed") > 0) parts.push(`${n("failed")} failed`);
+  const busy = n("uploading");
+  if (busy > 0) parts.push(`${busy} in progress`);
+  return parts.length > 0 ? parts.join(" · ") : null;
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { CovenantSetup } from "@/components/CovenantSetup";
 import { OnboardingStepper } from "@/components/OnboardingStepper";
 import { UploadPackage } from "@/components/UploadPackage";
+import { readiness } from "@/components/uploadModel";
 import { loadCovenantSetupProps } from "@/lib/covenant-setup-data";
 import { onboardingStep } from "@/lib/onboarding";
 import { anonReader } from "@/lib/supabase/anon";
@@ -34,6 +35,8 @@ export default async function OnboardingPage({ params, searchParams }: { params:
   ]);
   const derived = onboardingStep({ documents: docs.data ?? [], terms: terms.data ?? [] });
   const uploaded = (docs.data ?? []) as { doc_type: string | null; title: string }[];
+  // The same two-state readiness the uploader uses, over what is actually filed.
+  const ready = readiness(uploaded.map((d) => ({ docType: d.doc_type ?? "" })));
   const step =
     derived === "done" ? "done"
     : requested === "documents" ? "documents"
@@ -78,7 +81,24 @@ export default async function OnboardingPage({ params, searchParams }: { params:
           the wrong document type, with nothing on screen to show it. */}
       {uploaded.length > 0 && (
         <section aria-label="Documents on file" className="space-y-2">
-          <h2 className="text-card text-text">On file for this loan</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-card text-text">On file for this loan</h2>
+            {/* TWO readiness states, not one. A borrower reaches the first with
+                an agreement alone; testing also needs the period's financials,
+                and conflating them told analysts to wait for documents they did
+                not yet need. */}
+            <p className="text-label text-text-muted">
+              <span className={ready.termsReview ? "text-text" : undefined}>
+                {ready.termsReview ? "✓ " : "· "}Ready to review terms
+              </span>
+              <span className="mx-2" aria-hidden="true">
+                ·
+              </span>
+              <span className={ready.covenantTests ? "text-text" : undefined}>
+                {ready.covenantTests ? "✓ " : "· "}Ready to run covenant tests
+              </span>
+            </p>
+          </div>
           <ul className="divide-y divide-border rounded-md border border-border bg-surface">
             {uploaded.map((d, i) => (
               <li key={`${d.title}-${i}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
@@ -94,7 +114,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
 
       <div className="flex flex-wrap items-center gap-3">
         <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-model bg-model text-bg hover:bg-model-bright"}`}>
-          Prepare covenant terms
+          Continue to terms review
         </Link>
         {derived === "documents" && (
           <span className="max-w-prose text-label text-text-muted">

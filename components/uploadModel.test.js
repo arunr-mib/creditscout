@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 
 import {
   DATED_TYPES,
+  MAX_UPLOAD_BYTES,
+  UPLOAD_STATUS_LABEL,
+  oversizeNames,
+  uploadSummary,
   DOC_TYPE_VALUES,
   duplicateNames,
   readiness,
@@ -122,4 +126,34 @@ test("readiness: terms review and covenant testing are different states", () => 
 
 test("DATED_TYPES is exactly the set whose terms are extracted", () => {
   assert.deepEqual([...DATED_TYPES], ["agreement", "amendment"]);
+});
+
+// ------------------------------------------------ what happened to each file
+
+test("the stated size limit is the one the server actually enforces", async () => {
+  // A limit written twice is a limit that drifts. If `lib/ingest` changes this,
+  // this test fails rather than the analyst meeting a 413.
+  const { MAX_BYTES } = await import("../lib/ingest.ts");
+  assert.equal(MAX_UPLOAD_BYTES, MAX_BYTES);
+});
+
+test("an oversized file is named before anything is sent", () => {
+  const big = { name: "scan.pdf", size: MAX_UPLOAD_BYTES + 1 };
+  assert.deepEqual(oversizeNames([big, { name: "ok.pdf", size: 10 }]), ["scan.pdf"]);
+  const b = stagingBlockers([{ ...stageFile(big), docType: "financials" }], true);
+  assert.match(b[0], /larger than 10 MB/);
+});
+
+test("uploadSummary counts what happened, and a staged file has not happened", () => {
+  assert.equal(uploadSummary([{ status: "ready" }, { status: "failed" }, { status: "staged" }]), "1 ready · 1 failed");
+  assert.equal(uploadSummary([{ status: "uploading" }, { status: "uploading" }]), "2 in progress");
+  assert.equal(uploadSummary([{ status: "staged" }]), null);
+});
+
+test("the in-flight state is named for everything it covers", () => {
+  // Extraction, chunking and embedding happen inside the same call, with no
+  // signal at the boundary. A "Processing" state switched on a timer would be
+  // an animation pretending to be a measurement.
+  assert.equal(UPLOAD_STATUS_LABEL.uploading, "Uploading and indexing");
+  assert.equal(UPLOAD_STATUS_LABEL.ready, "Ready");
 });

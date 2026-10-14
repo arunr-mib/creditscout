@@ -6,10 +6,14 @@ import { uploadPackage } from "@/app/actions";
 import {
   DATED_TYPES,
   DOC_TYPES,
+  LIMITS_NOTE,
+  UPLOAD_STATUS_LABEL,
   duplicateNames,
   stageFile,
   stagingBlockers,
+  uploadSummary,
   type StagedFile,
+  type UploadStatus,
 } from "./uploadModel";
 
 export interface UploadFacility {
@@ -23,11 +27,16 @@ type Result =
   | { name: string; ok: true; sections: number }
   | { name: string; ok: false; reason: string };
 
+/**
+ * A staged file AND what has happened to it. The two were separate before: the
+ * rows were cleared on upload and the outcome arrived as a banner, so a file
+ * that failed left a sentence and no row to retry from.
+ */
+type Row = StagedFile & { status: UploadStatus; error?: string; sections?: number };
+
 type State =
   | { kind: "idle" }
-  /** `done`/`total` are counted files, not an invented percentage. */
-  | { kind: "uploading"; done: number; total: number; current: string }
-  | { kind: "results"; results: Result[] }
+  | { kind: "uploading" }
   /** Refused before anything was sent (no borrower, no effective date). */
   | { kind: "rejected"; reason: string };
 
@@ -43,7 +52,7 @@ type State =
 export function UploadPackage({ facilities, fixedFacilityId }: { facilities: UploadFacility[]; fixedFacilityId?: string }) {
   const router = useRouter();
   const [facilityId, setFacilityId] = useState(fixedFacilityId ?? facilities[0]?.id ?? "");
-  const [staged, setStaged] = useState<StagedFile[]>([]);
+  const [staged, setStaged] = useState<Row[]>([]);
   const [state, setState] = useState<State>({ kind: "idle" });
   const [dragover, setDragover] = useState(false);
   const [picked, setPicked] = useState<File[]>([]);
@@ -74,7 +83,7 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
     if (files.length === 0) return;
     setState({ kind: "idle" });
     setPicked((p) => [...p, ...files]);
-    setStaged((rows) => [...rows, ...files.map((f) => stageFile(f))]);
+    setStaged((rows) => [...rows, ...files.map((f) => ({ ...stageFile(f), status: "staged" as UploadStatus }))]);
   }
 
   /**
@@ -85,22 +94,38 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
    * `financials` by default. doc_type scopes the agent's retrieval, so a
    * misfiled agreement is invisible to terms extraction.
    */
-  async function upload() {
-    const blockers = stagingBlockers(staged, facilityId !== "");
+  const patch = (key: string, next: Partial<Row>) =>
+    setStaged((rows) => rows.map((r) => (r.key === key ? { ...r, ...next } : r)));
+
+  /**
+   * Upload the files that have not succeeded yet, one at a time, marking each
+   * row as it goes. A file that is already `ready` is never sent twice — the
+   * retry button re-sends ONE file, not the batch.
+   */
+  async function upload(only?: string) {
+    const queue = staged.filter((r) => (only ? r.key === only : r.status === "staged" || r.status === "failed"));
+    const blockers = stagingBlockers(queue, facilityId !== "");
     if (blockers.length > 0) {
       setState({ kind: "rejected", reason: blockers[0] });
       return;
     }
-    const results: Result[] = [];
-    for (const [i, meta] of staged.entries()) {
+    setState({ kind: "uploading" });
+    for (const meta of queue) {
       const file = picked.find((f) => f.name === meta.name && f.size === meta.size);
-      if (!file) continue;
-      setState({ kind: "uploading", done: i, total: staged.length, current: meta.name });
-      results.push(await send(file, meta));
+      if (!file) {
+        patch(meta.key, { status: "failed", error: "The file is no longer available in this tab. Add it again." });
+        continue;
+      }
+      patch(meta.key, { status: "uploading", error: undefined });
+      const result = await send(file, meta);
+      patch(
+        meta.key,
+        result.ok
+          ? { status: "ready", sections: result.sections, error: undefined }
+          : { status: "failed", error: result.reason },
+      );
     }
-    setState({ kind: "results", results });
-    setStaged([]);
-    setPicked([]);
+    setState({ kind: "idle" });
     router.refresh();
   }
 
@@ -111,7 +136,9 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
   }
 
   const field = "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
-  const blockers = stagingBlockers(staged, facilityId !== "");
+  const pendingRows = staged.filter((r) => r.status === "staged" || r.status === "failed");
+  const pending = pendingRows.length;
+  const blockers = stagingBlockers(pendingRows, facilityId !== "");
   const dupes = duplicateNames(staged);
 
   return (
@@ -149,14 +176,13 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
           dragover ? "border-model bg-model-bg text-text" : "border-border-strong text-text-muted"
         }`}
       >
-        {state.kind === "uploading"
-          ? `Indexing ${state.done + 1} of ${state.total} — ${state.current}`
-          : "Drop documents, or click to choose files"}
+        {state.kind === "uploading" ? "Indexing…" : "Drop documents, or click to choose files"}
       </button>
       <p className="mt-2 text-label text-text-muted">
         Drop the loan agreement and any amendments to prepare covenant terms. Add financial statements and the
         compliance certificate for covenant testing. Each file is classified on its own below.
       </p>
+      <p className="mt-1 text-label text-text-muted">{LIMITS_NOTE}</p>
 
       <input
         ref={inputRef}
@@ -177,7 +203,8 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
         <div className="mt-4 space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-label text-text-muted">
-              {staged.length} file{staged.length === 1 ? "" : "s"} to classify
+              {staged.length} file{staged.length === 1 ? "" : "s"}
+              {uploadSummary(staged) ? ` · ${uploadSummary(staged)}` : " to classify"}
             </h4>
             {dupes.length > 0 && (
               <p className="text-label text-code">Same name twice: {dupes.join(", ")}</p>
@@ -212,7 +239,23 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
                 />
               </label>
 
-              {f.suggested && f.docType !== "" && <span className="text-label text-text-muted">suggested</span>}
+              {f.suggested && f.docType !== "" && f.status === "staged" && (
+                <span className="text-label text-text-muted">suggested</span>
+              )}
+
+              {/* The state of THIS file, on THIS row. A batch banner could not
+                  say which of four documents failed. */}
+              <StatusChip status={f.status} sections={f.sections} />
+
+              {f.status === "failed" && (
+                <button
+                  type="button"
+                  onClick={() => void upload(f.key)}
+                  className="text-label text-model-bright underline-offset-2 hover:underline"
+                >
+                  Retry
+                </button>
+              )}
 
               <button
                 type="button"
@@ -221,6 +264,12 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
               >
                 Remove
               </button>
+
+              {f.error && (
+                <p role="alert" className="w-full text-label text-danger">
+                  {f.error}
+                </p>
+              )}
             </div>
           ))}
 
@@ -228,17 +277,20 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
             <button
               type="button"
               onClick={() => void upload()}
-              disabled={state.kind === "uploading"}
+              disabled={state.kind === "uploading" || pending === 0}
               className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {state.kind === "uploading" ? "Indexing…" : `Upload ${staged.length} document${staged.length === 1 ? "" : "s"}`}
+              {state.kind === "uploading"
+                ? "Indexing…"
+                : pending === 0
+                  ? "All documents uploaded"
+                  : `Upload ${pending} document${pending === 1 ? "" : "s"}`}
             </button>
             {blockers.length > 0 && <p className="text-label text-text-muted">{blockers[0]}</p>}
           </div>
         </div>
       )}
 
-      {state.kind === "results" && <Results results={state.results} />}
       {state.kind === "rejected" && (
         <p role="alert" className="mt-3 rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
           <span aria-hidden="true">✕ </span>
@@ -250,34 +302,27 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
 }
 
 /**
- * Every file's outcome, listed. Slate, never green — green means *compliant*,
- * and an indexed document is a human action, not a passing test.
- *
- * A batch with any failure leads with the failure count: "3 indexed" on a drop
- * of four is the sentence that loses a document without anyone noticing.
+ * One file's state, on its own row. Slate for ready, never green — green means
+ * *compliant* in this product, and an indexed document is a human action, not a
+ * passing test.
  */
-function Results({ results }: { results: readonly Result[] }) {
-  const failed = results.filter((r) => !r.ok);
-  const indexed = results.length - failed.length;
+function StatusChip({ status, sections }: { status: UploadStatus; sections?: number }) {
+  const tone =
+    status === "failed"
+      ? "border-danger bg-danger-bg text-danger"
+      : status === "uploading"
+        ? "border-model bg-model-bg text-model-bright"
+        : status === "ready"
+          ? "border-border-strong bg-surface-raised text-text"
+          : "border-border-strong text-text-muted";
   return (
-    <div
-      role={failed.length > 0 ? "alert" : "status"}
-      className={`mt-3 rounded-md border p-3 ${failed.length > 0 ? "border-danger bg-danger-bg" : "border-border-strong bg-surface-raised"}`}
-    >
-      <p className={`text-body ${failed.length > 0 ? "text-danger" : "text-text"}`}>
-        {failed.length > 0
-          ? `${failed.length} of ${results.length} could not be indexed. ${indexed} ${indexed === 1 ? "was" : "were"}.`
-          : `Indexed ${results.length} document${results.length === 1 ? "" : "s"}.`}
-      </p>
-      <ul className="mt-2 space-y-1">
-        {results.map((r, i) => (
-          <li key={`${r.name}-${i}`} className="text-label text-text-secondary">
-            <span aria-hidden="true" className={r.ok ? "text-text-muted" : "text-danger"}>{r.ok ? "· " : "✕ "}</span>
-            <span className="font-mono">{r.name}</span>
-            {r.ok ? ` — ${r.sections} section${r.sections === 1 ? "" : "s"} indexed` : ` — ${r.reason}`}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <span className={`inline-flex shrink-0 items-center gap-2 rounded border px-2 py-px text-label ${tone}`}>
+      {UPLOAD_STATUS_LABEL[status]}
+      {status === "ready" && sections !== undefined && (
+        <span className="text-text-muted">
+          {sections} section{sections === 1 ? "" : "s"}
+        </span>
+      )}
+    </span>
   );
 }
