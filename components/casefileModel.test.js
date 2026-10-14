@@ -610,3 +610,26 @@ test("OUTCOME_CHOICE: each decision is an action with what recording it means", 
     assert.match(OUTCOME_CHOICE[o].detail, /^Record that/, `${o} says what recording it does`);
   }
 });
+
+// ------------------------------------------------- a superseded casefile is history
+
+test("reviewMode: superseded is HISTORY, not 'not ready'", () => {
+  // It rendered a bare "kept as history" notice, so a completed investigation's
+  // findings, calculations and agent activity became unreachable the moment a
+  // later run replaced it — odd in a product whose claim is that every figure
+  // is traceable.
+  assert.equal(reviewMode("superseded"), "history");
+  assert.equal(reviewMode("pending_review"), "active");
+  assert.equal(reviewMode("approved"), "read_only");
+  assert.equal(reviewMode("overridden"), "read_only");
+  assert.equal(reviewMode("investigating"), "not_ready");
+  assert.equal(reviewMode("failed"), "not_ready");
+});
+
+test("reviewMode: history is its own mode, so it can never offer the decision actions", () => {
+  // The guarantee: a superseded casefile must be readable but not actionable.
+  // Sharing `read_only` with approved/overridden would have given it their bar.
+  const history = reviewMode("superseded");
+  assert.notEqual(history, "active");
+  assert.notEqual(history, "read_only");
+});

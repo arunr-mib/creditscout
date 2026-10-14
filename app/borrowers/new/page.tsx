@@ -22,13 +22,7 @@ export default function NewBorrowerPage() {
           borrower exists — the record has to exist before a document can hang
           off it, so creation stays the first action rather than a separate page. */}
       <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
-        <h2 className="text-card text-text">Borrower details</h2>
-        <p className="mt-1 text-body text-text-secondary">
-          The name identifies the loan everywhere in CreditScout. Industry is optional.
-        </p>
-        <div className="mt-3">
-          <NewBorrowerForm />
-        </div>
+        <NewBorrowerForm />
       </section>
     </div>
   );

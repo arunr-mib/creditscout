@@ -95,7 +95,11 @@ export default {
         "model-bright": "#105A56",
         "model-bg": "#E8F2F1",
         // For the dark surfaces, where the pale indigo is still the right one.
+        // The accent ON DARK surfaces. The deep teal is a button FILL on a light
+        // page; as text or a fill on the dark shell it reads 2.77 and
+        // disappears. These two are the dark-surface pair.
         "model-night": "#5EC2BA",
+        "model-night-bg": "#10302E",
 
         // amber = CODE did this. Never decoration, never a warning.
         // Amber-700, not amber-500: #F59E0B is unreadable as text on white.

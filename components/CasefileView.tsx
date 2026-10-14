@@ -74,6 +74,7 @@ export interface CasefileViewModel {
 export function CasefileView({ view }: { view: CasefileViewModel }) {
   const mode = reviewMode(view.status);
 
+  // History shows everything the decided view shows; it simply offers no actions.
   const showRec = mode !== "not_ready";
   // Enforcement overruled the agent: its prose argues a conclusion that was
   // rejected, so it is labelled a draft rather than left reading as the answer.
@@ -180,8 +181,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         />
       )}
 
-      {view.status === "superseded" && <Superseded currentId={view.supersededBy} />}
-      {mode === "not_ready" && view.status !== "superseded" && <NotReady status={view.status} />}
+      {mode === "history" && <Superseded currentId={view.supersededBy} />}
+      {mode === "not_ready" && <NotReady status={view.status} />}
 
       {mode === "active" && (
         <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} borrower={view.borrower} period={view.period} />

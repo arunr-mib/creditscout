@@ -397,7 +397,7 @@ export function seenSimilarLabel(count: unknown): string | null {
 
 // ------------------------------------------------------------- review state
 
-export type ReviewMode = "active" | "read_only" | "not_ready";
+export type ReviewMode = "active" | "read_only" | "history" | "not_ready";
 
 export const DECIDED_STATUSES = ["approved", "overridden", "awaiting_docs"] as const;
 
@@ -410,6 +410,12 @@ export const DECIDED_STATUSES = ["approved", "overridden", "awaiting_docs"] as c
 export function reviewMode(status: unknown): ReviewMode {
   if (status === "pending_review") return "active";
   if ((DECIDED_STATUSES as readonly unknown[]).includes(status)) return "read_only";
+  // A superseded casefile is HISTORY, not an empty page. It showed only a
+  // "kept as history" notice, which meant a completed investigation's findings,
+  // calculations and agent activity became unreachable the moment a later run
+  // replaced it — odd in a product whose claim is that every figure is
+  // traceable. It renders in full, read-only, with no actions.
+  if (status === "superseded") return "history";
   return "not_ready";
 }
 

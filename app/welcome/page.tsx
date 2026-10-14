@@ -65,7 +65,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             </Link>
             <Link
               href={signInHref}
-              className="whitespace-nowrap rounded-full bg-model px-6 py-2 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+              className="whitespace-nowrap rounded-full bg-model-night px-6 py-2 text-body font-medium text-night transition-opacity duration-fast hover:opacity-90"
             >
               Explore the demo
             </Link>
@@ -116,13 +116,13 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href={signInHref}
-              className="rounded-full bg-model px-6 py-3 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+              className="rounded-full bg-model-night px-6 py-3 text-body font-medium text-night transition-opacity duration-fast hover:opacity-90"
             >
               Explore the demo
             </Link>
             <a
               href="#how-it-works"
-              className="inline-flex items-center gap-2 rounded-full border border-night-border-strong bg-night-raised/50 px-6 py-3 text-body text-night-text backdrop-blur transition-colors duration-fast hover:border-model"
+              className="inline-flex items-center gap-2 rounded-full border border-night-border-strong bg-night-raised/50 px-6 py-3 text-body text-night-text backdrop-blur transition-colors duration-fast hover:border-model-night"
             >
               <span aria-hidden="true" className="text-model-night">↓</span>
               See how it works
@@ -192,7 +192,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
           </p>
           <Link
             href={signInHref}
-            className="mt-6 inline-block rounded-full bg-model px-6 py-3 text-body font-medium text-bg transition-opacity duration-fast hover:opacity-90"
+            className="mt-6 inline-block rounded-full bg-model-night px-6 py-3 text-body font-medium text-night transition-opacity duration-fast hover:opacity-90"
           >
             Explore the demo
           </Link>
@@ -274,7 +274,7 @@ function Figure({ label, value, note, tone }: { label: string; value: string; no
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-sm border border-model bg-model-bg px-2 py-px font-mono text-label text-model-night">
+    <span className="rounded-sm border border-model-night/40 bg-model-night-bg px-2 py-px font-mono text-label text-model-night">
       {children}
     </span>
   );
