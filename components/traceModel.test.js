@@ -11,6 +11,9 @@ import {
   investigationArc,
   LIVE_STATUS,
   ACTOR_LABEL,
+  STALLED_NOTICE,
+  STALL_AFTER_MS,
+  investigationStalled,
   activityAttribution,
   activityTitle,
 } from "./traceModel.ts";
@@ -236,4 +239,57 @@ test("activityAttribution never claims to show the agent's reasoning", () => {
     const s = activityAttribution(steps);
     assert.doesNotMatch(s, /because|reasoned that|decided that/i);
   }
+});
+
+// ------------------------------------------------------- a stalled run
+
+test("investigationStalled: a frozen run is PAUSED, and the UI must stop claiming progress", () => {
+  // The defect: a run whose driver went away showed "Watch live" and a
+  // live-looking trace indefinitely. Vercel caps a function at 60s and an
+  // investigation needs 60-90s across several slices, so nothing on the server
+  // resumes it — the browser is the driver.
+  const old = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: old }), true);
+});
+
+test("investigationStalled: a run that stepped recently is still running", () => {
+  const recent = new Date(Date.now() - 10 * 1000).toISOString();
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: recent }), false);
+});
+
+test("investigationStalled: the threshold clears the slowest observed step", () => {
+  // A specialist delegation took 38s on a live run. A threshold under that
+  // would call a working investigation paused.
+  assert.ok(STALL_AFTER_MS > 60 * 1000, "must exceed a slow delegation plus margin");
+  const at40s = new Date(Date.now() - 40 * 1000).toISOString();
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: at40s }), false);
+});
+
+test("investigationStalled: falls back to created_at before the first step lands", () => {
+  // A run that never produced a step at all still has to be nameable.
+  const old = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: null, created_at: old }), true);
+  const fresh = new Date().toISOString();
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: null, created_at: fresh }), false);
+});
+
+test("investigationStalled: only an investigating casefile can be stalled", () => {
+  // A finished casefile is not "paused" however old it is.
+  const old = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  for (const status of ["pending_review", "approved", "superseded", "failed"]) {
+    assert.equal(investigationStalled({ status, last_step_at: old }), false, status);
+  }
+});
+
+test("investigationStalled: an unreadable timestamp does not invent a stall", () => {
+  assert.equal(investigationStalled({ status: "investigating", last_step_at: "not a date" }), false);
+  assert.equal(investigationStalled({ status: "investigating" }), false);
+});
+
+test("STALLED_NOTICE says the work is intact, not lost", () => {
+  // It is not a crash. Telling an analyst their investigation failed when it
+  // merely paused would be worse than the silence it replaces.
+  assert.match(STALLED_NOTICE, /paused/i);
+  assert.match(STALLED_NOTICE, /nothing is lost/i);
+  assert.match(STALLED_NOTICE, /resumes/i);
 });

@@ -52,6 +52,8 @@ interface CasefileRow {
   recommendation: string | null;
   steps_count: number | null;
   created_at: string | null;
+  /** When the run last advanced. A gap means the browser driving it went away. */
+  last_step_at: string | null;
 }
 interface TermsRow {
   facility_id: string;
@@ -91,7 +93,7 @@ export default async function Home() {
     db.from("facilities").select("id, borrower_name, industry").order("borrower_name", { ascending: true }),
     db.from("tests").select("id, facility_id, test_period_end, computed_dscr, reported_dscr, threshold, passed, variance_flagged, calc_id, calc_error").eq("run_id", "demo"),
     db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
-    db.from("casefiles").select("id, exception_id, status, recommendation, steps_count, created_at").eq("run_id", "demo"),
+    db.from("casefiles").select("id, exception_id, status, recommendation, steps_count, created_at, last_step_at").eq("run_id", "demo"),
     db.from("covenant_terms").select("facility_id, terms, status, version").eq("status", "approved"),
   ]);
 

@@ -11,6 +11,8 @@
  * numbers; this is the screen's reading of their output.
  */
 
+import { investigationStalled } from "./traceModel.ts";
+
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 // ----------------------------------------------------------- the verdict
@@ -202,6 +204,7 @@ export type PortfolioStatus =
   | "breach_investigate"
   | "in_review"
   | "investigating"
+  | "investigation_paused"
   | "awaiting_docs"
   | "decided"
   | "compliant"
@@ -214,11 +217,14 @@ export type PortfolioStatus =
  */
 export const PORTFOLIO_STATUS: Record<
   PortfolioStatus,
-  { label: string; tone: "danger" | "human" | "model" | "success" | "muted"; icon: string; rank: number; needsAction: boolean }
+  { label: string; tone: "danger" | "human" | "model" | "code" | "success" | "muted"; icon: string; rank: number; needsAction: boolean }
 > = {
   breach_investigate: { label: "Breach — investigate", tone: "danger", icon: "↑", rank: 0, needsAction: true },
   in_review: { label: "In review", tone: "human", icon: "•", rank: 1, needsAction: true },
   investigating: { label: "Investigating", tone: "model", icon: "◆", rank: 2, needsAction: true },
+  // A run whose driver went away. Deliberately ranked WITH the work that needs
+  // attention: a paused investigation is a loan nobody is looking at.
+  investigation_paused: { label: "Investigation paused", tone: "code", icon: "⏸", rank: 2, needsAction: true },
   awaiting_docs: { label: "Awaiting docs", tone: "human", icon: "?", rank: 3, needsAction: true },
   decided: { label: "Decided", tone: "muted", icon: "✓", rank: 4, needsAction: false },
   compliant: { label: "Compliant", tone: "success", icon: "✓", rank: 5, needsAction: false },
@@ -256,7 +262,7 @@ export function portfolioRows(input: {
   facilities: { id: string; borrower_name: string; industry: string | null }[];
   /** ALL exceptions for the demo (open AND closed) — a closed/decided breach must read "Decided", never "Compliant". */
   exceptions: { id: string; facility_id: string; status: string; test_period_end: string; computed_dscr: unknown; reported_dscr: unknown; required_dscr: unknown }[];
-  casefileByException: Map<string, { id: string; status: string; recommendation: string | null }>;
+  casefileByException: Map<string, { id: string; status: string; recommendation: string | null; last_step_at?: string | null; created_at?: string | null }>;
   tests: { facility_id: string; test_period_end: string; computed_dscr: number | null; reported_dscr: number | null; threshold: number; passed: boolean | null }[];
   approvedTerms: { facility_id: string; version: number }[];
   targetPeriod: string;
@@ -285,7 +291,10 @@ export function portfolioRows(input: {
             : cf.status === "pending_review"
               ? "in_review"
               : cf.status === "investigating"
-                ? "investigating"
+                // The queue said "Watch live" for a frozen run, indefinitely.
+                // The browser drives the investigation; nothing on the server
+                // resumes it, so a stalled one must not claim to be running.
+                ? investigationStalled(cf) ? "investigation_paused" : "investigating"
                 : cf.status === "awaiting_docs"
                   ? "awaiting_docs"
                   : "decided";
@@ -377,6 +386,8 @@ export function reviewStatusOf(
       return { label: "Ready for analyst review", detail: SUGGESTS[row.recommendation ?? ""] ?? null, tone: "human" };
     case "investigating":
       return { label: "Investigating", detail: null, tone: "model" };
+    case "investigation_paused":
+      return { label: "Investigation paused", detail: "Open it to resume", tone: "code" };
     case "awaiting_docs":
       return { label: "Awaiting documents", detail: null, tone: "human" };
     case "decided":

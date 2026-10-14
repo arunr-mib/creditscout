@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { pollInvestigation } from "@/app/casefiles/actions";
 import { pollDecision, type LiveTraceView } from "./traceModel";
+import { STALLED_NOTICE } from "./traceModel";
 import { TraceArc } from "./TraceArc";
 import { TraceStep } from "./TraceStep";
 
@@ -195,7 +196,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
 
       {/* ---------------------------------------------------- interruption */}
       {syncError && (
-        <div role="status" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface shadow-card shadow-card p-4">
+        <div role="status" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface shadow-card p-4">
           <div className="flex items-start gap-3">
             <span aria-hidden="true" className="text-card text-code-bright">
               ⚠
@@ -203,7 +204,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
             <div>
               <p className="text-card text-text">Live updates interrupted</p>
               <p className="mt-1 max-w-prose text-body text-text-secondary">
-                We couldn&rsquo;t retrieve the latest status. The investigation may still be running.
+                We couldn&rsquo;t retrieve the latest status. {STALLED_NOTICE}
               </p>
               <p className="mt-1 text-label text-text-muted">
                 {reconnecting ? "Reconnecting…" : "Trying to reconnect…"}
@@ -222,7 +223,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
 
       {/* ------------------------------------------------- activity + outcome */}
       <div className="grid gap-4 lg:grid-cols-3">
-        <section aria-label="Agent activity" className="rounded-lg border border-border bg-surface shadow-card shadow-card lg:col-span-2">
+        <section aria-label="Agent activity" className="rounded-lg border border-border bg-surface shadow-card lg:col-span-2">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h2 className="text-card text-text">CreditScout Agent activity</h2>
             <span className="font-mono text-label text-text-muted">
@@ -272,7 +273,7 @@ export function LiveTrace(props: { casefileId: string; borrower: string; period:
 
         {/* The outcomes are named BEFORE one is reached, so the recommendation
             arrives as one of a known set rather than a verdict out of nowhere. */}
-        <section aria-label="Recommendation" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
+        <section aria-label="Recommendation" className="rounded-lg border border-border bg-surface shadow-card">
           <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
             <h2 className="text-card text-text">Recommendation</h2>
             <span className="rounded border border-border-strong px-3 py-px text-label text-text-muted">Pending</span>

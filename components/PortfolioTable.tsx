@@ -222,6 +222,13 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
           Watch live
         </Link>
       );
+    // Opening it resumes the drive, so the action is the resume.
+    case "investigation_paused":
+      return (
+        <Link href={`/casefiles/${row.casefileId}`} className={open}>
+          Resume
+        </Link>
+      );
     case "awaiting_docs":
       return (
         <Link href={`/casefiles/${row.casefileId}`} className={open}>

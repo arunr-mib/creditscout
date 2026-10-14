@@ -325,3 +325,51 @@ export function activityAttribution(steps: readonly { kind: TraceKind }[]): stri
   if (delegations === 0) return `${base} It ran them against its own tools without delegating.`;
   return `${base} ${delegations} ${delegations === 1 ? "was a delegation" : "were delegations"} to a specialist model.`;
 }
+
+// ------------------------------------------------------- a stalled run
+
+/**
+ * How long an investigation may go without progress before it is PAUSED
+ * rather than running.
+ *
+ * A drive slice advances the Foundry run and returns; the browser then asks for
+ * the next one. If nothing asks — the tab was closed, the laptop slept, the
+ * network dropped — the run stops where it is. Nothing on the server resumes
+ * it: Vercel caps a function at 60s and an investigation needs 60–90s across
+ * several slices, so there is no process that could carry it alone.
+ *
+ * Two minutes is comfortably longer than the slowest observed step (a
+ * specialist delegation took 38s) and short enough that an abandoned run is
+ * named quickly rather than spinning for an afternoon.
+ */
+export const STALL_AFTER_MS = 2 * 60 * 1000;
+
+/**
+ * Whether an `investigating` casefile is actually advancing.
+ *
+ * THE DEFECT THIS NAMES: a frozen run showed "Watch live" on the queue and a
+ * live-looking trace on the casefile, indefinitely. The UI asserted progress
+ * that had stopped — the one thing an investigation screen must not do. It is
+ * not a crash and not a failure: the work is intact and resumes the moment
+ * something drives it again. It is paused, and it should say so.
+ */
+export function investigationStalled(
+  casefile: { status?: unknown; last_step_at?: unknown; created_at?: unknown },
+  now: number = Date.now(),
+): boolean {
+  if (casefile.status !== "investigating") return false;
+  const stamp =
+    typeof casefile.last_step_at === "string" && casefile.last_step_at
+      ? casefile.last_step_at
+      : typeof casefile.created_at === "string"
+        ? casefile.created_at
+        : null;
+  if (!stamp) return false;
+  const t = Date.parse(stamp);
+  if (!Number.isFinite(t)) return false;
+  return now - t > STALL_AFTER_MS;
+}
+
+/** What the analyst is told, and offered, when a run is paused. */
+export const STALLED_NOTICE =
+  "This investigation is paused. It advances while this page is open and stops if the tab is closed — nothing is lost, and it resumes from where it stopped.";
