@@ -1,10 +1,12 @@
-import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode } from "./casefileModel";
+import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
 import { GuardrailNotices } from "./GuardrailNotice";
 import Link from "next/link";
+
+import { longDate } from "@/lib/terms-labels";
 import { RecommendationBadge } from "./RecommendationBadge";
 import { ReinvestigateButton } from "./ReinvestigateButton";
 import { ReviewActions } from "./ReviewActions";
@@ -348,6 +350,13 @@ function NotReady({ status }: { status: string }) {
   );
 }
 
+/** The stored decision verb, as the analyst performed it. The value is unchanged. */
+const DECISION_WORD: Record<string, string> = {
+  approve: "Accepted the recommendation",
+  override: "Recorded a different decision",
+  request_docs: "Marked as awaiting documents",
+};
+
 /** The recorded decision, with no action bar: a review is read-only once made. */
 function Decided({
   casefileId,
@@ -366,13 +375,35 @@ function Decided({
       <h2 id="decided-heading" className="text-card text-human">{decidedHeadline(status)}</h2>
       {review ? (
         <dl className="mt-2 space-y-1 text-body text-text-secondary">
-          <div className="flex gap-2"><dt className="text-text-muted">Decision</dt><dd className="font-mono">{review.decision}</dd></div>
-          {review.created_at && <div className="flex gap-2"><dt className="text-text-muted">Recorded</dt><dd className="font-mono">{review.created_at.slice(0, 10)}</dd></div>}
-          {review.corrected_outcome && <div className="flex gap-2"><dt className="text-text-muted">Corrected outcome</dt><dd className="font-mono">{review.corrected_outcome}</dd></div>}
-          {review.pattern_tag && <div className="flex gap-2"><dt className="text-text-muted">Pattern tag</dt><dd className="font-mono">{review.pattern_tag}</dd></div>}
+          {/* A RECEIPT, not a database row. It read `approve` / `true_breach`
+              in monospace — the stored identifiers, which are correct and are
+              not what an analyst wrote down. The values still travel unchanged
+              in the data; only the reading changes. */}
+          <div className="flex gap-2">
+            <dt className="text-text-muted">Decision</dt>
+            <dd className="text-text">{DECISION_WORD[review.decision] ?? review.decision}</dd>
+          </div>
+          {review.created_at && (
+            <div className="flex gap-2">
+              <dt className="text-text-muted">Recorded</dt>
+              <dd className="text-text">{longDate(review.created_at.slice(0, 10))}</dd>
+            </div>
+          )}
+          {review.corrected_outcome && (
+            <div className="flex gap-2">
+              <dt className="text-text-muted">Outcome recorded</dt>
+              <dd className="text-text">{OUTCOME_LABEL[review.corrected_outcome as keyof typeof OUTCOME_LABEL] ?? review.corrected_outcome}</dd>
+            </div>
+          )}
+          {review.pattern_tag && (
+            <div className="flex gap-2">
+              <dt className="text-text-muted">Case category</dt>
+              <dd className="text-text">{tagLabel(review.pattern_tag)}</dd>
+            </div>
+          )}
           {review.reason && (
             <div>
-              <dt className="text-text-muted">Analyst&rsquo;s reason (stored verbatim; retrieved on similar cases)</dt>
+              <dt className="text-text-muted">Analyst&rsquo;s rationale — saved to the casefile, retrieved on similar investigations</dt>
               <dd className="mt-1 whitespace-pre-wrap text-text">{review.reason}</dd>
             </div>
           )}

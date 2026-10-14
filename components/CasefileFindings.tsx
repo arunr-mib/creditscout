@@ -144,21 +144,23 @@ export function CasefileFindings({
         </ol>
 
         {summary.comparison.length > 1 && (
-          <details className="border-t border-border-strong">
-            {/* Collapsed by default: the figure strip above already states both
-                figures, so this is the detail behind a summary the analyst has
-                already read. */}
-            <summary className="cursor-pointer list-none px-4 py-3 text-card text-text marker:content-['']">
-              Calculation comparison <span aria-hidden="true" className="text-label text-model-bright">›</span>
-            </summary>
+          <div className="border-t border-border">
+            {/* VISIBLE, not behind a disclosure. This is the central evidence
+                for the decision — what the test produced under which basis —
+                and an unexplained "›" asked the analyst to guess that the thing
+                they most need is hidden inside it. */}
+            <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3">
+              <h3 className="text-card text-text">Calculation comparison</h3>
+              <p className="text-label text-text-muted">Each row is a logged calculation with its own calc_id.</p>
+            </div>
             <div className="px-4 pb-4">
             <div className="overflow-x-auto rounded-md border border-border">
               <table className="w-full border-collapse text-left">
-                <thead className="bg-model-bg/50">
-                  <tr className="text-label uppercase tracking-wide text-model-bright">
+                <thead className="bg-surface-raised">
+                  <tr className="text-label uppercase tracking-wide text-text-muted">
                     <th className="px-3 py-2 font-medium">Basis</th>
                     <th className="px-3 py-2 text-right font-medium">DSCR</th>
-                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Validation state</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -177,7 +179,7 @@ export function CasefileFindings({
               </table>
             </div>
             </div>
-          </details>
+          </div>
         )}
       </section>
 
