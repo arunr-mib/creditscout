@@ -230,20 +230,26 @@ y2 = 262
 band(y2, "Application", "Next.js · Vercel", "vercel")
 A.append(arrow(CX+216, y1+72, CX+216, y2-6))
 A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · review · approve terms · propose", "session-gated; service-role key stays server-side"], "plain", tag="Signed-in analyst"))
-A.append(box(CX+450, y2, 432, 108, "Agent tool routes", ["OpenAPI 3.0 · CREDITSCOUT_TOOL_KEY", "the only surface the agent can reach"], "code", tag="Key-gated"))
-A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings", ["chunk by section, 1536-dim vectors", "text-embedding-3-small"], "code", tag="Pipeline"))
+A.append(box(CX+450, y2, 432, 108, "Agent tool routes",
+             ["Published as OpenAPI; every call must present a secret key.",
+              "The agent can reach nothing else — not the database,",
+              "not the analyst's screens."], "code", tag="The agent's only door"))
+A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings",
+             ["chunk by section, 1536-dim vectors", "text-embedding-3-small", "Searched by the agent, not pre-loaded — see Agentic RAG below"], "code", tag="Retrieval index"))
 
 y3 = 432
 band(y3, "Reasoning", "Azure AI Foundry", "azure")
 A.append(arrow(CX+216, y2+108, CX+216, y3-6, "starts a run"))
-A.append(arrow(CX+666, y3+104, CX+666, y2+114, "six function tools over HTTPS"))
-A.append(box(CX, y3, CW, 104, "CreditScout Agent — gpt-4.1-mini", 
-             ["One orchestrator. It chooses what to read next, delegates, re-calculates,",
-              "and stops when the evidence is enough."], "model", tag="Orchestrator"))
+A.append(arrow(CX+666, y3+118, CX+666, y2+114, "six function tools over HTTPS"))
+A.append(box(CX, y3, CW, 118, "CreditScout Agent — gpt-4.1-mini",
+             ["One orchestrator. It chooses what to read next, delegates, re-calculates, and stops when the evidence is enough.",
+              "AGENTIC RAG: it is handed the document INVENTORY — titles, types, dates — and never the text. Every passage it uses,",
+              "it went and retrieved, with a query and a document type it chose. Past lessons are the one exception: those are",
+              "pre-fetched into the brief, and it can search for more."], "model", tag="Orchestrator · Agentic RAG"))
 
 y4 = 600
 band(y4, "In process", "Same Node process", "node")
-A.append(arrow(CX+216, y3+104, CX+216, y4-6, "delegates"))
+A.append(arrow(CX+216, y3+118, CX+216, y4-6, "delegates"))
 A.append(box(CX, y4, 648, 118, "Three specialists — gpt-5-mini", 
              ["definition_agent · research_agent · document_agent", "Serviced in-process by lib/agent/specialists.ts.", "facility_id is never a tool parameter — it comes from the casefile."], "model", tag="Delegation"))
 A.append(box(CX+678, y4, 684, 118, "calc/dscr.js   ·   guardrails/*.js",
