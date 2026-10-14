@@ -94,7 +94,7 @@ export function TermEditor(props: {
           <legend className="text-label text-text-muted">{spec.label} (tick every one the clause names)</legend>
           <div className="mt-1 flex flex-wrap gap-4">
             {(spec.vocabulary ?? []).map((name) => (
-              <label key={name} className="flex items-center gap-2 font-mono text-num text-text">
+              <label key={name} className="flex items-center gap-2 text-num tabular-nums text-text">
                 <input
                   type="checkbox"
                   checked={picked.includes(name)}
@@ -116,7 +116,7 @@ export function TermEditor(props: {
               inputMode={spec.kind === "number" || spec.kind === "nullable-number" ? "decimal" : undefined}
               placeholder={spec.kind === "date" ? "YYYY-MM-DD" : undefined}
               onChange={(e) => setRaw(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-border-strong bg-surface px-2 py-1 font-mono text-num text-text disabled:opacity-40"
+              className="mt-1 block w-full rounded-md border border-border-strong bg-surface px-2 py-1 text-num tabular-nums text-text disabled:opacity-40"
             />
           </label>
           {spec.kind === "nullable-number" && (
@@ -135,7 +135,7 @@ export function TermEditor(props: {
           list={listId}
           value={citation}
           onChange={(e) => setCitation(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-border-strong bg-surface px-2 py-1 font-mono text-num text-text"
+          className="mt-1 block w-full rounded-md border border-border-strong bg-surface px-2 py-1 text-num tabular-nums text-text"
         />
         <datalist id={listId}>
           {knownCitations.map((c) => (

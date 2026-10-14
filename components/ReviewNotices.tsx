@@ -157,7 +157,7 @@ function NotRun(props: {
   const on = confirmed.has(field);
   return (
     <div role="alert" className="rounded-md border-2 border-code bg-code-bg p-4">
-      <p className="font-mono text-badge uppercase tracking-wide text-code">
+      <p className="text-badge font-semibold uppercase tracking-wide text-code">
         <span aria-hidden="true">⟡ </span>by code · a check did not run
       </p>
       <p className="mt-1 text-section text-text">No completeness check ran for {label}</p>

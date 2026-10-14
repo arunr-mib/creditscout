@@ -158,7 +158,7 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
                 <td className="whitespace-nowrap px-4 align-middle text-text-secondary">
                   {r.effectiveDate ? (
                     <>
-                      <span className="font-mono text-num tabular-nums">{r.effectiveDate}</span>
+                      <span className="text-num tabular-nums">{r.effectiveDate}</span>
                       <span className="ml-2 text-label text-text-muted">{dateLabel(r.docType)}</span>
                     </>
                   ) : (

@@ -59,12 +59,12 @@ export function TermRow(props: {
               {parts.map(({ spec, text, original }) => (
                 <div key={spec.field} className="min-w-0">
                   {parts.length > 1 && <span className="mr-2 text-label text-text-muted">{spec.label}</span>}
-                  <span className="break-words font-mono text-num text-text">{text}</span>
+                  <span className="break-words text-num tabular-nums text-text">{text}</span>
                   {original !== undefined && (
                     <span className="ml-2 inline-flex flex-wrap items-baseline gap-2">
                       <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
                       <span className="text-label text-text-muted">
-                        model proposed <span className="font-mono text-model line-through">{original}</span>
+                        model proposed <span className="tabular-nums text-model line-through">{original}</span>
                       </span>
                       {editedFields.includes(spec.field) && (
                         <button type="button" onClick={() => onUndo(spec.field)} className="text-label text-text-muted underline hover:text-text">
@@ -118,7 +118,7 @@ export function TermRow(props: {
           {entry && problems.some((p) => p.kind !== "no_citation") && (
             <div>
               <p className="text-label text-text-muted">The quote it cites ({entry.citation}):</p>
-              <p className="mt-1 whitespace-pre-wrap border-l-2 border-danger pl-2 font-mono text-quote text-text-secondary">{entry.quote}</p>
+              <p className="mt-1 whitespace-pre-wrap border-l-2 border-danger pl-2 text-quote text-text-secondary">{entry.quote}</p>
             </div>
           )}
         </div>

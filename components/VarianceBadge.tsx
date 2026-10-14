@@ -12,10 +12,10 @@ export function VarianceBadge(props: { computed: number | null; reported: number
   if (!v) return null;
   if (v.flagged) {
     return (
-      <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+      <span className="rounded-sm bg-code-bg px-1 py-px text-badge tabular-nums text-code">
         {v.text} · variance logged
       </span>
     );
   }
-  return <span className="rounded-sm px-1 py-px font-mono text-badge text-text-muted">{v.text}</span>;
+  return <span className="rounded-sm px-1 py-px text-badge tabular-nums text-text-muted">{v.text}</span>;
 }

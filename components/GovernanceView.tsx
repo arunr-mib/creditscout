@@ -174,7 +174,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
           <span aria-hidden="true">ⓘ </span>
           Evaluation results describe the recorded test runs, not a guarantee of future performance.
         </p>
-        <p className="font-mono text-label text-text-muted">
+        <p className="text-label text-text-muted">
           {recordedAt ? `Recorded ${recordedAt.slice(0, 10)}` : "No run recorded"}
           {cases != null && ` · ${cases} cases scored`}
         </p>
@@ -231,7 +231,7 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
     ) : (
       <>
         <span className="text-text-secondary">{side.recommendation}</span>
-        {side.steps != null && <span className="ml-2 font-mono text-label text-text-muted">{side.steps} steps</span>}
+        {side.steps != null && <span className="ml-2 text-label tabular-nums text-text-muted">{side.steps} steps</span>}
       </>
     );
 
@@ -247,7 +247,7 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
       <section className="rounded-lg border border-border bg-surface shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <h2 className="text-card text-text">Case comparison</h2>
-          <span className="font-mono text-label text-text-muted">
+          <span className="text-label text-text-muted">
             {cold?.created_at ? cold.created_at.slice(0, 10) : ""} · cold / warm
           </span>
         </div>

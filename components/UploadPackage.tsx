@@ -293,7 +293,7 @@ export function UploadPackage({
                   type="date"
                   value={f.date}
                   onChange={(e) => setStaged((rows) => rows.map((r) => (r.key === f.key ? { ...r, date: e.target.value } : r)))}
-                  className={`${field} font-mono ${DATED_TYPES.includes(f.docType) && f.date === "" ? "border-code" : ""}`}
+                  className={`${field} tabular-nums ${DATED_TYPES.includes(f.docType) && f.date === "" ? "border-code" : ""}`}
                 />
               </label>
 

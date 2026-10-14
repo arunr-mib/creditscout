@@ -72,7 +72,7 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
               >
                 <span>{d.label}</span>
                 {count > 0 && (
-                  <span className="rounded-sm bg-night-raised px-2 font-mono text-badge text-night-muted">{count}</span>
+                  <span className="rounded-sm bg-night-raised px-2 text-badge tabular-nums text-night-muted">{count}</span>
                 )}
               </Link>
             </li>

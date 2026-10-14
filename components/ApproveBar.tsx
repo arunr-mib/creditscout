@@ -69,7 +69,7 @@ export function ApproveBar(props: {
     return (
       <footer className="sticky bottom-0 -mx-6 mt-6 border-t-2 border-border-strong bg-bg px-6 py-4 md:-mx-8 md:px-8">
         <p role="status" className="text-card text-human">
-          Approved as version {state.version}, effective from <span className="font-mono">{state.effectiveFrom}</span>, by{" "}
+          Approved as version {state.version}, effective from <span className="tabular-nums">{state.effectiveFrom}</span>, by{" "}
           {state.by}.
         </p>
         <p className="mt-1 max-w-prose text-body text-text-secondary">

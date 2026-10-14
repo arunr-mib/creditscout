@@ -57,7 +57,7 @@ export function UncitedClauses(props: {
           clause panel marks those.
         </p>
         {uncited.length > 0 && (
-          <p className="mt-2 font-mono text-label text-code">
+          <p className="mt-2 text-label text-code">
             <span aria-hidden="true">⟡ </span>counted by code · {uncited.length} clause{uncited.length === 1 ? "" : "s"} no term cites
             {shownKnown ? ` · ${neverShown} never shown to the model` : ""} · {openedCount} opened by you on this screen
           </p>
@@ -111,9 +111,9 @@ export function UncitedClauses(props: {
                         {c.shown === true && <span className="text-badge text-text-muted">shown to the model</span>}
                         {opened.has(key) && <span className="text-badge text-human">opened</span>}
                       </span>
-                      <span className="mt-1 block font-mono text-quote text-text-secondary">{first}</span>
+                      <span className="mt-1 block text-quote text-text-secondary">{first}</span>
                       {rest.join(" ").trim() !== "" && (
-                        <span className="mt-1 block font-mono text-quote text-text-muted">
+                        <span className="mt-1 block text-quote text-text-muted">
                           {rest.join(" ").trim().slice(0, 200)}
                           {rest.join(" ").trim().length > 200 ? "…" : ""}
                         </span>
@@ -121,7 +121,7 @@ export function UncitedClauses(props: {
                     </button>
                     {flagged.map((w, i) => (
                       <p key={i} className="mt-1 rounded-sm border-l-4 border-code bg-code-bg p-2 text-body text-text-secondary">
-                        <span className="font-mono text-label text-code">
+                        <span className="text-label text-code">
                           <span aria-hidden="true">⟡ </span>flagged by an automated check ·{" "}
                         </span>
                         {w.message}

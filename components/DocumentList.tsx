@@ -43,10 +43,10 @@ export function DocumentList({ documents, approvedTerms }: { documents: Document
             <tr key={doc.id} className="border-b border-border">
               <td className="py-2 pr-4 text-text">{doc.title}</td>
               <td className="py-2 pr-4 text-text-secondary">{DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type}</td>
-              <td className="py-2 pr-4 font-mono text-text-secondary">{doc.effective_date ?? "—"}</td>
+              <td className="py-2 pr-4 tabular-nums text-text-secondary">{doc.effective_date ?? "—"}</td>
               <td className="py-2">
                 {state === "not_boarded" ? (
-                  <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">not boarded</span>
+                  <span className="rounded-sm bg-code-bg px-1 py-px text-badge text-code">not boarded</span>
                 ) : state === "boarded" ? (
                   <span className="text-label text-text-muted">boarded</span>
                 ) : (

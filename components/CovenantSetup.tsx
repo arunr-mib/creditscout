@@ -364,14 +364,14 @@ export function CovenantSetup(props: {
                     {d.doc_type.replace("_", " ")}
                     {!SOURCE_TYPES.includes(d.doc_type) && " (cannot be a source of terms)"}
                   </td>
-                  <td className="whitespace-nowrap py-1 pr-2 font-mono text-text-muted">{d.effective_date ?? "—"}</td>
+                  <td className="whitespace-nowrap py-1 pr-2 tabular-nums text-text-muted">{d.effective_date ?? "—"}</td>
                   <td className="py-1">
                     {d.doc_type !== "amendment" ? (
                       <span className="text-text-muted">—</span>
                     ) : boardedTitles.has(d.title) ? (
                       <span className="text-text-muted">boarded</span>
                     ) : (
-                      <span className="whitespace-nowrap rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
+                      <span className="whitespace-nowrap rounded-sm bg-code-bg px-1 py-px text-badge text-code">
                         <span aria-hidden="true">⟡ </span>not boarded
                       </span>
                     )}
@@ -398,9 +398,9 @@ export function CovenantSetup(props: {
               <tbody>
                 {shownHistory.map((h) => (
                   <tr key={h.version} className="border-t border-border">
-                    <td className="py-1 pr-2 font-mono text-text-secondary">v{h.version}</td>
+                    <td className="py-1 pr-2 tabular-nums text-text-secondary">v{h.version}</td>
                     <td className="py-1 pr-2 text-text-secondary">{h.status}</td>
-                    <td className="whitespace-nowrap py-1 pr-2 font-mono text-text-muted">{h.effective_from}</td>
+                    <td className="whitespace-nowrap py-1 pr-2 tabular-nums text-text-muted">{h.effective_from}</td>
                     <td className="py-1 text-text-muted">{h.approved_by ?? "not approved"}</td>
                   </tr>
                 ))}

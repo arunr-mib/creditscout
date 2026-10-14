@@ -105,7 +105,7 @@ function TermsRow({ card }: { card: TermsCard }) {
     <>
       <tr className="border-t border-border align-middle">
         <td className="px-4 py-3 text-body text-text">{card.borrower}</td>
-        <td className="px-4 py-3 font-mono text-num text-text-secondary">
+        <td className="px-4 py-3 text-num tabular-nums text-text-secondary">
           {card.approvedVersion != null ? `v${card.approvedVersion}` : <span className="font-sans text-text-muted">None approved</span>}
         </td>
         <td className="px-4 py-3 text-body text-text-secondary">
@@ -158,7 +158,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
           <h2 className="text-card text-text">{card.borrower}</h2>
           {card.approvedVersion != null && (
             <span className="text-label text-text-muted">
-              Approved terms · <span className="font-mono">v{card.approvedVersion}</span>
+              Approved terms · <span className="tabular-nums">v{card.approvedVersion}</span>
             </span>
           )}
         </div>
@@ -210,7 +210,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
                   return (
                     <Fragment key={v.version}>
                       <tr className="border-t border-border">
-                        <td className="px-3 py-2 font-mono text-num text-text">v{v.version}</td>
+                        <td className="px-3 py-2 text-num tabular-nums text-text">v{v.version}</td>
                         <td className="px-3 py-2">
                           <StatusPill status={v.status} />
                         </td>

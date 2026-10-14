@@ -110,10 +110,10 @@ function Table({
               </td>
               {/* An absent side is said, not left blank: "—" in a covenant
                   table reads as a value nobody filled in. */}
-              <td className="px-4 py-2 font-mono text-num text-text-secondary">
+              <td className="px-4 py-2 text-num tabular-nums text-text-secondary">
                 {r.approved ?? <span className="font-sans text-text-muted">not in this version</span>}
               </td>
-              <td className={`px-4 py-2 font-mono text-num ${r.kind === "same" ? "text-text-secondary" : "text-text"}`}>
+              <td className={`px-4 py-2 text-num tabular-nums ${r.kind === "same" ? "text-text-secondary" : "text-text"}`}>
                 {r.proposed ?? <span className="font-sans text-text-muted">dropped</span>}
               </td>
               <td className="px-4 py-2">

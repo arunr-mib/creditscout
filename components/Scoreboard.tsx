@@ -62,7 +62,7 @@ function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: Metr
           {METRICS.map((spec, i) => (
             <tr key={spec.key} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
               <td className="px-4 align-middle text-label text-text">{spec.label}</td>
-              <td className="px-4 py-2 text-right align-middle font-mono text-num tabular-nums text-model-bright/80">
+              <td className="px-4 py-2 text-right align-middle text-num tabular-nums text-model-bright/80">
                 {spec.target}
               </td>
               <Actual cell={cold ? cold[i] : null} />
@@ -85,10 +85,10 @@ const STATUS_CLASS: Record<MetricStatus, string> = {
 function Actual({ cell }: { cell: MetricCell | null }) {
   // No run for this mode at all, or the metric wasn't reported: an em dash, never 0.
   if (!cell || cell.display === null) {
-    return <td className="px-4 py-2 text-right align-middle font-mono text-num tabular-nums text-text-muted">—</td>;
+    return <td className="px-4 py-2 text-right align-middle text-num tabular-nums text-text-muted">—</td>;
   }
   return (
-    <td className={`px-4 py-2 text-right align-middle font-mono text-num tabular-nums ${STATUS_CLASS[cell.status]}`}>
+    <td className={`px-4 py-2 text-right align-middle text-num tabular-nums ${STATUS_CLASS[cell.status]}`}>
       {cell.display}
     </td>
   );

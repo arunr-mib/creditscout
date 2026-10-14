@@ -271,7 +271,7 @@ function Figure({ label, value, note, tone }: { label: string; value: string; no
   return (
     <div className="bg-night-raised px-6 py-4">
       <p className="text-label text-night-muted">{label}</p>
-      <p className={`mt-1 font-mono text-title tabular-nums ${tone}`}>{value}</p>
+      <p className={`mt-1 text-title tabular-nums ${tone}`}>{value}</p>
       <p className="mt-1 text-label text-night-muted">{note}</p>
     </div>
   );
@@ -316,7 +316,7 @@ function ProcessStep({
           <span aria-hidden="true" className="ml-4 hidden h-px flex-1 bg-night-border-strong md:block" />
         )}
       </div>
-      <p className="mt-6 font-mono text-label text-model-night">{step}</p>
+      <p className="mt-6 text-label text-model-night">{step}</p>
       <h3 className="mt-2 text-card text-night-text">{head}</h3>
       <p className="mt-2 max-w-[34ch] text-body text-night-secondary">{body}</p>
     </li>

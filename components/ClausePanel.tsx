@@ -91,7 +91,7 @@ export function ClausePanel(props: {
         </div>
       )}
 
-      <div id="clause-panel-text" className="font-mono text-quote text-text-secondary">
+      <div id="clause-panel-text" className="text-quote text-text-secondary">
         {body.map((p, i) => {
           const para = text.slice(p.start, p.end);
           const inside = span && span.start < p.end && span.end > p.start ? { s: Math.max(span.start, p.start) - p.start, e: Math.min(span.end, p.end) - p.start } : null;

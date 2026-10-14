@@ -210,7 +210,7 @@ function SummaryStrip({
           // A divider is a border, not a character: as text it is read out by a
           // screen reader and audited for contrast it can never meet.
           <div key={s.label} className={`flex items-baseline gap-2 ${i > 0 ? "border-l border-border pl-6" : ""}`}>
-            <span className={`font-mono text-num tabular-nums ${zero ? "text-text-muted" : "text-text"}`}>{s.value}</span>
+            <span className={`text-num tabular-nums ${zero ? "text-text-muted" : "text-text"}`}>{s.value}</span>
             <span className={`text-body ${zero ? "text-text-muted" : "text-text-secondary"}`}>{s.label}</span>
           </div>
         );

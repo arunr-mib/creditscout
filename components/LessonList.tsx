@@ -154,7 +154,7 @@ function Fig({ label, value }: { label: string; value: number | null }) {
   return (
     <div>
       <dt className="text-label text-text-muted">{label}</dt>
-      <dd className="font-mono text-num tabular-nums text-text">{value == null ? "—" : `${value.toFixed(2)}x`}</dd>
+      <dd className="text-num tabular-nums text-text">{value == null ? "—" : `${value.toFixed(2)}x`}</dd>
     </div>
   );
 }
@@ -168,7 +168,7 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
       {!nested && (
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-card text-text">{borrower}</h2>
-          <span className="font-mono text-label text-text-muted">{period}</span>
+          <span className="text-label tabular-nums text-text-muted">{period}</span>
         </div>
       )}
 
@@ -237,9 +237,9 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
             </summary>
             <div className="mt-2 space-y-1 rounded-md border border-border bg-surface-raised p-3">
               {row.patternTag && (
-                <p className="font-mono text-badge text-text-muted">pattern_tag · {row.patternTag}</p>
+                <p className="text-badge text-text-muted">pattern_tag · {row.patternTag}</p>
               )}
-              {row.createdAt && <p className="font-mono text-badge text-text-muted">recorded · {row.createdAt.slice(0, 10)}</p>}
+              {row.createdAt && <p className="text-badge tabular-nums text-text-muted">recorded · {row.createdAt.slice(0, 10)}</p>}
               {row.storedText && <p className="mt-1 text-quote text-text-secondary">{row.storedText}</p>}
             </div>
           </details>

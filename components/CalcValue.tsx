@@ -24,7 +24,7 @@ export function CalcValue(props: CalcValueProps) {
         <span className="text-label uppercase tracking-wide text-text-muted">
           {label}
         </span>
-        <span className="font-mono text-num text-text-muted">—</span>
+        <span className="text-num tabular-nums text-text-muted">—</span>
         <span className="rounded-sm bg-danger-bg px-1 py-px font-mono text-badge text-danger">
           <span aria-hidden="true">⟡ </span>
           not computed · {props.error}
@@ -38,7 +38,7 @@ export function CalcValue(props: CalcValueProps) {
       <span className="text-label uppercase tracking-wide text-text-muted">
         {label}
       </span>
-      <span className="font-mono text-num text-code-bright">
+      <span className="text-num tabular-nums text-code-bright">
         {props.value.toFixed(2)}
       </span>
       <CalcBadge calcId={props.calcId} />

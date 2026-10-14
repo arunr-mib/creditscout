@@ -46,9 +46,9 @@ export function TestResultCard({ test }: { test: TestResultView }) {
         <span className="inline-flex items-baseline gap-2">
           <span className="text-label uppercase tracking-wide text-text-muted">Reported DSCR</span>
           {test.reported_dscr != null ? (
-            <span className="font-mono text-num text-text-secondary">{test.reported_dscr.toFixed(2)}</span>
+            <span className="text-num tabular-nums text-text-secondary">{test.reported_dscr.toFixed(2)}</span>
           ) : (
-            <span className="font-mono text-num text-text-muted" title="No borrower figure on file">
+            <span className="text-num tabular-nums text-text-muted" title="No borrower figure on file">
               —
             </span>
           )}

@@ -70,7 +70,7 @@ function PolicyValue({ row }: { row: PolicyRow }) {
       </ul>
     );
   }
-  return <span className="font-mono text-num tabular-nums text-text">{String(row.value)}</span>;
+  return <span className="text-num tabular-nums text-text">{String(row.value)}</span>;
 }
 
 /** A plain-language line of what each policy means and its unit (audit 3.8). */

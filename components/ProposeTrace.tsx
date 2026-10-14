@@ -27,7 +27,7 @@ export function ProposeTrace(props: { borrower: string; documents: string[] }) {
         <li className="border-l-2 border-model pl-3">
           <p className="flex items-baseline gap-3">
             <span className="text-body text-model-bright">definition_agent</span>
-            <span className="font-mono text-label text-text-muted">running · {seconds}s</span>
+            <span className="text-label tabular-nums text-text-muted">running · {seconds}s</span>
           </p>
           <p className="text-body text-text-secondary">
             Reading {documents.length > 0 ? documents.join(", ") : "the agreement and any amendments on file"}, finding the

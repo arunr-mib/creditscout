@@ -103,7 +103,7 @@ export function TraceStep({
               specialist model
             </span>
           )}
-          {time && <span className="ml-auto font-mono text-label text-text-muted">{time}</span>}
+          {time && <span className="ml-auto text-label tabular-nums text-text-muted">{time}</span>}
         </p>
 
         {step.role && <p className="mt-1 text-label text-text-muted">{step.role}</p>}
@@ -134,7 +134,7 @@ export function TraceStep({
           step.output && (
             <p
               className={`mt-1 text-body ${
-                state === "needs_input" ? "text-code-bright" : step.calculator ? "font-mono text-text" : "text-text-secondary"
+                state === "needs_input" ? "text-code-bright" : step.calculator ? "tabular-nums text-text" : "text-text-secondary"
               }`}
             >
               {activityResult(step)}

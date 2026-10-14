@@ -36,7 +36,7 @@ export function ClaimList(props: {
               />
               {!c.cited && <span className="text-label text-danger">Unsupported: nothing here can be checked against a document.</span>}
             </div>
-            {c.cited && c.quote && <p className="mt-2 font-mono text-quote text-text-secondary">&ldquo;{c.quote}&rdquo;</p>}
+            {c.cited && c.quote && <p className="mt-2 text-quote text-text-secondary">&ldquo;{c.quote}&rdquo;</p>}
           </li>
         );
       })}

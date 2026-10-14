@@ -25,7 +25,7 @@ export function CalcTable(props: {
   if (sections.length === 0) {
     return (
       <p className="rounded-md border border-border bg-surface p-4 text-body text-text-muted">
-        <span className="font-mono text-num">—</span> No calculation was logged for this casefile, so there are no
+        <span className="text-num tabular-nums">—</span> No calculation was logged for this casefile, so there are no
         computed figures to show. Open the investigation trace to see what ran.
       </p>
     );
@@ -52,7 +52,7 @@ export function CalcTable(props: {
             {s.rows.length === 0 && (
               <tr>
                 <td colSpan={3} className="px-3 py-2 text-body text-text-muted">
-                  <span className="font-mono text-num">—</span> This calculation's log row holds no components to show.
+                  <span className="text-num tabular-nums">—</span> This calculation's log row holds no components to show.
                 </td>
               </tr>
             )}
@@ -82,7 +82,7 @@ function Row(props: {
       </td>
       {/* Amber is for what code produced. A document figure or an approved covenant
           term is evidence, not code, so it stays plain text — never amber. */}
-      <td className={`px-3 py-2 text-right font-mono text-num tabular-nums ${computed ? "text-code-bright" : "text-text"}`}>
+      <td className={`px-3 py-2 text-right text-num tabular-nums ${computed ? "text-code-bright" : "text-text"}`}>
         {formatFigure(row.value, row.format)}
       </td>
       <td className="whitespace-nowrap px-3 py-2">

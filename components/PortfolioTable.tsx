@@ -149,12 +149,12 @@ export function PortfolioTable({
                     <p className="text-body text-text">{r.borrower}</p>
                     <p className="text-label text-text-muted">
                       {r.industry ?? "—"}
-                      {r.termsVersion != null && <span className="ml-2 font-mono">· Terms v{r.termsVersion}</span>}
+                      {r.termsVersion != null && <span className="ml-2 tabular-nums">· Terms v{r.termsVersion}</span>}
                     </p>
                   </td>
-                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
-                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
+                  <td className="px-3 py-3 text-right text-num tabular-nums text-text">{dscr(r.ours)}</td>
+                  <td className="px-3 py-3 text-right text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
+                  <td className="px-3 py-3 text-right text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
                   <td className="px-3 py-3">
                     <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded px-2 py-px text-label ${RESULT_TONE[result]}`}>
                       <span aria-hidden="true">{RESULT_GLYPH[result]}</span>

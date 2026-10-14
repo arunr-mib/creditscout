@@ -453,7 +453,7 @@ function Fact({ label, value, tone }: { label: string; value: string; tone?: str
   return (
     <div>
       <dt className="text-label text-text-muted">{label}</dt>
-      <dd className={`mt-px font-mono text-num ${tone ?? "text-text"}`}>{value}</dd>
+      <dd className={`mt-px text-num tabular-nums ${tone ?? "text-text"}`}>{value}</dd>
     </div>
   );
 }
