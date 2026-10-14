@@ -1,4 +1,4 @@
-import { noticeHeading, noticesOf, type Notice } from "./casefileModel";
+import { NOTICE_WEIGHT_LABEL, groupNotices, noticeHeading, noticesOf, type Notice } from "./casefileModel";
 
 /**
  * design.md 5.6 / 12.13. Amber, because a guardrail is code. A 3px left border
@@ -10,10 +10,21 @@ import { noticeHeading, noticesOf, type Notice } from "./casefileModel";
 export function GuardrailNotices({ notes }: { notes: unknown }) {
   const list = noticesOf(notes);
   if (list.length === 0) return null;
+  // Grouped by what each one DEMANDS. Flat, a rule that changed the
+  // recommendation read exactly like an informational flag, and an analyst had
+  // to infer the difference from the wording.
+  const groups = groupNotices(list);
   return (
-    <section aria-label="Guardrail notices" className="space-y-2">
-      {list.map((n, i) => (
-        <GuardrailNotice key={i} notice={n} />
+    <section aria-label="Validation notices" className="space-y-4">
+      {groups.map((g) => (
+        <div key={g.weight} className="space-y-2">
+          <h3 className="text-label uppercase tracking-wide text-text-muted">
+            {NOTICE_WEIGHT_LABEL[g.weight]} · {g.notices.length}
+          </h3>
+          {g.notices.map((n, i) => (
+            <GuardrailNotice key={i} notice={n} />
+          ))}
+        </div>
       ))}
     </section>
   );

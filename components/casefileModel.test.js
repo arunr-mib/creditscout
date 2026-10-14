@@ -9,7 +9,10 @@ import {
   calcSectionsOf,
   chipCitation,
   citationState,
+  NOTICE_WEIGHT_LABEL,
   OUTCOME_CHOICE,
+  groupNotices,
+  noticeWeight,
   TAGS,
   TAG_LABEL,
   citationsOnScreen,
@@ -632,4 +635,40 @@ test("reviewMode: history is its own mode, so it can never offer the decision ac
   const history = reviewMode("superseded");
   assert.notEqual(history, "active");
   assert.notEqual(history, "read_only");
+});
+
+// ------------------------------------------- what a notice actually demands
+
+const notice = (action, check = "x") => ({ layer: "guardrail", check, action, detail: "" });
+
+test("noticeWeight: a rule that CHANGED the recommendation outranks one that flagged it", () => {
+  // Every notice rendered with the same weight, so a recommendation a code rule
+  // had overridden read identically to an informational flag.
+  assert.equal(noticeWeight(notice("abstain")), "changed_the_outcome");
+  assert.equal(noticeWeight(notice("escalate")), "changed_the_outcome");
+  assert.equal(noticeWeight(notice("claim_removed")), "needs_acknowledgement");
+  assert.equal(noticeWeight(notice("retry")), "needs_acknowledgement");
+  assert.equal(noticeWeight(notice("flag")), "informational");
+});
+
+test("noticeWeight: derived from the recorded action, not the check's name", () => {
+  // A new check added to guardrails/ inherits the right grouping with no
+  // change here; keying off names would silently drop it into "information".
+  assert.equal(noticeWeight(notice("abstain", "some_future_check")), "changed_the_outcome");
+});
+
+test("groupNotices: heaviest first, empty groups omitted", () => {
+  const groups = groupNotices([notice("flag"), notice("abstain"), notice("claim_removed")]);
+  assert.deepEqual(groups.map((g) => g.weight), ["changed_the_outcome", "needs_acknowledgement", "informational"]);
+  assert.equal(groups.every((g) => g.notices.length > 0), true);
+
+  const onlyFlags = groupNotices([notice("flag"), notice("flag")]);
+  assert.deepEqual(onlyFlags.map((g) => g.weight), ["informational"], "no empty headings");
+  assert.deepEqual(groupNotices([]), []);
+});
+
+test("every grouping has a label that says what it demands", () => {
+  for (const w of ["changed_the_outcome", "needs_acknowledgement", "informational"]) {
+    assert.ok(NOTICE_WEIGHT_LABEL[w].length > 0, w);
+  }
 });

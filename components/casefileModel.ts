@@ -812,3 +812,41 @@ export function decisionBasis(
     outstanding: openItems > 0 ? `${openItems} item${openItems === 1 ? "" : "s"} to review before recording a decision.` : null,
   };
 }
+
+// ------------------------------------------- what a notice actually demands
+
+/**
+ * Notices grouped by what they ask of the analyst.
+ *
+ * Every notice was rendered with the same weight, so a recommendation that a
+ * code rule had CHANGED sat beside an informational flag and read identically.
+ * They demand different things: one altered the outcome, one needs
+ * acknowledging, one is context.
+ *
+ * Derived from the recorded `action`, which the guardrail wrote — never from
+ * the check's name, so a new check inherits the right grouping automatically.
+ */
+export type NoticeWeight = "changed_the_outcome" | "needs_acknowledgement" | "informational";
+
+export const NOTICE_WEIGHT_LABEL: Record<NoticeWeight, string> = {
+  changed_the_outcome: "Changed the recommendation",
+  needs_acknowledgement: "Needs acknowledgement before deciding",
+  informational: "Information",
+};
+
+export function noticeWeight(notice: Notice): NoticeWeight {
+  // `abstain` and `escalate` are the guardrail overriding the model's answer.
+  if (notice.action === "abstain" || notice.action === "escalate") return "changed_the_outcome";
+  // A removed claim and a retry changed what the analyst is reading, without
+  // changing the outcome — they have to know, and nothing is blocked.
+  if (notice.action === "claim_removed" || notice.action === "retry") return "needs_acknowledgement";
+  return "informational";
+}
+
+/** Notices in weight order, heaviest first, with empty groups omitted. */
+export function groupNotices(notes: readonly Notice[]): { weight: NoticeWeight; notices: Notice[] }[] {
+  const order: NoticeWeight[] = ["changed_the_outcome", "needs_acknowledgement", "informational"];
+  return order
+    .map((weight) => ({ weight, notices: notes.filter((n) => noticeWeight(n) === weight) }))
+    .filter((g) => g.notices.length > 0);
+}
