@@ -73,25 +73,27 @@ export default async function DocumentsPage() {
 
       {needsReview.length > 0 && (
         <section aria-label="Amendments requiring review" className="space-y-3">
-          <h2 className="text-section text-text">Amendments requiring review</h2>
+          <h2 className="text-section text-text">Amendments awaiting terms review · {needsReview.length}</h2>
           <p className="max-w-prose text-body text-text-secondary">
-            These amendments are on file but are not included in approved terms. Review their impact before updating
-            the covenant.
+            On file but not incorporated into approved terms. Review the impact before the terms are used in a test.
           </p>
           <ul className="space-y-2">
             {needsReview.map((r) => (
               <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border border-l-2 border-l-code bg-surface px-4 py-3">
+                {/* The BORROWER leads: an analyst scanning this list is looking
+                    for a loan, not for a document called "Amendment No. 2" —
+                    which is what most of them are called. */}
                 <div>
-                  <p className="text-card text-text">{r.title}</p>
+                  <p className="text-card text-text">{r.borrower}</p>
                   <p className="text-label text-text-muted">
-                    {r.borrower} · Effective {longDate(r.effective_date)} ·{" "}
-                    <span className="text-code-bright" title={NOT_BOARDED_TOOLTIP}>
-                      {TERMS_PENDING}
-                    </span>
+                    {r.title} · Effective {longDate(r.effective_date)}
+                  </p>
+                  <p className="text-label text-code" title={NOT_BOARDED_TOOLTIP}>
+                    Not incorporated into approved terms
                   </p>
                 </div>
                 <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised">
-                  Review terms
+                  Review impact
                 </Link>
               </li>
             ))}

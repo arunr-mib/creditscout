@@ -119,3 +119,29 @@ export function summariseTerms(terms: unknown): TermLine[] {
 
   return out;
 }
+
+// ------------------------------------------- what a document's date MEANS
+
+/**
+ * The label for a document's date, which differs by document.
+ *
+ * Every row said "Effective date". For an agreement or an amendment that is
+ * right — it is the date the terms take force. For a financial statement the
+ * same column holds the END OF THE PERIOD REPORTED, and for a compliance
+ * certificate the period being certified. Calling those "effective" is simply
+ * the wrong word for the fact, and on a screen whose job is helping an analyst
+ * find the right evidence, the wrong word costs a click or a mistake.
+ */
+export const DATE_LABEL: Record<string, string> = {
+  agreement: "Effective date",
+  amendment: "Effective date",
+  waiver: "Dated",
+  financials: "Period ended",
+  compliance_certificate: "Reporting period",
+};
+
+export const dateLabel = (docType: string | null | undefined): string =>
+  DATE_LABEL[docType ?? ""] ?? "Date";
+
+/** The column heading when one table mixes document types. */
+export const MIXED_DATE_HEADING = "Relevant date";

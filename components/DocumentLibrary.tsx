@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, longDate } from "@/lib/terms-labels";
+import { MIXED_DATE_HEADING, NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, dateLabel, longDate } from "@/lib/terms-labels";
 
 export interface DocumentRowView {
   id: string;
@@ -111,13 +111,13 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-model-bg/50">
+          <thead className="bg-surface-raised">
             <tr className="border-b border-border">
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Document</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Borrower</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Document type</th>
-              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-model-bright">Effective date</th>
-              <th className="whitespace-nowrap px-4 py-2 text-right text-label uppercase tracking-wide text-model-bright">
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Borrower</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">Document type</th>
+              <th className="whitespace-nowrap px-4 py-2 text-label uppercase tracking-wide text-text-muted">{MIXED_DATE_HEADING}</th>
+              <th className="whitespace-nowrap px-4 py-2 text-right text-label uppercase tracking-wide text-text-muted">
                 Covenant terms
               </th>
             </tr>
@@ -132,11 +132,32 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
             )}
             {shown.map((r) => (
               <tr key={r.id} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
-                <td className="px-4 align-middle text-body text-text">{r.title}</td>
+                <td className="px-4 align-middle text-body text-text">
+                  {r.title}
+                  {/* A waiver REQUEST is not a granted waiver. The title alone
+                      carried that distinction; on a row among executed
+                      documents it needs to be a state, not a reading exercise.
+                      This is the F3 twist: an unexecuted request on file,
+                      dated after the period, unsigned by the lender. */}
+                  {r.docType === "waiver" && /unexecuted|request/i.test(r.title) && (
+                    <span className="ml-2 rounded bg-code-bg px-2 py-px text-badge text-code">Unexecuted</span>
+                  )}
+                </td>
                 <td className="px-4 align-middle text-body text-text-secondary">{r.borrower}</td>
                 <td className="px-4 align-middle text-label text-text-muted">{r.docTypeLabel}</td>
-                <td className="whitespace-nowrap px-4 align-middle font-mono text-num tabular-nums text-text-secondary">
-                  {r.effectiveDate ?? "—"}
+                {/* The heading is generic because the table mixes types; each
+                    row says which KIND of date it is holding. An agreement's
+                    date takes terms into force; a financial statement's is the
+                    end of the period reported. */}
+                <td className="whitespace-nowrap px-4 align-middle text-text-secondary">
+                  {r.effectiveDate ? (
+                    <>
+                      <span className="font-mono text-num tabular-nums">{r.effectiveDate}</span>
+                      <span className="ml-2 text-label text-text-muted">{dateLabel(r.docType)}</span>
+                    </>
+                  ) : (
+                    <span className="text-text-muted">Not recorded</span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-right align-middle">
                   {r.boarding === "not_boarded" ? (
