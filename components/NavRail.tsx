@@ -61,8 +61,13 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
               <Link
                 href={d.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-body transition-colors duration-fast ${
-                  active ? "bg-night-raised text-night-text" : "text-night-secondary hover:bg-night-hover hover:text-night-text"
+                className={`flex items-center justify-between gap-2 rounded-md py-2 pr-3 text-body transition-colors duration-fast ${
+                  // A subtle surface step plus a narrow teal marker, rather than
+                  // a filled block: selection should be quiet and the accent
+                  // should mean the same thing here as everywhere else.
+                  active
+                    ? "border-l-2 border-model-night bg-night-raised pl-[10px] text-night-text"
+                    : "border-l-2 border-transparent pl-[10px] text-night-secondary hover:bg-night-hover hover:text-night-text"
                 }`}
               >
                 <span>{d.label}</span>

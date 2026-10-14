@@ -56,15 +56,15 @@ export default {
         // values were tuned against #0A1628 and fail on white — the dark
         // `model` sits at 2.98:1, `code` 2.15, `success` 1.40. Each new value
         // clears 4.5:1 on both the page and a card.
-        bg: "#F7F9FC",
+        bg: "#F7F9FA",
         surface: "#FFFFFF",
-        "surface-raised": "#F1F5F9",
-        border: "#E8EDF4",
-        "border-strong": "#CBD5E1",
+        "surface-raised": "#F1F4F6",
+        border: "#DCE4E8",
+        "border-strong": "#C3CFD5",
 
-        text: "#0F172A",
-        "text-secondary": "#334155",
-        "text-muted": "#5B6B82",
+        text: "#19282F",
+        "text-secondary": "#52646D",
+        "text-muted": "#6B7C85",
 
         // ------------------------------------- surfaces that stay dark, on purpose
         //
@@ -72,25 +72,30 @@ export default {
         // foregrounds, so they cannot borrow the tokens above — that was the
         // whole failure mode of the first attempt at this. They get their own
         // set, and `night-*` says so at every call site.
-        sunken: "#0B1A2F",
-        night: "#0A1628",
-        "night-raised": "#11243D",
-        "night-hover": "#16293F",
+        sunken: "#182126",
+        night: "#141C21",
+        "night-raised": "#26373D",
+        "night-hover": "#223136",
         "night-text": "#F8FAFC",
         "night-secondary": "#CBD5E1",
-        "night-muted": "#94A3B8",
-        "night-border": "#1E293B",
-        "night-border-strong": "#334155",
+        "night-muted": "#9AAAB2",
+        "night-border": "#2C3B41",
+        "night-border-strong": "#3E4F56",
 
-        // indigo = a MODEL did this. (Was teal; the hue changed, the rule did not.)
-        // Deeper and less saturated than the dark theme's #818CF8: that value
-        // was electric enough to read as the generative-AI house style, and it
-        // fails 4.5:1 on white anyway. This clears 6.29:1.
-        model: "#4F46E5",
-        "model-bright": "#4338CA",
-        "model-bg": "#EEF2FF",
+        // DEEP TEAL = a MODEL did this, and = interaction.
+        //
+        // Saturated indigo buttons competed with a navy shell: two strong blues,
+        // neither winning, and the evidence losing to both. The shell is now
+        // graphite and the accent is deliberate. 6.23:1 for white text on the
+        // button, 5.90 as text on the page.
+        //
+        // Green stays reserved for a verified pass or a recorded resolution.
+        // Teal identifies interaction; it must never be read as "compliant".
+        model: "#146C67",
+        "model-bright": "#105A56",
+        "model-bg": "#E8F2F1",
         // For the dark surfaces, where the pale indigo is still the right one.
-        "model-night": "#A5B4FC",
+        "model-night": "#5EC2BA",
 
         // amber = CODE did this. Never decoration, never a warning.
         // Amber-700, not amber-500: #F59E0B is unreadable as text on white.

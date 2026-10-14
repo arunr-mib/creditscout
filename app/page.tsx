@@ -172,7 +172,7 @@ export default async function Home() {
 
       {/* -------------------------------------------------------------- upload */}
       <section aria-label="Upload a package" className="space-y-3">
-        <h2 className="text-section text-text">Add a quarterly package</h2>
+        <h2 className="text-section text-text">Add borrower documents</h2>
         <UploadPackage facilities={uploadFacilities} />
       </section>
     </div>
