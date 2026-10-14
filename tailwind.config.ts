@@ -126,11 +126,11 @@ export default {
         "danger-bg": "#FBE3E3",
         // The SOLID fill of the outcome mark on the recommendation card. It
         // carries no small text, so it is free to go as dark as it likes:
-        // white on these two reads 9.5:1 (danger) and 7.9:1 (success).
-        "danger-strong": "#8C1515",
+        // white on these two reads 7.7:1 (danger) and 6.6:1 (success).
+        "danger-strong": "#A31A1A",
         success: "#15803D",
         "success-bg": "#E8F7EE",
-        "success-strong": "#115E32",
+        "success-strong": "#156B37",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
