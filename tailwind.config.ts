@@ -124,15 +124,13 @@ export default {
         // regression for a cosmetic gain. These two are as deep as AA allows.
         danger: "#C81E1E",
         "danger-bg": "#FBE3E3",
-        // The outcome mark on the recommendation card, which carries no small
-        // text and is therefore free to go deeper: `-strong` ink on `-tile`
-        // reads 7.1:1 (danger) and 6.4:1 (success).
+        // The SOLID fill of the outcome mark on the recommendation card. It
+        // carries no small text, so it is free to go as dark as it likes:
+        // white on these two reads 9.5:1 (danger) and 7.9:1 (success).
         "danger-strong": "#8C1515",
-        "danger-tile": "#F6CFCF",
         success: "#15803D",
         "success-bg": "#E8F7EE",
         "success-strong": "#115E32",
-        "success-tile": "#CDE9D8",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

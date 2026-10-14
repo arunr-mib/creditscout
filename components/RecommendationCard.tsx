@@ -19,10 +19,20 @@ import type { DecisionBasis } from "./casefileModel";
  * recommendation and gets out of the way.
  */
 
-/** The outcome's mark. A tint, not a traffic light: the words carry the verdict. */
+/**
+ * The outcome's mark: a SOLID fill, deepest ink of its pair, white glyph.
+ *
+ * It was a pale tint with a coloured glyph, which read as a watermark beside a
+ * 28px headline. The fill carries no text of its own, so it is free to go as
+ * dark as it likes — white on these two reads 7.9:1 and 9.5:1, where the
+ * badge tints elsewhere are pinned near 4.5:1 by the text they carry.
+ *
+ * `request` and `abstain` stay unfilled on purpose. A filled mark says the
+ * agent reached a position; those two are the cases where it did not.
+ */
 const TILE: Record<string, { icon: string; tone: string }> = {
-  resolve: { icon: "✓", tone: "border-success bg-success-tile text-success-strong" },
-  escalate: { icon: "↗", tone: "border-danger bg-danger-tile text-danger-strong" },
+  resolve: { icon: "✓", tone: "border-success-strong bg-success-strong text-surface" },
+  escalate: { icon: "↗", tone: "border-danger-strong bg-danger-strong text-surface" },
   request: { icon: "⌛", tone: "border-border-strong bg-surface-raised text-human" },
   abstain: { icon: "–", tone: "border-border-strong bg-surface-raised text-text-secondary" },
 };
