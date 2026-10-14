@@ -340,18 +340,19 @@ export function testResultOf(row: Pick<PortfolioRow, "ours" | "required" | "stat
   return row.ours < row.required ? "below_minimum" : "meets_minimum";
 }
 
+/** The covenant verdict in the words a credit analyst uses. */
 export const TEST_RESULT_LABEL: Record<TestResult, string> = {
-  below_minimum: "Below minimum",
-  meets_minimum: "Meets minimum",
+  below_minimum: "Breach",
+  meets_minimum: "In compliance",
   not_tested: "Not tested",
 };
 
 /** What the agent put forward, in an analyst's words. Null when it has not finished. */
 const SUGGESTS: Record<string, string> = {
-  resolve: "Suggests resolution",
-  escalate: "Suggests escalation",
-  request: "Suggests requesting documents",
-  abstain: "Suggests no conclusion",
+  resolve: "Recommendation: Resolve",
+  escalate: "Recommendation: Escalate",
+  request: "Recommendation: Request documents",
+  abstain: "Recommendation: Abstain",
 };
 
 export interface ReviewStatusView {
@@ -373,7 +374,7 @@ export function reviewStatusOf(
 ): ReviewStatusView {
   switch (row.status) {
     case "in_review":
-      return { label: "Ready for review", detail: SUGGESTS[row.recommendation ?? ""] ?? null, tone: "human" };
+      return { label: "Ready for analyst review", detail: SUGGESTS[row.recommendation ?? ""] ?? null, tone: "human" };
     case "investigating":
       return { label: "Investigating", detail: null, tone: "model" };
     case "awaiting_docs":
@@ -381,9 +382,9 @@ export function reviewStatusOf(
     case "decided":
       return { label: "Decision recorded", detail: null, tone: "muted" };
     case "breach_investigate":
-      return { label: "Not investigated", detail: null, tone: "code" };
+      return { label: "Awaiting investigation", detail: null, tone: "code" };
     case "compliant":
-      return { label: "No review needed", detail: null, tone: "muted" };
+      return { label: "No exception identified", detail: null, tone: "muted" };
     case "not_tested":
       return row.hasApprovedTerms
         ? { label: "Not tested", detail: null, tone: "muted" }
@@ -391,9 +392,19 @@ export function reviewStatusOf(
   }
 }
 
-/** Queue-level counts. `tested` is "3 of 5" — loans with a result this period. */
+/**
+ * Queue-level counts. `tested` is "3 of 5" — loans with a result this period.
+ *
+ * `awaitingInvestigation` exists because the summary band was under-reporting
+ * the analyst's workload: an open breach with no casefile yet needs attention
+ * just as much as a finished one awaiting review, and it was counted nowhere.
+ * The header said "1" when two loans wanted a decision. Under-reporting work is
+ * the worst direction for this number to be wrong.
+ */
 export function queueCounts(rows: readonly PortfolioRow[]): {
   readyForReview: number;
+  awaitingInvestigation: number;
+  needsAttention: number;
   tested: number;
   total: number;
   termsApprovalNeeded: number;
@@ -401,6 +412,8 @@ export function queueCounts(rows: readonly PortfolioRow[]): {
 } {
   return {
     readyForReview: rows.filter((r) => r.status === "in_review").length,
+    awaitingInvestigation: rows.filter((r) => r.status === "breach_investigate").length,
+    needsAttention: rows.filter((r) => r.status === "in_review" || r.status === "breach_investigate").length,
     tested: rows.filter((r) => testResultOf(r) !== "not_tested").length,
     total: rows.length,
     termsApprovalNeeded: rows.filter((r) => !r.hasApprovedTerms).length,

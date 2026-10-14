@@ -19,7 +19,7 @@ import {
  * next, with one action per row.
  *
  * TEST RESULT AND REVIEW STATUS ARE SEPARATE COLUMNS, deliberately. A failing
- * quarter stays "Below minimum" after a decision is recorded on it; collapsing
+ * quarter stays a "Breach" after a decision is recorded on it; collapsing
  * the two is how a screen ends up implying a breach stopped failing because
  * someone wrote down what they decided about it.
  *
@@ -28,10 +28,20 @@ import {
 
 const dscr = (v: number | null): string => (v == null ? "—" : `${v.toFixed(2)}x`);
 
+/**
+ * Softly tinted, not outlined: on a light canvas a saturated outline reads as
+ * an alert on every row. The glyph differs per state as well as the colour —
+ * meaning is never carried by hue alone (design.md §2).
+ */
 const RESULT_TONE: Record<TestResult, string> = {
-  below_minimum: "border-danger bg-danger-bg text-danger",
-  meets_minimum: "border-success bg-success-bg text-success",
-  not_tested: "border-border-strong text-text-muted",
+  below_minimum: "bg-danger-bg text-danger",
+  meets_minimum: "bg-success-bg text-success",
+  not_tested: "bg-surface-raised text-text-muted",
+};
+const RESULT_GLYPH: Record<TestResult, string> = {
+  below_minimum: "▼",
+  meets_minimum: "✓",
+  not_tested: "–",
 };
 
 const REVIEW_TONE: Record<string, string> = {
@@ -42,11 +52,11 @@ const REVIEW_TONE: Record<string, string> = {
 };
 
 const DETAIL_TONE: Record<string, string> = {
-  "Suggests resolution": "text-success",
-  "Suggests escalation": "text-danger",
+  "Recommendation: Resolve": "text-success",
+  "Recommendation: Escalate": "text-danger",
 };
 
-type Filter = "all" | "review" | "untested";
+type Filter = "all" | "review" | "investigate" | "untested";
 
 export function PortfolioTable({
   rows,
@@ -65,12 +75,17 @@ export function PortfolioTable({
   const counts = useMemo(() => queueCounts(rows), [rows]);
 
   const view = useMemo(() => {
+    // One definition of each state, shared by the counts, the chips and the
+    // rows. A chip that filtered on a different rule than the count beside it
+    // would make the two disagree in front of the analyst.
     const byFilter =
       filter === "review"
         ? rows.filter((r) => r.status === "in_review")
-        : filter === "untested"
-          ? rows.filter((r) => testResultOf(r) === "not_tested")
-          : rows;
+        : filter === "investigate"
+          ? rows.filter((r) => r.status === "breach_investigate")
+          : filter === "untested"
+            ? rows.filter((r) => testResultOf(r) === "not_tested")
+            : rows;
     const q = query.trim().toLowerCase();
     return q === "" ? byFilter : byFilter.filter((r) => r.borrower.toLowerCase().includes(q));
   }, [rows, filter, query]);
@@ -83,7 +98,10 @@ export function PortfolioTable({
             All loans · {counts.total}
           </FilterChip>
           <FilterChip active={filter === "review"} onClick={() => setFilter("review")}>
-            Ready for review · {counts.readyForReview}
+            Ready for analyst review · {counts.readyForReview}
+          </FilterChip>
+          <FilterChip active={filter === "investigate"} onClick={() => setFilter("investigate")}>
+            Awaiting investigation · {counts.awaitingInvestigation}
           </FilterChip>
           <FilterChip active={filter === "untested"} onClick={() => setFilter("untested")}>
             Untested · {counts.untested}
@@ -103,13 +121,13 @@ export function PortfolioTable({
 
       <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card shadow-card">
         <table className="w-full border-collapse text-left">
-          <thead className="bg-model-bg/50">
-            <tr className="text-label text-model-bright">
+          <thead className="bg-surface-raised">
+            <tr className="text-label uppercase tracking-wide text-text-muted">
               <th className="whitespace-nowrap px-3 py-2 font-medium">Borrower</th>
               <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Computed DSCR</th>
               <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Reported DSCR</th>
               <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Minimum</th>
-              <th className="whitespace-nowrap px-3 py-2 font-medium">Test result</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Covenant test result</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Review status</th>
               <th className="whitespace-nowrap px-3 py-2 font-medium">Next action</th>
             </tr>
@@ -127,33 +145,33 @@ export function PortfolioTable({
               const review = reviewStatusOf(r);
               return (
                 <tr key={r.facilityId} className="border-t border-border transition-colors duration-fast hover:bg-surface-raised">
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-3">
                     <p className="text-body text-text">{r.borrower}</p>
                     <p className="text-label text-text-muted">
                       {r.industry ?? "—"}
                       {r.termsVersion != null && <span className="ml-2 font-mono">· Terms v{r.termsVersion}</span>}
                     </p>
                   </td>
-                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
-                  <td className="px-3 py-2">
-                    <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded border px-3 py-px text-label ${RESULT_TONE[result]}`}>
-                      <span aria-hidden="true">●</span>
+                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
+                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
+                  <td className="px-3 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded px-2 py-px text-label ${RESULT_TONE[result]}`}>
+                      <span aria-hidden="true">{RESULT_GLYPH[result]}</span>
                       {TEST_RESULT_LABEL[result]}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-3">
                     <p className={`text-body ${REVIEW_TONE[review.tone]}`}>{review.label}</p>
                     {review.detail && (
                       <p className={`text-label ${DETAIL_TONE[review.detail] ?? "text-text-muted"}`}>{review.detail}</p>
                     )}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-3">
                     {/* One width for the column whichever component renders the
                         action — Investigate and Run are their own components
                         and were sizing themselves. */}
-                    <div className="w-[132px] [&>*]:w-full [&_a]:w-full [&_button]:w-full [&_button]:justify-center">
+                    <div className="w-[124px] [&>*]:w-full [&_a]:w-full [&_button]:w-full [&_button]:justify-center">
                       <RowAction row={r} targetPeriod={targetPeriod} targetLabel={targetLabel} />
                     </div>
                   </td>
@@ -187,7 +205,7 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
   // reserved for the two that SPEND something: running a test and starting an
   // investigation. The colour tells you whether a click costs anything.
   const open =
-    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 py-2 text-body font-medium leading-5 text-text shadow-card transition-colors duration-fast hover:bg-surface-raised";
+    "inline-flex min-w-[124px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast hover:bg-surface-raised";
 
   switch (row.status) {
     case "breach_investigate":
@@ -229,6 +247,7 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
         <RunTestButton
           // Quarter only, no year: "Re-run Q2 2026" wraps to two lines in the
           // fixed-width action cell. The year is already in the page eyebrow.
+          compact
           label={row.status === "compliant" ? `Re-run ${shortQuarter}` : `Run ${shortQuarter}`}
           endpoint="/api/tests/run"
           body={{ facility_id: row.facilityId, test_period_end: targetPeriod }}

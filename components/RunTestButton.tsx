@@ -20,8 +20,10 @@ export function RunTestButton(props: {
   disabledReason?: string | null;
   /** The play mark. Off by default: in a table cell the label wraps around it. */
   showPlay?: boolean;
+  /** Row actions are chips, not slabs: outline, denser, no play glyph. */
+  compact?: boolean;
 }) {
-  const { label, endpoint, body, disabledReason, showPlay = false } = props;
+  const { label, endpoint, body, disabledReason, showPlay = false, compact = false } = props;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,11 @@ export function RunTestButton(props: {
         onClick={run}
         disabled={disabled || busy}
         aria-describedby={disabled ? reasonId : undefined}
-        className="inline-flex items-center justify-center gap-2 rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast ease-out hover:bg-model-bright disabled:cursor-not-allowed disabled:opacity-40"
+        className={
+          compact
+            ? "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-model bg-surface px-3 py-2 text-body font-medium leading-5 text-model transition-colors duration-fast ease-out hover:bg-model-bg disabled:cursor-not-allowed disabled:opacity-40"
+            : "inline-flex items-center justify-center gap-2 rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast ease-out hover:bg-model-bright disabled:cursor-not-allowed disabled:opacity-40"
+        }
       >
         {/* The mark says this one RUNS something, which is the distinction the
             colour already carries — a click here spends work, the beige ones

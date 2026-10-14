@@ -131,7 +131,7 @@ export default async function Home() {
       <header className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
-            <p className="text-label text-text-muted">DSCR monitoring · {targetLabel}</p>
+            <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
             <h1 className="text-title text-text">Credit Analysis Queue</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -147,13 +147,16 @@ export default async function Home() {
           Monitor covenant tests, investigate exceptions, and review recommendations with the evidence at hand.
         </p>
 
-        <StatBand
-          stats={[
-            { label: "Ready for review", value: String(counts.readyForReview), tone: counts.readyForReview ? "human" : "muted" },
+        <SummaryStrip
+          items={[
+            { label: "ready for analyst review", value: counts.readyForReview, filter: "review" },
+            // Counted separately and deliberately: an open breach with no
+            // casefile is work, and the band used to omit it entirely.
+            { label: "awaiting investigation", value: counts.awaitingInvestigation, filter: "investigate" },
             // A ratio, not a bare count: "3" alone never says how much of the
             // book is still untested.
-            { label: "Loans tested", value: `${counts.tested} of ${counts.total}`, tone: "muted" },
-            { label: "Terms approval needed", value: String(counts.termsApprovalNeeded), tone: counts.termsApprovalNeeded ? "code" : "muted" },
+            { label: "loans tested", value: `${counts.tested} of ${counts.total}`, filter: null },
+            { label: "awaiting terms approval", value: counts.termsApprovalNeeded, filter: null },
           ]}
         />
       </header>
@@ -184,20 +187,31 @@ export default async function Home() {
  * "Avg steps / case" is deliberately NOT here: it measures the agent, not the
  * portfolio, and belongs with the eval scoreboard on Governance (review 3).
  */
-function StatBand({
-  stats,
+/**
+ * The work in front of the analyst, as one line rather than four tiles.
+ *
+ * The tiles were the largest thing on a screen whose job is the table beneath
+ * them, and they pushed the queue below the fold. A zero is kept visually quiet
+ * — nothing is drawn to a count of nothing to do.
+ */
+function SummaryStrip({
+  items,
 }: {
-  stats: { label: string; value: string; tone: "danger" | "human" | "code" | "muted" }[];
+  items: { label: string; value: number | string; filter: string | null }[];
 }) {
-  const tone = { danger: "text-danger", human: "text-human", code: "text-code-bright", muted: "text-text" } as const;
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-      {stats.map((s) => (
-        <div key={s.label} className="rounded-lg border border-border bg-surface px-4 py-3 shadow-card">
-          <p className="text-label text-text-muted">{s.label}</p>
-          <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>
-        </div>
-      ))}
+    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3">
+      {items.map((s, i) => {
+        const zero = s.value === 0 || s.value === "0";
+        return (
+          // A divider is a border, not a character: as text it is read out by a
+          // screen reader and audited for contrast it can never meet.
+          <div key={s.label} className={`flex items-baseline gap-2 ${i > 0 ? "border-l border-border pl-6" : ""}`}>
+            <span className={`font-mono text-num tabular-nums ${zero ? "text-text-muted" : "text-text"}`}>{s.value}</span>
+            <span className={`text-body ${zero ? "text-text-muted" : "text-text-secondary"}`}>{s.label}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
