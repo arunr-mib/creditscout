@@ -158,8 +158,11 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           )}
           <Figure label="Minimum DSCR" value={fmtX(summary.required)} />
           <Figure
-            label="Period"
-            value={view.testPeriodEnd ? `${view.testBasis ?? ""} ending ${view.testPeriodEnd}`.trim() : view.period}
+            label="Reporting period"
+            // The quarter, not the measurement basis. "TTM ending 2026-06-30"
+            // is how the covenant is computed; an analyst identifies the test
+            // by its reporting period, and the basis belongs with the terms.
+            value={view.period}
             muted
           />
         </dl>

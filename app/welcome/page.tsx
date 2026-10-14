@@ -139,32 +139,37 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         {/* ------------------------------------------------------- workflow */}
         <section id="how-it-works" aria-labelledby="how-heading" className="mt-16 scroll-mt-[96px] border-t border-night-border pt-12">
           <h2 id="how-heading" className="max-w-prose text-section text-night-text">
-            The borrower&rsquo;s ratio is the starting point. Verification is the work.
+            From approved terms to an informed decision.
           </h2>
           <p className="mt-3 max-w-prose text-body text-night-secondary">
-            A covenant exception rarely lives in one document. CreditScout brings the terms, calculations, and
-            supporting evidence together so you can assess what the numbers mean.
+            Trace the terms, verify the calculations, and investigate covenant exceptions.
           </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            <Step
-              tone="human"
+          {/* An editorial sequence, not three notification cards. The coloured
+              left rules made every panel look like an alert, and implied a
+              status difference between steps that does not exist — they are
+              stages of one process, not three states. One accent throughout,
+              with thin connectors standing in for the rules. */}
+          <ol className="mt-8 grid gap-12 md:grid-cols-3 md:gap-6">
+            <ProcessStep
               step="01"
               head="Establish the terms"
-              body="Review proposed covenant definitions beside their source clauses. Approve versioned, effective-dated terms for future tests."
+              body="Review covenant definitions against their source clauses. Approve versioned, effective-dated terms for future tests."
+              icon="document"
             />
-            <Step
-              tone="code"
+            <ProcessStep
               step="02"
-              head="Compute independently"
-              body="Test DSCR against approved terms and reconcile the result with the borrower’s reported figure."
+              head="Test the covenants"
+              body="Calculate results against approved terms and reconcile borrower-reported figures."
+              icon="calculator"
             />
-            <Step
-              tone="model"
+            <ProcessStep
               step="03"
-              head="Investigate the exception"
-              body="Follow the evidence across agreements and amendments. Review cited findings, missing information, and the resulting recommendation."
+              head="Investigate exceptions"
+              body="Review cited findings and a recommendation for analyst decision."
+              icon="investigation"
+              last
             />
-          </div>
+          </ol>
         </section>
 
         {/* ------------------------------------------------------ oversight */}
@@ -280,16 +285,74 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** One numbered workflow step. The tone rule still holds: slate human, amber code, teal model. */
-function Step({ tone, step, head, body }: { tone: "model" | "code" | "human"; step: string; head: string; body: string }) {
-  const accent = tone === "model" ? "text-model-night" : tone === "code" ? "text-code-bright" : "text-human";
-  const rule = tone === "model" ? "border-l-model" : tone === "code" ? "border-l-code" : "border-l-border-strong";
+/**
+ * One stage of the process.
+ *
+ * Deliberately NOT a card. The previous version gave each step a coloured left
+ * rule — slate, amber, teal — which made three stages of one workflow look like
+ * three alerts of differing severity, and suggested a status distinction the
+ * steps do not carry. Open columns, one accent, a thin connector.
+ */
+function ProcessStep({
+  step,
+  head,
+  body,
+  icon,
+  last = false,
+}: {
+  step: string;
+  head: string;
+  body: string;
+  icon: "document" | "calculator" | "investigation";
+  last?: boolean;
+}) {
   return (
-    <div className={`rounded-md border border-night-border border-l-2 ${rule} bg-night-raised p-4`}>
-      <p className={`font-mono text-label ${accent}`}>{step}</p>
+    <li className="relative">
+      <div className="flex items-center">
+        <StepIcon kind={icon} />
+        {/* Desktop only: the connector implies sequence, which stacking already
+            does on a narrow screen. */}
+        {!last && (
+          <span aria-hidden="true" className="ml-4 hidden h-px flex-1 bg-night-border-strong md:block" />
+        )}
+      </div>
+      <p className="mt-6 font-mono text-label text-model-night">{step}</p>
       <h3 className="mt-2 text-card text-night-text">{head}</h3>
-      <p className="mt-2 text-body text-night-secondary">{body}</p>
-    </div>
+      <p className="mt-2 max-w-[34ch] text-body text-night-secondary">{body}</p>
+    </li>
+  );
+}
+
+/** Line icons at a consistent weight, drawn rather than imported — no icon dependency. */
+function StepIcon({ kind }: { kind: "document" | "calculator" | "investigation" }) {
+  const common = { fill: "none", strokeLinecap: "round" as const, strokeLinejoin: "round" as const, strokeWidth: 1.5 };
+  return (
+    <svg viewBox="0 0 48 48" className="h-12 w-12 shrink-0" role="img" aria-hidden="true">
+      {kind === "document" && (
+        <g {...common}>
+          <path d="M12 6h16l8 8v28H12z" stroke="#E8EDF0" />
+          <path d="M28 6v8h8" stroke="#E8EDF0" />
+          <path d="M18 22h12M18 28h12M18 34h7" stroke="#5EC2BA" />
+        </g>
+      )}
+      {kind === "calculator" && (
+        <g {...common}>
+          <rect x="12" y="6" width="24" height="36" rx="3" stroke="#E8EDF0" />
+          <rect x="17" y="12" width="14" height="6" rx="1" stroke="#5EC2BA" />
+          <path d="M18 25h3M23.5 25h3M29 25h3M18 31h3M23.5 31h3" stroke="#5EC2BA" />
+          <path d="M29 31v5" stroke="#5EC2BA" />
+        </g>
+      )}
+      {kind === "investigation" && (
+        <g {...common}>
+          <path d="M12 6h16l8 8v28H12z" stroke="#E8EDF0" />
+          <path d="M28 6v8h8" stroke="#E8EDF0" />
+          <path d="M18 20h10M18 26h7" stroke="#E8EDF0" />
+          <circle cx="28" cy="32" r="6" stroke="#5EC2BA" />
+          <path d="M32.5 36.5 37 41" stroke="#5EC2BA" />
+        </g>
+      )}
+    </svg>
   );
 }
 
