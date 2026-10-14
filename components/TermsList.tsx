@@ -76,7 +76,7 @@ function Card({ card }: { card: TermsCard }) {
   const hasTerms = card.versions.length > 0;
 
   return (
-    <article className="overflow-hidden rounded-lg border border-border-strong bg-surface">
+    <article className="overflow-hidden rounded-lg border border-border bg-surface shadow-card shadow-card">
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
         <div className="flex flex-wrap items-baseline gap-3">
           <h2 className="text-card text-text">{card.borrower}</h2>
@@ -109,7 +109,7 @@ function Card({ card }: { card: TermsCard }) {
           </div>
           <Link
             href={setupHref}
-            className="shrink-0 rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg hover:bg-text"
+            className="shrink-0 rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised"
           >
             Review update
           </Link>

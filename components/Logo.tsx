@@ -20,6 +20,10 @@
  * The original's hierarchy survives: the outer evidence points stay quieter
  * than the one in the middle.
  *
+ * Still mapped for DARK surfaces after the 2026-10-13 light flip: the only
+ * places it appears are the nav rail and the marketing pages, both of which
+ * stayed dark. If it is ever placed on a light surface it needs the inverse.
+ *
  * Size it with a height class and let the width follow — `h-8 w-auto`.
  */
 export function Logo({ className = "h-8 w-auto" }: { className?: string }) {

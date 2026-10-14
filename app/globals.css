@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  html { color-scheme: dark; }
+  html { color-scheme: light; }
   body { @apply bg-bg text-text-secondary antialiased; }
   /* Numeric columns must align — analysts scan columns of ratios. */
   .font-mono { font-variant-numeric: tabular-nums; }

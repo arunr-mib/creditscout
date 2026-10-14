@@ -27,7 +27,7 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
       {!bare && <h2 className="text-section text-text">Eval scoreboard</h2>}
 
       {state === "awaiting" ? (
-        <div className="space-y-2 rounded-lg border border-border bg-surface p-6">
+        <div className="space-y-2 rounded-lg border border-border bg-surface shadow-card p-6">
           <p className="text-body text-text-secondary">Not measured yet.</p>
           <p className="max-w-prose text-label text-text-muted">
             The harness runs every labelled case twice — once with memory cleared (cold) and once with prior analyst
@@ -46,7 +46,7 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
 
 function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: MetricCell[] | null }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
       <table className="w-full border-collapse">
         <thead className="bg-model-bg/50">
           <tr className="border-b border-border">

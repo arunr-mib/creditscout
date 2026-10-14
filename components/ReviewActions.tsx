@@ -67,7 +67,7 @@ export function ReviewActions(props: {
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
-    <section aria-label="Review the recommendation" className="rounded-lg border border-border-strong bg-surface p-4">
+    <section aria-label="Review the recommendation" className="rounded-lg border border-border bg-surface shadow-card shadow-card p-4">
       <div className="mb-3 space-y-1">
         <LockedPolicyValue name="require_human_review" value={humanReviewRequired} />
         <p className="text-label text-text-muted">{notice.text}</p>

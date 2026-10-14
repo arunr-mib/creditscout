@@ -101,17 +101,17 @@ export function PortfolioTable({
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border-strong bg-surface">
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card shadow-card">
         <table className="w-full border-collapse text-left">
           <thead className="bg-model-bg/50">
             <tr className="text-label text-model-bright">
-              <th className="whitespace-nowrap px-4 py-3 font-medium">Borrower</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Computed DSCR</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Reported DSCR</th>
-              <th className="whitespace-nowrap px-4 py-3 text-right font-medium">Minimum</th>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">Test result</th>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">Review status</th>
-              <th className="whitespace-nowrap px-4 py-3 font-medium">Next action</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Borrower</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Computed DSCR</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Reported DSCR</th>
+              <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Minimum</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Test result</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Review status</th>
+              <th className="whitespace-nowrap px-3 py-2 font-medium">Next action</th>
             </tr>
           </thead>
           <tbody>
@@ -127,29 +127,29 @@ export function PortfolioTable({
               const review = reviewStatusOf(r);
               return (
                 <tr key={r.facilityId} className="border-t border-border transition-colors duration-fast hover:bg-surface-raised">
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <p className="text-body text-text">{r.borrower}</p>
                     <p className="text-label text-text-muted">
                       {r.industry ?? "—"}
                       {r.termsVersion != null && <span className="ml-2 font-mono">· Terms v{r.termsVersion}</span>}
                     </p>
                   </td>
-                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text">{dscr(r.ours)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.theirs)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text-secondary">{dscr(r.required)}</td>
+                  <td className="px-3 py-2">
                     <span className={`inline-flex whitespace-nowrap items-center gap-2 rounded border px-3 py-px text-label ${RESULT_TONE[result]}`}>
                       <span aria-hidden="true">●</span>
                       {TEST_RESULT_LABEL[result]}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     <p className={`text-body ${REVIEW_TONE[review.tone]}`}>{review.label}</p>
                     {review.detail && (
                       <p className={`text-label ${DETAIL_TONE[review.detail] ?? "text-text-muted"}`}>{review.detail}</p>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2">
                     {/* One width for the column whichever component renders the
                         action — Investigate and Run are their own components
                         and were sizing themselves. */}
@@ -187,7 +187,7 @@ function RowAction({ row, targetPeriod, targetLabel }: { row: PortfolioRow; targ
   // reserved for the two that SPEND something: running a test and starting an
   // investigation. The colour tells you whether a click costs anything.
   const open =
-    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong bg-human px-3 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-text";
+    "inline-flex min-w-[132px] items-center justify-center whitespace-nowrap rounded-md border border-border-strong bg-surface px-3 py-2 text-body font-medium leading-5 text-text shadow-card transition-colors duration-fast hover:bg-surface-raised";
 
   switch (row.status) {
     case "breach_investigate":

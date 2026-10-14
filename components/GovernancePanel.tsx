@@ -23,7 +23,7 @@ export function GovernancePanel({ rows, bare = false }: { rows: PolicyTableRow[]
           Set by the Credit Risk Officer. The agent recommends within these bounds; it never changes them.
         </p>
       )}
-      <div className="overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
         <table className="w-full border-collapse">
           <thead className="bg-model-bg/50">
             <tr className="border-b border-border">

@@ -52,7 +52,7 @@ export function LoginForm({ next, demo }: { next: string; demo: { username: stri
 
   return (
     <>
-      <div className="rounded-lg border border-border-strong bg-surface p-6">
+      <div className="rounded-lg border border-border bg-surface shadow-card shadow-card p-6">
         <form ref={formRef} action={action} className="flex flex-col gap-3">
           <input type="hidden" name="next" value={next} />
           <label className="flex flex-col gap-1">

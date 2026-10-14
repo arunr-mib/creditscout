@@ -90,7 +90,7 @@ export default async function DocumentsPage() {
                     </span>
                   </p>
                 </div>
-                <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-md border border-border-strong bg-human px-3 py-1 text-body font-medium leading-5 text-bg hover:bg-text">
+                <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised">
                   Review terms
                 </Link>
               </li>

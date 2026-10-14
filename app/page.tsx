@@ -126,9 +126,9 @@ export default async function Home() {
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       {/* ---------------------------------------------------------------- header */}
-      <header className="space-y-4">
+      <header className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
             <p className="text-label text-text-muted">DSCR monitoring · {targetLabel}</p>
@@ -159,7 +159,7 @@ export default async function Home() {
       </header>
 
       {/* -------------------------------------------------------- portfolio table */}
-      <section aria-label="Loans" className="space-y-3">
+      <section aria-label="Loans" className="space-y-2">
         {facilities.length === 0 ? (
           <p className="text-body text-text-secondary">No loans on file. Board a covenant to add one.</p>
         ) : (
@@ -193,7 +193,7 @@ function StatBand({
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {stats.map((s) => (
-        <div key={s.label} className="rounded-lg border border-border-strong bg-surface-raised px-4 py-4">
+        <div key={s.label} className="rounded-lg border border-border bg-surface px-4 py-3 shadow-card">
           <p className="text-label text-text-muted">{s.label}</p>
           <p className={`mt-1 font-mono text-title ${tone[s.tone]}`}>{s.value}</p>
         </div>

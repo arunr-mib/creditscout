@@ -62,7 +62,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <section aria-label="Investigation controls" className="rounded-lg border border-border-strong bg-surface">
+            <section aria-label="Investigation controls" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-model-bright">Investigation limits</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">Read-only</span>
@@ -79,7 +79,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
                 Officer's and can be changed; these cannot be changed by anyone
                 without a code change, and they are what the product's claim
                 actually rests on. */}
-            <section aria-label="Enforcement rules" className="rounded-lg border border-border-strong bg-surface lg:col-span-2">
+            <section aria-label="Enforcement rules" className="rounded-lg border border-border bg-surface shadow-card shadow-card lg:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-model-bright">Enforcement rules (always applied)</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">
@@ -114,7 +114,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
               </div>
             </section>
 
-            <section aria-label="Evaluation results" className="rounded-lg border border-border-strong bg-surface">
+            <section aria-label="Evaluation results" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
               <div className="border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-model-bright">Evaluation results</h2>
                 <p className="mt-1 text-body text-text-secondary">
@@ -163,7 +163,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 
       {/* Shown, not withheld: at n=6 the sample size is the first thing an
           honest reader wants, and both facts are in the row the harness wrote. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface shadow-card px-4 py-3">
         <p className="text-label text-text-muted">
           <span aria-hidden="true">ⓘ </span>
           Evaluation results describe the recorded test runs, not a guarantee of future performance.
@@ -180,7 +180,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 /** The per-case record behind the headline numbers. */
 function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
   if (runs.length === 0) {
-    return <p className="rounded-lg border border-border bg-surface p-6 text-body text-text-muted">No evaluation run recorded yet.</p>;
+    return <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">No evaluation run recorded yet.</p>;
   }
   return (
     <div className="space-y-4">
@@ -188,7 +188,7 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
         const m = (r.metrics ?? {}) as Record<string, unknown>;
         const cases = Array.isArray(m.cases) ? (m.cases as Record<string, unknown>[]) : [];
         return (
-          <section key={`${r.mode}-${i}`} className="rounded-lg border border-border-strong bg-surface">
+          <section key={`${r.mode}-${i}`} className="rounded-lg border border-border bg-surface shadow-card shadow-card">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
               <h2 className="text-card text-text">
                 {r.mode === "warm" ? "With prior lessons" : "Without prior lessons"}

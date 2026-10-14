@@ -106,13 +106,13 @@ export function LessonList({ rows }: { rows: LessonRow[] }) {
       </p>
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-6 text-body text-text-muted">
+        <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">
           No prior cases match those filters.
         </p>
       ) : (
         <ul className="space-y-3">
           {groups.map((g) => (
-            <li key={g.key} className="rounded-lg border border-border-strong bg-surface">
+            <li key={g.key} className="rounded-lg border border-border bg-surface shadow-card shadow-card">
               <Record row={g.records[0]} borrower={g.borrower} period={g.period} />
               {g.records.length > 1 && (
                 <details className="border-t border-border-strong">

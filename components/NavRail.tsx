@@ -40,7 +40,7 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
     // destinations ever outgrow the screen.
     <nav
       aria-label="Primary"
-      className="flex shrink-0 flex-col gap-1 border-b border-border bg-sunken px-3 py-4 md:sticky md:top-0 md:h-screen md:w-[224px] md:overflow-y-auto md:border-b-0 md:border-r"
+      className="flex shrink-0 flex-col gap-1 border-b border-night-border bg-sunken px-3 py-4 md:sticky md:top-0 md:h-screen md:w-[224px] md:overflow-y-auto md:border-b-0 md:border-r"
     >
       <div className="mb-4 px-2">
         <Link href="/" aria-label="CreditScout — go to the queue" className="block">
@@ -62,12 +62,12 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
                 href={d.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex items-center justify-between gap-2 rounded-md px-3 py-2 text-body transition-colors duration-fast ${
-                  active ? "bg-surface-raised text-text" : "text-text-secondary hover:bg-surface hover:text-text"
+                  active ? "bg-night-raised text-night-text" : "text-night-secondary hover:bg-night-hover hover:text-night-text"
                 }`}
               >
                 <span>{d.label}</span>
                 {count > 0 && (
-                  <span className="rounded-sm bg-surface px-2 font-mono text-badge text-text-muted">{count}</span>
+                  <span className="rounded-sm bg-night-raised px-2 font-mono text-badge text-night-muted">{count}</span>
                 )}
               </Link>
             </li>
@@ -79,17 +79,17 @@ export function NavRail({ counts, search, user }: { counts: NavCounts; search: S
           so both sit at the foot of the rail. No "Signed in" label: a name at
           the foot of the rail already says that, and the role is what actually
           tells you something. */}
-      <div className="mt-6 border-t border-border px-3 pt-4 md:mt-auto">
-        <p className="truncate text-body text-text" title={user.name}>
+      <div className="mt-6 border-t border-night-border px-3 pt-4 md:mt-auto">
+        <p className="truncate text-body text-night-text" title={user.name}>
           {user.name}
         </p>
-        <p className="text-badge text-text-muted">{user.role}</p>
+        <p className="text-badge text-night-muted">{user.role}</p>
       </div>
 
       <form action={signOut} className="px-1 pt-1">
         <button
           type="submit"
-          className="w-full rounded-md px-3 py-2 text-left text-body text-text-muted transition-colors duration-fast hover:bg-surface hover:text-text"
+          className="w-full rounded-md px-3 py-2 text-left text-body text-night-muted transition-colors duration-fast hover:bg-night-hover hover:text-night-text"
         >
           Sign out
         </button>
