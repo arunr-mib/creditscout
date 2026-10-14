@@ -275,215 +275,230 @@ for name, kind in tools:
 fy = 898
 P.append(f'<line x1="64" y1="{fy}" x2="1600" y2="{fy}" stroke="{L_EDGE}" stroke-width="1"/>')
 P.append(f'<text x="64" y="{fy+30}" fill="{L_TEXT}" font-size="14.5">It remembers. A decision you record becomes a lesson, and the next similar exception starts with that lesson in hand.</text>')
-P.append(f'<text x="64" y="{fy+54}" fill="{L_MUTED}" font-size="13">Across three live runs that has not made investigations shorter. The effect is neutral, and we do not claim otherwise.</text>')
 
 write("creditscout-user-flow.svg", ldoc(1664, 1012, "\n  ".join(P)))
 print("user flow written")
 
 # ========================================================= ARCHITECTURE
 #
-# An architecture review, not a pitch. Responsibilities, boundaries and short
-# descriptions; the longer explanations are numbered notes beneath the drawing
-# and the versions and filenames are in one strip at the foot.
+# Four bands, read top to bottom: who uses it, what runs it, what the agent is
+# allowed to do, and where things are kept. Each band carries its own one-line
+# purpose on the rail, so the picture explains itself before any box is read.
 #
-# TWO CLAIMS WERE CORRECTED HERE, both of which had been overstated:
+# WHAT THIS DELIBERATELY DOES NOT CARRY: model versions, embedding dimensions
+# and filenames. Those are deployment facts and they belong in deployment
+# documentation, where they can change without redrawing the architecture.
+#
+# TWO CLAIMS WERE CORRECTED WHEN THIS WAS REDRAWN, both overstated before:
 #
 #   "The model never produces a number" — too absolute. The agent supplies the
-#   inputs and the term definitions a calculation runs on. What is true, and
-#   what matters, is that covenant results are CALCULATED AND VALIDATED BY
-#   APPLICATION CODE.
+#   inputs and the term definitions a calculation runs on. What is true: the
+#   result is calculated and validated by application code.
 #
 #   "Neither reachable by the model" — ambiguous, since the agent does invoke
-#   the calculator. The accurate statement is that it can request a calculation
-#   and supply its inputs, and cannot change the calculation logic or the
-#   validation rules.
+#   the calculator. It can request a calculation; it cannot change the
+#   calculation logic or the validation rules.
 #
-# AND ONE CONNECTOR WAS WRONG. The specialists are serviced IN-PROCESS by the
-# application (`orchestrator.ts`: "they have no route"), and they reach
-# documents through the application's own retrieval, never through the tool
-# gateway and never with a database handle of their own. The old drawing let
-# both of those be read the other way.
+# ON THE GATEWAY AND THE SPECIALISTS: the three specialists are serviced
+# in-process (`orchestrator.ts`: "they have no route"), while retrieval and the
+# calculator are HTTP routes carrying a key. That difference is TRANSPORT, and
+# transport is a deployment fact. What holds for all three, and what this band
+# claims, is that they are approved operations scoped to the active case: the
+# borrower and the period come from the casefile, never from the agent's
+# arguments. The gateway bar is drawn over all three on that basis.
 
-A_BG, A_CARD, A_EDGE = "#F7F9FA", "#FFFFFF", "#C7D3DA"
-A_TEXT, A_SECOND, A_MUTED = "#19282F", "#52646D", "#6B7C85"
-A_TEAL, A_TEAL_SOFT = "#146C67", "#E8F2F1"
-A_ZONE = {
-    "Experience": "#EEF2F4",
-    "Application": "#EDF2F1",
-    "Investigation": "#E9F0F3",
-    "Data": "#EFF1F2",
-}
-A_LINE, A_DATA_LINE = "#8B9BA5", "#B3C0C8"
+A_BG, A_CARD, A_EDGE = "#F5F8F9", "#FFFFFF", "#CBD6DB"
+A_TEXT, A_SECOND, A_MUTED = "#15232A", "#4E6069", "#7C8B93"
+A_TEAL = "#146C67"
+A_BAND = "#EEF3F4"
+A_LINE = "#5E7984"
 
 A = []
 
 
-def zone(x, y, w, h, label):
+def icon(kind, x, y, col=A_TEAL, s=1.0):
+    """A 34px line icon, drawn here so the set stays consistent."""
+    def p(d, w=2.0, fill="none"):
+        return f'<path d="{d}" fill="{fill}" stroke="{col}" stroke-width="{w}" stroke-linecap="round" stroke-linejoin="round"/>'
+    g = {
+        "person": f'<circle cx="{x+17}" cy="{y+12}" r="6.5" fill="none" stroke="{col}" stroke-width="2"/>'
+                  + p(f"M{x+5},{y+30} a12,10 0 0 1 24,0"),
+        "window": p(f"M{x+3},{y+7} h28 a2,2 0 0 1 2,2 v16 a2,2 0 0 1 -2,2 h-28 a2,2 0 0 1 -2,-2 v-16 a2,2 0 0 1 2,-2 z")
+                  + p(f"M{x+1},{y+14} h32", 1.6)
+                  + f'<circle cx="{x+6}" cy="{y+10.5}" r="1.4" fill="{col}"/>',
+        "gear": f'<circle cx="{x+17}" cy="{y+18}" r="5" fill="none" stroke="{col}" stroke-width="2"/>'
+                + p(f"M{x+17},{y+18} m0,-11 a11,11 0 1 1 -0.1,0 z", 2.0)
+                + p(f"M{x+17},{y+5} v3 M{x+17},{y+28} v3 M{x+4},{y+18} h3 M{x+27},{y+18} h3"
+                    f" M{x+8},{y+9} l2,2 M{x+24},{y+25} l2,2 M{x+26},{y+9} l-2,2 M{x+10},{y+25} l-2,2", 1.8),
+        "shield": p(f"M{x+17},{y+4} l12,5 v9 c0,8 -5,13 -12,16 c-7,-3 -12,-8 -12,-16 v-9 z")
+                  + p(f"M{x+11},{y+18} l4,4 l8,-8", 2.1),
+        "doc": p(f"M{x+6},{y+4} h14 l8,8 v20 a2,2 0 0 1 -2,2 h-20 a2,2 0 0 1 -2,-2 v-26 a2,2 0 0 1 2,-2 z")
+               + p(f"M{x+20},{y+4} v8 h8", 1.7)
+               + p(f"M{x+11},{y+21} h12 M{x+11},{y+27} h12", 1.7),
+        "people": f'<circle cx="{x+11}" cy="{y+12}" r="5" fill="none" stroke="{col}" stroke-width="1.9"/>'
+                  + f'<circle cx="{x+24}" cy="{y+13}" r="4.2" fill="none" stroke="{col}" stroke-width="1.9"/>'
+                  + p(f"M{x+2},{y+29} a9,8 0 0 1 18,0", 1.9)
+                  + p(f"M{x+20},{y+29} a7,6 0 0 1 13,0", 1.9),
+        "calc": p(f"M{x+6},{y+4} h22 a2,2 0 0 1 2,2 v26 a2,2 0 0 1 -2,2 h-22 a2,2 0 0 1 -2,-2 v-26 a2,2 0 0 1 2,-2 z")
+                + p(f"M{x+9},{y+10} h16 v5 h-16 z", 1.7)
+                + f'<circle cx="{x+11}" cy="{y+22}" r="1.5" fill="{col}"/><circle cx="{x+17}" cy="{y+22}" r="1.5" fill="{col}"/>'
+                + f'<circle cx="{x+23}" cy="{y+22}" r="1.5" fill="{col}"/><circle cx="{x+11}" cy="{y+28}" r="1.5" fill="{col}"/>'
+                + f'<circle cx="{x+17}" cy="{y+28}" r="1.5" fill="{col}"/><circle cx="{x+23}" cy="{y+28}" r="1.5" fill="{col}"/>',
+        "db": f'<ellipse cx="{x+17}" cy="{y+9}" rx="12" ry="4.6" fill="none" stroke="{col}" stroke-width="2"/>'
+              + p(f"M{x+5},{y+9} v18 c0,2.6 5.4,4.6 12,4.6 s12,-2 12,-4.6 v-18")
+              + p(f"M{x+5},{y+18} c0,2.6 5.4,4.6 12,4.6 s12,-2 12,-4.6", 1.7),
+    }
+    return g.get(kind, "")
+
+
+def band(y, h, label, lines):
+    o = [f'<rect x="48" y="{y}" width="1504" height="{h}" rx="14" fill="{A_BAND}" stroke="{A_EDGE}" stroke-width="1"/>',
+         f'<text x="72" y="{y+34}" fill="{A_TEXT}" font-size="13" font-weight="700" letter-spacing="1.5">{esc(label)}</text>']
+    for i, ln in enumerate(lines):
+        o.append(f'<text x="72" y="{y+56+i*17}" fill="{A_MUTED}" font-size="12.5">{esc(ln)}</text>')
+    return "\n  ".join(o)
+
+
+def comp(x, y, w, h, title, sub, ic=None, foot=None, top=False):
+    """`top` anchors the text to the card's head, for a card that carries
+    something else below it — the gateway's tool chips."""
+    o = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{A_CARD}" stroke="{A_EDGE}" stroke-width="1.2"/>']
+    tx = x + (76 if ic else 24)
+    base = y + 36 if top else y + h / 2 - 4
+    if ic:
+        o.append(icon(ic, x + 24, (y + 8) if top else (y + (h - 34) / 2)))
+    o.append(f'<text x="{tx}" y="{base}" fill="{A_TEXT}" font-size="17" font-weight="700">{esc(title)}</text>')
+    o.append(f'<text x="{tx}" y="{base+20}" fill="{A_SECOND}" font-size="13.5">{esc(sub)}</text>')
+    if foot:
+        o.append(f'<text x="{tx}" y="{base+40}" fill="{A_MUTED}" font-size="12.5">{esc(foot)}</text>')
+    return "\n  ".join(o)
+
+
+def arr(pts, label=None, lx=None, ly=None, both=False, turn=False):
+    d = " ".join(("M" if i == 0 else "L") + f"{p[0]},{p[1]}" for i, p in enumerate(pts))
+    o = [f'<path d="{d}" fill="none" stroke="{A_LINE}" stroke-width="1.6" marker-end="url(#ae)"'
+         + (' marker-start="url(#as)"' if both else "") + "/>"]
+    if label:
+        # `turn` sets the label along a vertical run, where a horizontal one
+        # would be written across the line it belongs to.
+        rot = f' transform="rotate(-90 {lx} {ly})"' if turn else ""
+        o.append(f'<text x="{lx}" y="{ly}" fill="{A_SECOND}" font-size="13" text-anchor="middle"{rot}>{esc(label)}</text>')
+    return "\n  ".join(o)
+
+
+def logo(x, y):
+    """The CreditScout reticle and wordmark, mapped for a light page."""
+    k = 0.42
     return "\n  ".join([
-        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="16" fill="{A_ZONE[label]}" stroke="{A_EDGE}" stroke-width="1" stroke-dasharray="2 4"/>',
-        f'<text x="{x+18}" y="{y+24}" fill="{A_MUTED}" font-size="11.5" font-weight="700" letter-spacing="1.4">{esc(label.upper())}</text>',
+        f'<g transform="translate({x},{y}) scale({k})" fill="none" stroke-linecap="round" stroke-linejoin="round">',
+        f'  <path d="M39 20h-9a10 10 0 0 0-10 10v9M73 20h9a10 10 0 0 1 10 10v9M92 73v9a10 10 0 0 1-10 10h-9M20 73v9a10 10 0 0 0 10 10h9" stroke="{A_TEXT}" stroke-width="6.5"/>',
+        f'  <path d="M37 56h38" stroke="{A_TEAL}" stroke-width="4.5"/>',
+        f'  <circle cx="39" cy="56" r="4.5" fill="{A_TEAL}"/>',
+        f'  <circle cx="56" cy="56" r="6" fill="{A_TEAL}"/>',
+        f'  <circle cx="74" cy="56" r="4.5" fill="{A_TEAL}"/>',
+        f'  <path d="M56 44v-7" stroke="{A_TEAL}" stroke-width="3.5"/>',
+        '</g>',
+        f'<text x="{x+56}" y="{y+32}" font-size="20" font-weight="700" letter-spacing="1.6">'
+        f'<tspan fill="{A_TEXT}">CREDIT</tspan><tspan fill="{A_TEAL}">SCOUT</tspan></text>',
     ])
 
 
-def comp(x, y, w, h, n, title, lines, accent=False, approval=False):
-    """One component: a number, a title, and at most two short lines."""
-    edge = A_TEAL if accent else A_EDGE
-    o = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="10" fill="{A_CARD}" stroke="{edge}" stroke-width="{1.6 if accent else 1.2}"/>']
-    o.append(f'<circle cx="{x+24}" cy="{y+24}" r="11.5" fill="{A_TEAL_SOFT}" stroke="{A_TEAL}" stroke-width="1.2"/>')
-    o.append(f'<text x="{x+24}" y="{y+28.5}" fill="{A_TEAL}" font-size="12" font-weight="700" text-anchor="middle">{n}</text>')
-    o.append(f'<text x="{x+46}" y="{y+29}" fill="{A_TEXT}" font-size="15.5" font-weight="700">{esc(title)}</text>')
-    for i, ln in enumerate(lines):
-        o.append(f'<text x="{x+20}" y="{y+52+i*17}" fill="{A_SECOND}" font-size="12.5">{esc(ln)}</text>')
-    if approval:
-        o.append(f'<rect x="{x+w-122}" y="{y+h-30}" width="104" height="21" rx="10.5" fill="{A_TEAL_SOFT}" stroke="{A_TEAL}" stroke-width="1"/>')
-        o.append(f'<text x="{x+w-70}" y="{y+h-15.5}" fill="{A_TEAL}" font-size="10" font-weight="700" letter-spacing="0.3" text-anchor="middle">HUMAN APPROVAL</text>')
-    return "\n  ".join(o)
-
-
-def link(pts, label=None, lx=None, ly=None, data=False, both=False):
-    """A connector. Solid = request/response, dashed = data access."""
-    col = A_DATA_LINE if data else A_LINE
-    dash = ' stroke-dasharray="5 4"' if data else ""
-    d = " ".join(("M" if i == 0 else "L") + f"{p[0]},{p[1]}" for i, p in enumerate(pts))
-    o = [f'<path d="{d}" fill="none" stroke="{col}" stroke-width="1.5"{dash} marker-end="url(#ar)"'
-         + (' marker-start="url(#as)"' if both else "") + '/>']
-    if label:
-        o.append(f'<text x="{lx}" y="{ly}" fill="{A_MUTED}" font-size="11.5" text-anchor="middle">{esc(label)}</text>')
-    return "\n  ".join(o)
-
-
-def note(x, y, n, text_lines):
-    o = [f'<text x="{x}" y="{y}" fill="{A_TEAL}" font-size="12" font-weight="700">{n}</text>']
-    for i, ln in enumerate(text_lines):
-        o.append(f'<text x="{x+18}" y="{y+i*16}" fill="{A_SECOND}" font-size="12.3">{esc(ln)}</text>')
-    return "\n  ".join(o)
-
-
-# ----------------------------------------------------------------- zones
+# ----------------------------------------------------------------- bands
 #
-# Wide gaps between zones on purpose: a connector's label belongs in the gap,
-# not on top of the component it points at.
-A.append(zone(56, 128, 360, 152, "Experience"))
-A.append(zone(526, 128, 640, 480, "Application"))
-A.append(zone(1276, 128, 332, 152, "Investigation"))
-A.append(zone(56, 636, 1552, 124, "Data"))
+# One centred content column, 296..1496, for every band. The rail sits to its
+# left; the gutters either side of the column are even.
+C0, C1 = 296, 1496          # the content column
+HALF = 540                  # a two-up card, with a gap wide enough for a label
+THIRD = 380                 # a three-up card
+LC, RC = C0 + HALF / 2, C1 - HALF / 2
 
-# ----------------------------------------------------------------- row 1
-A.append(comp(76, 162, 320, 100, 1, "Analyst workspace",
-              ["Review exceptions, inspect evidence, approve",
-               "covenant terms, and record decisions."], approval=True))
-A.append(comp(546, 162, 600, 100, 2, "Application services",
-              ["Onboarding, document processing, covenant tests,",
-               "investigations, and analyst reviews."]))
-A.append(comp(1296, 162, 292, 100, 3, "Investigation orchestrator",
-              ["Selects evidence, requests calculations,",
-               "and delegates research tasks."], accent=True))
+A.append(band(118, 132, "EXPERIENCE", ["Analysts review results", "and make decisions."]))
+A.append(band(274, 150, "APPLICATION", ["Run investigations", "and orchestrate analysis."]))
+A.append(band(448, 342, "CONTROLLED OPERATIONS", ["The agent works through", "approved, case-scoped", "operations."]))
+A.append(band(814, 152, "DATA", ["Persistent case data", "with secure access."]))
 
-A.append(link([(396, 194), (546, 194)], "Starts investigation", 471, 184))
-A.append(link([(546, 236), (396, 236)], "Records decision", 471, 256))
-A.append(link([(1146, 194), (1296, 194)], "Starts run", 1221, 184))
-A.append(link([(1296, 236), (1146, 236)], "Returns findings", 1221, 256))
+# ----------------------------------------------------------------- experience
+A.append(comp(C0, 140, HALF, 88, "Analyst workspace", "Review exceptions and inspect evidence", "person"))
+A.append(comp(C1 - HALF, 140, HALF, 88, "Analyst decision", "Approve, override, or request more evidence", "person"))
+A.append(arr([(C1 - HALF, 184), (C0 + HALF, 184)], "Record decision", (C0 + HALF + C1 - HALF) / 2, 174))
 
-# ----------------------------------------------------------------- row 2
-A.append(comp(576, 330, 280, 92, 4, "Specialist services",
-              ["Covenant interpretation, document review,",
-               "targeted research."], accent=True))
-A.append(comp(896, 330, 280, 92, 5, "Tool gateway",
-              ["Exposes the approved operations available",
-               "to the agent."]))
+# ----------------------------------------------------------------- application
+A.append(comp(C0, 296, HALF, 106, "Application services", "Authorize access and manage investigations", "window", foot="Next.js \u00b7 Vercel"))
+A.append(comp(C1 - HALF, 296, HALF, 106, "Investigation orchestrator", "Select evidence and coordinate analysis", "gear", foot="Azure AI Foundry"))
+A.append(arr([(LC, 228), (LC, 296)], "Start investigation", LC + 96, 266))
+A.append(arr([(C0 + HALF, 349), (C1 - HALF, 349)], "Coordinate run", (C0 + HALF + C1 - HALF) / 2, 339))
+A.append(arr([(RC, 296), (RC, 228)], "Validated recommendation", RC + 128, 266))
 
-# the orchestrator reaches the gateway for evidence and calculations, and the
-# specialists through the application, which services those calls in-process.
-A.append(link([(1442, 262), (1442, 292), (1036, 292), (1036, 330)], "Requests evidence \u00b7 Runs calculation", 1200, 284))
-A.append(link([(1340, 262), (1340, 310), (716, 310), (716, 330)], "Delegates research task", 930, 324))
+# ------------------------------------------------------- controlled operations
+#
+# THE SIX TOOLS, NAMED. Three are deterministic code and three are specialist
+# models; they sit inside one control boundary because the control is the same
+# for all six — scope comes from the casefile, never from the agent's
+# arguments. The tint is the only thing that separates them, which is the
+# honest amount of separation: the difference is what runs, not what is
+# permitted.
+A.append(comp(C0, 486, C1 - C0, 118, "Tool gateway", "Approved operations, scoped to the active case", "shield", top=True))
+TOOLS = [("search_documents", False), ("dscr_calculator", False), ("search_past_cases", False),
+         ("definition_agent", True), ("research_agent", True), ("document_agent", True)]
+cw, gap = 182, 14
+tx = C0 + 20
+for name, is_model in TOOLS:
+    fill, edge, col = ("#E8F2F1", A_TEAL, A_TEAL) if is_model else (A_BG, A_EDGE, A_SECOND)
+    A.append(f'<rect x="{tx}" y="562" width="{cw}" height="30" rx="15" fill="{fill}" stroke="{edge}" stroke-width="1.1"/>')
+    A.append(f'<text x="{tx+cw/2}" y="582" fill="{col}" font-size="12.5" font-family="{MONO}" text-anchor="middle">{name}</text>')
+    tx += cw + gap
+A.append(f'<text x="{C1-20}" y="516" fill="{A_MUTED}" font-size="11.5" text-anchor="end">three deterministic tools \u00b7 three specialist models</text>')
 
-# ----------------------------------------------------------------- row 3
-A.append(comp(576, 470, 280, 100, 7, "Document retrieval",
-              ["Processes documents into searchable",
-               "sections; returns relevant passages."]))
-A.append(comp(896, 470, 280, 100, 6, "Calculation and validation",
-              ["Computes covenant results from supplied",
-               "inputs; validates the answer."]))
+A.append(arr([(RC, 402), (RC, 486)], "Request / result", RC + 92, 448, both=True))
 
-A.append(link([(716, 422), (716, 470)], "In-process", 676, 450))
-A.append(link([(1036, 422), (1036, 470)], "Calculates", 1078, 450))
-A.append(link([(936, 422), (936, 446), (816, 446), (816, 470)], "Retrieves", 876, 440))
+TC = [C0, C0 + THIRD + 30, C0 + 2 * (THIRD + 30)]
+A.append(comp(TC[0], 648, THIRD, 112, "Document retrieval", "Find passages and prior lessons", "doc"))
+A.append(comp(TC[1], 648, THIRD, 112, "Specialist services", "Interpret terms, answer questions", "people"))
+A.append(comp(TC[2], 648, THIRD, 112, "Calculation & validation", "Compute results, apply policy", "calc"))
+for c in TC:
+    A.append(arr([(c + THIRD / 2, 604), (c + THIRD / 2, 648)], "Request / result", c + THIRD / 2 + 92, 628, both=True))
 
 # ----------------------------------------------------------------- data
-A.append(comp(76, 672, 1512, 76, 8, "Case data and history",
-              ["Borrower records, document sections, versioned covenant terms, tests, investigations, calculations, decisions, lessons, evaluations."]))
-A.append(link([(566, 262), (566, 286), (466, 286), (466, 672)], "Reads \u00b7 writes", 500, 470, data=True))
-A.append(link([(716, 570), (716, 672)], "", data=True))
-A.append(link([(1036, 570), (1036, 672)], "", data=True))
+A.append(comp(C0, 838, C1 - C0, 104, "Case data and history",
+              "Documents \u00b7 Approved terms \u00b7 Tests \u00b7 Investigations \u00b7 Calculations \u00b7 Decisions \u00b7 Lessons",
+              "db", foot="Postgres \u00b7 pgvector \u00b7 Row-level security"))
 
-# ----------------------------------------------------------------- legend
-LX, LY = 1040, 54
-A.append(f'<line x1="{LX}" y1="{LY}" x2="{LX+26}" y2="{LY}" stroke="{A_LINE}" stroke-width="1.5" marker-end="url(#ar)"/>')
-A.append(f'<text x="{LX+34}" y="{LY+4}" fill="{A_SECOND}" font-size="12">Request / response</text>')
-A.append(f'<line x1="{LX+160}" y1="{LY}" x2="{LX+186}" y2="{LY}" stroke="{A_DATA_LINE}" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar)"/>')
-A.append(f'<text x="{LX+194}" y="{LY+4}" fill="{A_SECOND}" font-size="12">Data access</text>')
-A.append(f'<rect x="{LX+292}" y="{LY-10}" width="104" height="21" rx="10.5" fill="{A_TEAL_SOFT}" stroke="{A_TEAL}" stroke-width="1"/>')
-A.append(f'<text x="{LX+344}" y="{LY+4.5}" fill="{A_TEAL}" font-size="10" font-weight="700" letter-spacing="0.3" text-anchor="middle">HUMAN APPROVAL</text>')
-A.append(f'<text x="{LX+406}" y="{LY+4}" fill="{A_SECOND}" font-size="12">Decision point</text>')
+# the connector used to end on the card's rounded corner; it meets the edge at
+# mid-height now, where an arrowhead reads as arriving rather than clipping.
+A.append(arr([(C0, 360), (252, 360), (252, 890), (C0, 890)], "Read / write", 240, 640, both=True, turn=True))
+A.append(arr([(TC[0] + THIRD / 2, 760), (TC[0] + THIRD / 2, 838)], "Search sections and lessons", TC[0] + THIRD / 2 + 134, 800))
 
-# ----------------------------------------------------------------- notes
-NY = 820
-A.append(f'<line x1="56" y1="{NY-32}" x2="1608" y2="{NY-32}" stroke="{A_EDGE}" stroke-width="1"/>')
-A.append(f'<text x="56" y="{NY-8}" fill="{A_TEXT}" font-size="14" font-weight="700">Notes</text>')
-col2 = 852
-A.append(note(56, NY + 16, "1", ["Authenticated access. Server-side authorization controls what each",
-                                 "request may read and change."]))
-A.append(note(56, NY + 58, "2", ["Services the agent's specialist calls in-process: those have no HTTP",
-                                 "route. Quarterly covenant tests call the calculation service directly,",
-                                 "with no agent involved."]))
-A.append(note(56, NY + 116, "3", ["Starts from the document inventory — titles, types and dates — and",
-                                  "retrieves source passages as needed. Relevant prior lessons are",
-                                  "supplied as additional context."]))
-A.append(note(56, NY + 174, "4", ["Operate within the investigation's case scope. The borrower and the",
-                                  "period come from the casefile, not from the agent's arguments."]))
-A.append(note(col2, NY + 16, "5", ["Requests are authenticated and scoped to the active case.",
-                                   "The agent has no direct database access."]))
-A.append(note(col2, NY + 58, "6", ["Missing required inputs return an explicit error rather than a",
-                                   "default. The agent can request a calculation and supply its inputs;",
-                                   "it cannot change the calculation logic or the validation rules."]))
-A.append(note(col2, NY + 116, "7", ["Sections are embedded once at upload and searched per request.",
-                                    "Original uploads are not retained: a document is its indexed",
-                                    "sections, and every citation resolves to one of them."]))
-A.append(note(col2, NY + 174, "8", ["Row-level security applies to every read. Covenant terms are",
-                                    "versioned and effective-dated; an amendment supersedes."]))
+# THE LOOP CLOSES. A recorded decision becomes a lesson, and a later
+# investigation retrieves it through the same gateway as any other evidence.
+A.append(arr([(C1, 212), (1540, 212), (1540, 890), (C1, 890)], "Decision recorded as a lesson", C1 - 108, 806))
 
-# ------------------------------------------------- implementation details
-IY = 1038
-A.append(f'<rect x="56" y="{IY}" width="1552" height="58" rx="10" fill="{A_CARD}" stroke="{A_EDGE}" stroke-width="1.2"/>')
-A.append(f'<text x="76" y="{IY+22}" fill="{A_MUTED}" font-size="11" font-weight="700" letter-spacing="1.3">IMPLEMENTATION DETAILS</text>')
-A.append(f'<text x="76" y="{IY+43}" fill="{A_SECOND}" font-size="12.3" font-family="{MONO}">Next.js on Vercel  ·  Azure AI Foundry, gpt-4.1-mini orchestrator  ·  gpt-5-mini specialists  ·  text-embedding-3-small, 1536 dimensions  ·  calc/dscr.js  ·  guardrails/*.js  ·  Postgres + pgvector</text>')
-
-# ------------------------------------------------------- control summary
-CY = 1130
-A.append(f'<text x="56" y="{CY}" fill="{A_TEXT}" font-size="14.5" font-weight="700">Control summary</text>')
-A.append(f'<text x="56" y="{CY+24}" fill="{A_SECOND}" font-size="13.5">The agent directs the investigation. Application code calculates and validates the result. An analyst records the decision.</text>')
+# ----------------------------------------------------------------- footer
+FY = 1012
+A.append(f'<line x1="48" y1="{FY-26}" x2="1552" y2="{FY-26}" stroke="{A_EDGE}" stroke-width="1"/>')
+A.append(f'<text x="48" y="{FY}" fill="{A_TEXT}" font-size="14">The agent directs the investigation. Application code calculates and validates results. An analyst records the decision.</text>')
+A.append(f'<text x="1552" y="{FY}" fill="{A_MUTED}" font-size="12.5" text-anchor="end">Model versions and infrastructure details belong in deployment documentation.</text>')
 
 
 def adoc(w, h, body):
-    head = f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{SANS}">'
     return "\n".join([
-        head,
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{SANS}">',
         '  <defs>',
-        '    <marker id="ar" markerWidth="8" markerHeight="7" refX="7.5" refY="3.5" orient="auto">',
-        f'      <path d="M0,0 L8,3.5 L0,7 Z" fill="{A_LINE}"/>',
+        '    <marker id="ae" markerWidth="9" markerHeight="8" refX="8.5" refY="4" orient="auto">',
+        f'      <path d="M0,0 L9,4 L0,8 Z" fill="{A_LINE}"/>',
         '    </marker>',
-        '    <marker id="as" markerWidth="8" markerHeight="7" refX="0.5" refY="3.5" orient="auto">',
-        f'      <path d="M8,0 L0,3.5 L8,7 Z" fill="{A_LINE}"/>',
+        '    <marker id="as" markerWidth="9" markerHeight="8" refX="0.5" refY="4" orient="auto">',
+        f'      <path d="M9,0 L0,4 L9,8 Z" fill="{A_LINE}"/>',
         '    </marker>',
         '  </defs>',
         f'  <rect width="{w}" height="{h}" fill="{A_BG}"/>',
-        f'  <text x="56" y="56" fill="{A_TEXT}" font-size="26" font-weight="700" letter-spacing="-0.4">CreditScout architecture</text>',
-        f'  <text x="56" y="84" fill="{A_SECOND}" font-size="14">An analyst-led investigation workflow with agent orchestration, deterministic calculations, and server-enforced controls.</text>',
+        f'  <text x="48" y="58" fill="{A_TEXT}" font-size="30" font-weight="700" letter-spacing="-0.6">CreditScout architecture</text>',
+        f'  <text x="48" y="88" fill="{A_SECOND}" font-size="16">Agent orchestration. Deterministic calculations. Analyst decisions.</text>',
+        "  " + logo(1330, 26),
         "  " + body,
         '</svg>',
         '',
     ])
 
 
-write("creditscout-architecture.svg", adoc(1664, 1178, "\n  ".join(A)))
+write("creditscout-architecture.svg", adoc(1600, 1046, "\n  ".join(A)))
 print("architecture written")

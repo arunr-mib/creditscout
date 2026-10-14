@@ -145,6 +145,5 @@
   <text x="1433" y="851" fill="#146C67" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">document_agent</text>
   <line x1="64" y1="898" x2="1600" y2="898" stroke="#DED7CE" stroke-width="1"/>
   <text x="64" y="928" fill="#1F2A2E" font-size="14.5">It remembers. A decision you record becomes a lesson, and the next similar exception starts with that lesson in hand.</text>
-  <text x="64" y="952" fill="#8A959B" font-size="13">Across three live runs that has not made investigations shorter. The effect is neutral, and we do not claim otherwise.</text>
   <text x="64" y="986" fill="#8A959B" font-size="12">CreditScout · synthetic data only · the agent recommends, a human decides</text>
 </svg>

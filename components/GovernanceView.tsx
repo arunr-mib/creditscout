@@ -357,10 +357,6 @@ function Knowledge() {
         </section>
       ))}
 
-      <p className="text-label text-text-muted">
-        Generated from <span className="font-mono">docs/diagrams/generate.py</span>. Edit the generator and re-run —
-        never the SVG.
-      </p>
     </div>
   );
 }
