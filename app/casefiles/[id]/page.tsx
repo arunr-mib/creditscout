@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { CasefileView, type ReviewRecord } from "@/components/CasefileView";
 import { LiveTrace } from "@/components/LiveTrace";
-import { buildLiveTrace } from "@/components/traceModel";
+import { buildLiveTrace, evidenceLinks, exceptionFacts } from "@/components/traceModel";
 import {
   amendmentStatuses,
   calcSectionsOf,
@@ -50,6 +50,9 @@ interface ExceptionRow {
   facility_id: string;
   test_period_end: string;
   status: string;
+  /** The figures that raised the exception. The live screen states them; it never recomputes them. */
+  computed_dscr: number | null;
+  required_dscr: number | null;
 }
 
 /**
@@ -77,7 +80,11 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   if (!casefile) notFound();
 
   const exception = must(
-    await db.from("exceptions").select("id, facility_id, test_period_end, status").eq("id", casefile.exception_id).maybeSingle(),
+    await db
+      .from("exceptions")
+      .select("id, facility_id, test_period_end, status, computed_dscr, required_dscr")
+      .eq("id", casefile.exception_id)
+      .maybeSingle(),
     "select exceptions",
   ) as ExceptionRow | null;
   if (!exception) throw new Error(`Casefile ${id} names exception ${casefile.exception_id}, which does not exist`);
@@ -87,16 +94,33 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   // status falls through to the concluded view below; `failed` renders its
   // failed state there too. One URL per casefile.
   if (casefile.status === "investigating") {
-    const facility = must(
-      await db.from("facilities").select("borrower_name").eq("id", exception.facility_id).maybeSingle(),
-      "select facilities",
-    ) as { borrower_name: string } | null;
+    // The live screen states the test that raised the exception, says which
+    // document types exist (so a missing PASSAGE is never reported as a missing
+    // FILING), and resolves each retrievable citation to its document here —
+    // the browser is never handed the corpus, only the links.
+    const [liveFacility, liveTerms, liveDocs, liveChunks] = await Promise.all([
+      db.from("facilities").select("borrower_name").eq("id", exception.facility_id).maybeSingle(),
+      termsInForce(db, exception.facility_id, exception.test_period_end).catch(() => null),
+      db.from("documents").select("id, title, doc_type").eq("facility_id", exception.facility_id),
+      loadFacilityChunks(db, exception.facility_id).catch(() => []),
+    ]);
+    const docRows = ((must(liveDocs, "select documents") ?? []) as { id: string; title: string; doc_type: string | null }[]);
+    const docIdByTitle: Record<string, string> = {};
+    for (const d of docRows) if (!(d.title in docIdByTitle)) docIdByTitle[d.title] = d.id;
+    const citations = [...new Set(liveChunks.map((c) => c.citation))];
     return (
       <LiveTrace
         casefileId={id}
-        borrower={facility?.borrower_name ?? "Unknown borrower"}
+        borrower={(must(liveFacility, "select facilities") as { borrower_name: string } | null)?.borrower_name ?? "Unknown borrower"}
         period={quarterLabel(exception.test_period_end)}
         trace={buildLiveTrace(casefile.trace)}
+        facts={exceptionFacts({
+          computed: exception.computed_dscr,
+          required: exception.required_dscr,
+          termsVersion: liveTerms?.version ?? null,
+        })}
+        docTypesOnFile={[...new Set(docRows.map((d) => d.doc_type).filter((t): t is string => typeof t === "string"))]}
+        evidence={evidenceLinks(citations, liveChunks, docIdByTitle)}
       />
     );
   }

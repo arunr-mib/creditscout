@@ -373,3 +373,307 @@ export function investigationStalled(
 /** What the analyst is told, and offered, when a run is paused. */
 export const STALLED_NOTICE =
   "This investigation is paused. It advances while this page is open and stops if the tab is closed — nothing is lost, and it resumes from where it stopped.";
+
+// ------------------------------------------- what the live screen must not lie about
+
+/**
+ * The state of one activity, which is NOT the same question as what it was.
+ *
+ * THE DEFECT THIS NAMES: a calculator step that returned
+ * `missing input: financials.addback_amounts["…"]` rendered exactly like one
+ * that returned a ratio — same row, same weight, no state. The brief's rule is
+ * blunt and right: *do not describe a calculation attempt as a completed
+ * calculation*. A step with no output yet is in progress; a step whose output is
+ * "no calculation" needs an input; everything else completed.
+ */
+export type ActivityState = "completed" | "needs_input" | "in_progress";
+
+export const ACTIVITY_STATE_LABEL: Record<ActivityState, string> = {
+  completed: "Completed",
+  needs_input: "Needs input",
+  in_progress: "In progress",
+};
+
+/** The calculator refused for want of an input. `trace.ts` writes this prefix. */
+export const NO_CALCULATION = "no calculation:";
+
+export function calcNeedsInput(step: Pick<TraceStepView, "calculator" | "output">): boolean {
+  return step.calculator && step.output.trim().toLowerCase().startsWith(NO_CALCULATION);
+}
+
+/**
+ * A step reaches the trace only once Foundry reports it `completed`
+ * (`mapRunStepsToTrace` drops the rest), so a recorded step with an output IS
+ * finished. `in_progress` is therefore reserved for the one case it is true of:
+ * the step is the last recorded one and the run is still being driven, with no
+ * output written yet.
+ */
+export function activityState(
+  step: Pick<TraceStepView, "calculator" | "output">,
+  opts: { last?: boolean; running?: boolean } = {},
+): ActivityState {
+  if (calcNeedsInput(step)) return "needs_input";
+  if (step.output.trim() === "" && opts.last === true && opts.running === true) return "in_progress";
+  return "completed";
+}
+
+/**
+ * A missing calculator input, in the words of the thing it is.
+ *
+ * `financials.addback_amounts["dry_dock_and_vessel_overhaul"]` is the truth and
+ * is kept in the technical details; "the dry dock and vessel overhaul add-back
+ * amount" is the same fact said once, to an analyst. Derived purely by
+ * unpacking the path — no figure, no inference. An unrecognised path is
+ * returned as it came rather than dressed up.
+ */
+export function missingInputLabel(error: string): string | null {
+  const m = /missing input:\s*(.+?)\s*$/i.exec(error);
+  if (!m) return null;
+  const path = m[1];
+  const addback = /addback_amounts\[?"?([\w .-]+)"?\]?/i.exec(path);
+  if (addback) return `the ${addback[1].replace(/[_-]+/g, " ").trim()} add-back amount`;
+  const field = /^financials\.([\w_]+)$/i.exec(path);
+  if (field) return `the ${field[1].replace(/_/g, " ")} figure`;
+  return path;
+}
+
+/**
+ * The one thing standing in the investigation's way, if anything is.
+ *
+ * Three causes that look alike on a log and demand different things of the
+ * analyst, so they are never collapsed into one message:
+ *
+ *   `calculator_input`  an input the agent did not pass to the calculator. The
+ *                       evidence is already on file; the agent can recover it.
+ *                       Asking the analyst for documents here is wrong.
+ *   `document_missing`  the agent searched a document type the borrower has not
+ *                       filed. Only this one is an upload request.
+ *   `evidence_absent`   the documents are on file and do not contain it. Neither
+ *                       a retry nor an upload fixes that by itself.
+ *
+ * Ordered by what blocks the calculation most directly. Returns null when the
+ * investigation is simply working.
+ */
+export type IssueKind = "calculator_input" | "document_missing" | "evidence_absent";
+
+export interface IssueView {
+  kind: IssueKind;
+  title: string;
+  detail: string;
+  /** What happens next, and whether the analyst is the one to do it. */
+  next: string;
+}
+
+/** Doc types a `search_documents` input named, from the summary `"query" in a, b`. */
+function searchedTypes(input: string): string[] {
+  const m = /\bin\s+([a-z_,\s]+)$/i.exec(input.trim());
+  if (!m) return [];
+  return m[1]
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t !== "");
+}
+
+export function investigationIssue(
+  steps: readonly TraceStepView[],
+  docTypesOnFile: readonly string[] = [],
+): IssueView | null {
+  const stuck = [...steps].reverse().find((s) => calcNeedsInput(s));
+  if (stuck) {
+    const what = missingInputLabel(stuck.output);
+    return {
+      kind: "calculator_input",
+      title: "Additional input needed for calculation",
+      detail: what
+        ? `The calculator needs ${what}. No revised DSCR is available yet.`
+        : "The calculator declined the request for a missing input. No revised DSCR is available yet.",
+      next: "The agent can supply this from evidence already retrieved. No documents are needed from you.",
+    };
+  }
+
+  const empty = [...steps].reverse().find((s) => s.tool === "search_documents" && /^no matching text$/i.test(s.output.trim()));
+  if (empty) {
+    const types = searchedTypes(empty.input);
+    const absent = types.filter((t) => !docTypesOnFile.includes(t));
+    if (types.length > 0 && absent.length === types.length) {
+      return {
+        kind: "document_missing",
+        title: "A document the agent looked for is not on file",
+        detail: `No ${absent.join(" or ").replace(/_/g, " ")} has been uploaded for this borrower.`,
+        next: "The investigation continues on the documents it has. Uploading the missing filing would let it test more.",
+      };
+    }
+    return {
+      kind: "evidence_absent",
+      title: "Evidence not found in the available documents",
+      detail: "A search of the filed documents returned no matching passage.",
+      next: "The agent will try other evidence. If nothing supports the test, it abstains rather than guesses.",
+    };
+  }
+  return null;
+}
+
+/**
+ * The run so far, counted — "2 evidence searches completed · 1 calculation
+ * attempt needs input".
+ *
+ * `investigationArc` says what KIND of work happened; this says how it went,
+ * which is the distinction the brief asks for. A calculation that produced no
+ * ratio is counted as an attempt, never as a calculation.
+ */
+export function activitySummary(steps: readonly TraceStepView[]): string | null {
+  const searches = steps.filter((s) => s.tool === "search_documents" || s.tool === "search_past_cases").length;
+  const attempts = steps.filter((s) => calcNeedsInput(s)).length;
+  const calcs = steps.filter((s) => s.calculator && !calcNeedsInput(s)).length;
+  const delegations = steps.filter((s) => s.kind === "model").length;
+  const parts: string[] = [];
+  if (searches > 0) parts.push(`${searches} evidence ${searches === 1 ? "search" : "searches"} completed`);
+  if (calcs > 0) parts.push(`${calcs} ${calcs === 1 ? "calculation" : "calculations"} completed`);
+  if (attempts > 0) parts.push(`${attempts} calculation ${attempts === 1 ? "attempt" : "attempts"} needs input`);
+  if (delegations > 0) parts.push(`${delegations} specialist ${delegations === 1 ? "delegation" : "delegations"}`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+/**
+ * How recently the screen heard from the server, as a measurement.
+ *
+ * "Last received · 0s" was a true reading in a developer's units. The words
+ * change; the clock behind them does not, and it is still a real elapsed count
+ * rather than a reassurance printed on render.
+ */
+export function freshnessLabel(secondsSince: number): string {
+  if (!Number.isFinite(secondsSince) || secondsSince < 0) return "Updated just now";
+  if (secondsSince < 10) return "Updated just now";
+  if (secondsSince < 60) return `Updated ${Math.floor(secondsSince)}s ago`;
+  const m = Math.floor(secondsSince / 60);
+  return `Updated ${m}m ago`;
+}
+
+/**
+ * Connection health is reported SEPARATELY from investigation state, because
+ * they are different facts and conflating them is how a screen ends up
+ * asserting progress it cannot see. Losing the updates does not stop the run,
+ * and it does not prove the run is alive either — so this says only what is
+ * known.
+ */
+export const CONNECTION_INTERRUPTED = "Connection interrupted. Investigation status is temporarily unavailable.";
+
+/** Prior cases inform; they never govern. Said on screen, next to them. */
+export const PRIOR_CASES_NOTE =
+  "Prior cases provide context. Current documents and approved terms govern this investigation.";
+
+/**
+ * Evidence the agent actually retrieved, as citations, deduplicated in the
+ * order they were first returned.
+ *
+ * Read from the search steps' own output summaries (`3 chunks: §4.01, §4.02`),
+ * so it can only name passages a search really returned. A failed or empty
+ * search contributes nothing rather than an empty-handed row.
+ */
+export function evidenceGathered(steps: readonly TraceStepView[]): string[] {
+  const out: string[] = [];
+  for (const s of steps) {
+    if (s.tool !== "search_documents") continue;
+    const m = /^\d+\s+chunks?:\s*(.+)$/i.exec(s.output.trim());
+    if (!m) continue;
+    for (const c of m[1].split(",").map((x) => x.trim())) {
+      if (c !== "" && c !== "?" && !out.includes(c)) out.push(c);
+    }
+  }
+  return out;
+}
+
+// --------------------------------------------------------- the exception's facts
+
+/**
+ * The test that raised the exception, stated once at the top so the
+ * investigation reads as an inquiry into something specific.
+ *
+ * The shortfall is subtraction over the two figures already stored, done in
+ * integer hundredths — `1.25 - 1.12` in binary floating point is
+ * 0.13000000000000012, and a screen that prints that has lost the analyst. No
+ * figure here is derived from anything but `exceptions`: the UI does not
+ * recompute a ratio, ever.
+ */
+export interface ExceptionFacts {
+  computed: number | null;
+  required: number | null;
+  /** Minimum minus calculated, 2dp, or null when either side is unknown. */
+  shortfall: number | null;
+  termsVersion: number | null;
+}
+
+export function exceptionFacts(input: {
+  computed?: number | null;
+  required?: number | null;
+  termsVersion?: number | null;
+}): ExceptionFacts {
+  const computed = typeof input.computed === "number" && Number.isFinite(input.computed) ? input.computed : null;
+  const required = typeof input.required === "number" && Number.isFinite(input.required) ? input.required : null;
+  const shortfall =
+    computed !== null && required !== null ? (Math.round(required * 100) - Math.round(computed * 100)) / 100 : null;
+  return {
+    computed,
+    required,
+    shortfall,
+    termsVersion: typeof input.termsVersion === "number" ? input.termsVersion : null,
+  };
+}
+
+/**
+ * A retrieved citation, resolved to the document it came from so the analyst
+ * can open the passage WITHOUT expanding technical details.
+ *
+ * `href` is null whenever the citation cannot be traced to a stored document —
+ * the citation is still shown, because the agent really did retrieve it, but it
+ * is never given a link that would 404 or land on the wrong filing.
+ */
+export interface EvidenceLink {
+  citation: string;
+  docTitle: string | null;
+  href: string | null;
+}
+
+export function evidenceLinks(
+  citations: readonly string[],
+  chunks: readonly { citation: string; doc_title: string | null; section?: string | null }[],
+  docIdByTitle: Readonly<Record<string, string>>,
+): EvidenceLink[] {
+  return citations.map((citation) => {
+    const chunk = chunks.find((c) => c.citation === citation) ?? null;
+    const title = chunk?.doc_title ?? null;
+    const id = title ? docIdByTitle[title] : undefined;
+    if (!id) return { citation, docTitle: title, href: null };
+    const section = chunk?.section ? `#section-${chunk.section.replace(/\s+/g, "-")}` : "";
+    return { citation, docTitle: title, href: `/documents/${id}${section}` };
+  });
+}
+
+/**
+ * The RESULT line of an activity, in the words of the thing that happened.
+ *
+ * A refused calculation printed its raw refusal —
+ * `no calculation: missing input: financials.addback_amounts["…"]` — as the
+ * row's result. That is the truth, in the calculator's units, and it reads as a
+ * stack trace. The raw string keeps its place in the technical details; the row
+ * says what it means, and is explicit that no ratio came of it.
+ */
+export function activityResult(step: Pick<TraceStepView, "calculator" | "output">): string {
+  if (!calcNeedsInput(step)) return step.output;
+  const what = missingInputLabel(step.output);
+  const subject = what ? what.charAt(0).toUpperCase() + what.slice(1) : "A required input";
+  return `${subject} was not supplied to the calculator. No new ratio was calculated.`;
+}
+
+/**
+ * A retrieval step's own result, split so the citations can be LINKS on the row
+ * rather than text an analyst has to expand technical details to act on.
+ * Returns null for anything that is not a passage hit — a failed or empty
+ * search keeps its sentence.
+ */
+export function searchCitations(output: string): { count: number; citations: string[] } | null {
+  const m = /^(\d+)\s+chunks?:\s*(.+)$/i.exec(output.trim());
+  if (!m) return null;
+  const citations = [...new Set(m[2].split(",").map((c) => c.trim()).filter((c) => c !== "" && c !== "?"))];
+  return citations.length > 0 ? { count: Number(m[1]), citations } : null;
+}

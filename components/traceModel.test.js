@@ -16,6 +16,20 @@ import {
   investigationStalled,
   activityAttribution,
   activityTitle,
+  ACTIVITY_STATE_LABEL,
+  activityResult,
+  activityState,
+  activitySummary,
+  calcNeedsInput,
+  CONNECTION_INTERRUPTED,
+  evidenceGathered,
+  evidenceLinks,
+  exceptionFacts,
+  freshnessLabel,
+  investigationIssue,
+  missingInputLabel,
+  PRIOR_CASES_NOTE,
+  searchCitations,
 } from "./traceModel.ts";
 import { SPECIALIST_NAMES } from "../lib/agent/prompt.ts";
 import { CALCULATOR_TOOL, MEMORY_LOADED_STEP, MEMORY_UNAVAILABLE_STEP, memoryLoadedEntry } from "../lib/agent/trace.ts";
@@ -292,4 +306,185 @@ test("STALLED_NOTICE says the work is intact, not lost", () => {
   assert.match(STALLED_NOTICE, /paused/i);
   assert.match(STALLED_NOTICE, /nothing is lost/i);
   assert.match(STALLED_NOTICE, /resumes/i);
+});
+
+// ------------------------------------------------- an attempt is not a calculation
+
+const step = (over = {}) => ({
+  n: 1,
+  tool: "search_documents",
+  kind: "code",
+  input: "",
+  output: "",
+  ts: "",
+  calculator: false,
+  role: null,
+  decision: null,
+  ...over,
+});
+
+const refused = (error) => step({ tool: "dscr_calculator", calculator: true, output: `no calculation: ${error}` });
+
+test("calcNeedsInput: the calculator's refusal is not a result", () => {
+  // `trace.ts` writes "no calculation: <error>" precisely so this is decidable
+  // without re-parsing the tool's JSON.
+  assert.equal(calcNeedsInput(refused('missing input: financials.ebitda')), true);
+  assert.equal(
+    calcNeedsInput(step({ tool: "dscr_calculator", calculator: true, output: "DSCR 1.31 vs 1.25 — pass (calc_id 8f2a1b0c)" })),
+    false,
+  );
+});
+
+test("activityState: a refused calculation reads Needs input, never Completed", () => {
+  // THE RULE: do not describe a calculation attempt as a completed calculation.
+  assert.equal(activityState(refused('missing input: financials.addback_amounts["dry_dock"]')), "needs_input");
+  assert.equal(ACTIVITY_STATE_LABEL[activityState(refused("missing input: financials.ebitda"))], "Needs input");
+});
+
+test("activityState: only the last step of a live run can be in progress", () => {
+  // Every recorded step is one Foundry already called `completed`, so claiming
+  // a middle row is still running would be a fabrication.
+  const blank = step({ output: "" });
+  assert.equal(activityState(blank, { last: true, running: true }), "in_progress");
+  assert.equal(activityState(blank, { last: false, running: true }), "completed");
+  assert.equal(activityState(blank, { last: true, running: false }), "completed");
+});
+
+test("missingInputLabel: the path becomes the thing it names", () => {
+  assert.equal(
+    missingInputLabel('missing input: financials.addback_amounts["dry_dock_and_vessel_overhaul"]'),
+    "the dry dock and vessel overhaul add-back amount",
+  );
+  assert.equal(missingInputLabel("missing input: financials.ebitda"), "the ebitda figure");
+});
+
+test("missingInputLabel: an unfamiliar path is passed through, not invented", () => {
+  assert.equal(missingInputLabel("missing input: terms.threshold.min_dscr"), "terms.threshold.min_dscr");
+  assert.equal(missingInputLabel("duplicate add-back in terms: \"x\""), null);
+});
+
+// ----------------------------------------------------- the three recovery cases
+
+test("investigationIssue: an omitted calculator input does not ask for documents", () => {
+  // THE DEFECT: one amber message for every stall, which told the analyst to
+  // upload a document when the agent already held the evidence and had simply
+  // not passed it. Different cause, different action.
+  const issue = investigationIssue([refused('missing input: financials.addback_amounts["dry_dock_and_vessel_overhaul"]')]);
+  assert.equal(issue.kind, "calculator_input");
+  assert.match(issue.detail, /dry dock and vessel overhaul add-back amount/);
+  assert.match(issue.detail, /No revised DSCR is available yet/);
+  assert.match(issue.next, /No documents are needed from you/);
+});
+
+test("investigationIssue: a search of a document that was never filed IS an upload request", () => {
+  const s = step({ tool: "search_documents", input: '"dry dock add-back" in amendment', output: "no matching text" });
+  const issue = investigationIssue([s], ["agreement", "financials"]);
+  assert.equal(issue.kind, "document_missing");
+  assert.match(issue.detail, /No amendment has been uploaded/);
+});
+
+test("investigationIssue: a filed document that lacks the passage is neither of those", () => {
+  const s = step({ tool: "search_documents", input: '"dry dock add-back" in agreement', output: "no matching text" });
+  const issue = investigationIssue([s], ["agreement"]);
+  assert.equal(issue.kind, "evidence_absent");
+  assert.match(issue.next, /abstains rather than guesses/);
+});
+
+test("investigationIssue: a working investigation has no issue to report", () => {
+  // Amber is reserved for the calculation issue. A successful search must not
+  // wear it.
+  assert.equal(investigationIssue([step({ output: "3 chunks: §4.01, §4.02" })]), null);
+  assert.equal(investigationIssue([]), null);
+});
+
+test("investigationIssue: the calculator outranks a stale empty search", () => {
+  const s = step({ tool: "search_documents", input: '"x" in amendment', output: "no matching text" });
+  assert.equal(investigationIssue([s, refused("missing input: financials.ebitda")]).kind, "calculator_input");
+});
+
+// ----------------------------------------------------------- the progress line
+
+test("activitySummary: counts an attempt as an attempt", () => {
+  const steps = [
+    step({ output: "3 chunks: §4.01" }),
+    step({ tool: "search_documents", output: "2 chunks: §1.01" }),
+    refused("missing input: financials.ebitda"),
+  ];
+  assert.equal(activitySummary(steps), "2 evidence searches completed · 1 calculation attempt needs input");
+});
+
+test("activitySummary: a real calculation is reported as completed", () => {
+  const steps = [step({ tool: "dscr_calculator", calculator: true, output: "DSCR 1.31 vs 1.25 — pass (calc_id abc12345)" })];
+  assert.equal(activitySummary(steps), "1 calculation completed");
+});
+
+test("activitySummary: nothing yet says nothing", () => {
+  assert.equal(activitySummary([]), null);
+});
+
+test("freshnessLabel: a measurement, in words", () => {
+  assert.equal(freshnessLabel(0), "Updated just now");
+  assert.equal(freshnessLabel(9), "Updated just now");
+  assert.equal(freshnessLabel(12), "Updated 12s ago");
+  assert.equal(freshnessLabel(75), "Updated 1m ago");
+});
+
+test("connection health is stated as unknown status, never as a stopped run", () => {
+  // Losing the updates neither stops the investigation nor proves it is alive.
+  assert.match(CONNECTION_INTERRUPTED, /temporarily unavailable/);
+  assert.doesNotMatch(CONNECTION_INTERRUPTED, /failed|stopped/i);
+  assert.match(PRIOR_CASES_NOTE, /approved terms govern/);
+});
+
+test("evidenceGathered: only passages a search actually returned", () => {
+  const steps = [
+    step({ output: "3 chunks: §4.01, §4.02" }),
+    step({ tool: "search_documents", output: "1 chunk: §4.01" }),
+    step({ tool: "search_documents", output: "no matching text" }),
+    step({ tool: "search_past_cases", output: "2 lessons: addback_cap" }),
+  ];
+  assert.deepEqual(evidenceGathered(steps), ["§4.01", "§4.02"], "deduplicated, in first-seen order, searches only");
+});
+
+// --------------------------------------------------------- the exception's facts
+
+test("exceptionFacts: the shortfall is exact, not floating point", () => {
+  // 1.25 - 1.12 in binary floating point is 0.13000000000000012. Printing that
+  // on a covenant screen loses the analyst.
+  assert.equal(exceptionFacts({ computed: 1.12, required: 1.25 }).shortfall, 0.13);
+  assert.equal(exceptionFacts({ computed: 1.31, required: 1.25 }).shortfall, -0.06);
+});
+
+test("exceptionFacts: an unknown figure yields no shortfall rather than a zero", () => {
+  assert.equal(exceptionFacts({ computed: null, required: 1.25 }).shortfall, null);
+  assert.equal(exceptionFacts({ computed: 1.12, required: null }).shortfall, null);
+  assert.equal(exceptionFacts({}).termsVersion, null);
+});
+
+test("evidenceLinks: a citation with no stored document is shown without a link", () => {
+  // It WAS retrieved — dropping it would hide evidence. Linking it anywhere
+  // would be worse: the link would land on the wrong filing or nothing.
+  const chunks = [{ citation: "CA §7.11", doc_title: "Credit Agreement", section: "§7.11" }];
+  const links = evidenceLinks(["CA §7.11", "AM2 §3"], chunks, { "Credit Agreement": "doc-1" });
+  assert.deepEqual(links, [
+    { citation: "CA §7.11", docTitle: "Credit Agreement", href: "/documents/doc-1#section-§7.11" },
+    { citation: "AM2 §3", docTitle: null, href: null },
+  ]);
+});
+
+test("activityResult: the row says what happened; the raw refusal stays in the details", () => {
+  const refusal = refused('missing input: financials.addback_amounts["dry_dock_and_vessel_overhaul"]');
+  assert.equal(
+    activityResult(refusal),
+    "The dry dock and vessel overhaul add-back amount was not supplied to the calculator. No new ratio was calculated.",
+  );
+  // A real result is passed through untouched — it already carries its calc_id.
+  const done = step({ tool: "dscr_calculator", calculator: true, output: "DSCR 1.31 vs 1.25 — pass (calc_id abc12345)" });
+  assert.equal(activityResult(done), done.output);
+});
+
+test("searchCitations: a passage hit becomes links; anything else keeps its sentence", () => {
+  assert.deepEqual(searchCitations("3 chunks: CA §7.11, AM2 §3, CA §7.11"), { count: 3, citations: ["CA §7.11", "AM2 §3"] });
+  assert.equal(searchCitations("no matching text"), null);
+  assert.equal(searchCitations("search failed: timeout"), null);
 });
