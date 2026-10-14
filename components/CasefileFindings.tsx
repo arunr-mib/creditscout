@@ -91,7 +91,7 @@ export function CasefileFindings({
     <div className="grid items-start gap-4 lg:grid-cols-3">
       {/* ------------------------------------------------ what the agent found */}
       <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border-strong bg-surface shadow-card lg:col-span-2">
-        <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Investigation findings</h2>
+        <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Investigation findings</h2>
 
         <ol className="px-6">
           {summary.steps.map((step, i) => {
@@ -99,17 +99,17 @@ export function CasefileFindings({
             const sec = sectionFor(step.calcId);
             const detail = step.kind === "addback" && amendmentEffect ? amendmentEffect : step.detail;
             return (
-              <li key={step.n} className={i > 0 ? "border-t border-border py-4" : "py-4"}>
-                <div className="flex gap-4">
+              <li key={step.n} className={i > 0 ? "border-t border-border py-3" : "pb-3"}>
+                <div className="flex gap-3">
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-body text-text-muted"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-label text-text-muted"
                   >
                     {STEP_ICON[step.kind] ?? "·"}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
-                      <p className="text-card font-bold text-text">{step.title}</p>
+                      <p className="text-body font-bold text-text">{step.title}</p>
                       {(sec || step.kind === "addback") && (
                         <button
                           type="button"
@@ -163,7 +163,7 @@ export function CasefileFindings({
         </ol>
 
         {summary.comparison.length > 1 && (
-          <div className="border-t border-border px-6 py-4">
+          <div className="border-t border-border px-6 py-3">
             {/* VISIBLE, not behind a disclosure. This is the central evidence
                 for the decision — what the test produced under which basis.
                 Quiet, though: three coloured pills on three rows made a
@@ -173,25 +173,25 @@ export function CasefileFindings({
               <tbody>
                 {summary.comparison.map((row) => (
                   <tr key={row.basis} className="border-t border-border first:border-t-0">
-                    <td className="py-2 pr-4 text-body text-text">{row.basis}</td>
-                    <td className="py-2 pr-4 text-right text-body tabular-nums text-text">
+                    <td className="py-1 pr-4 text-body text-text">{row.basis}</td>
+                    <td className="py-1 pr-4 text-right text-body tabular-nums text-text">
                       {row.dscr == null ? "—" : `${row.dscr.toFixed(2)}x`}
                     </td>
-                    <td className={`py-2 text-right text-body ${row.status === "provisional" ? "text-code-bright" : "text-text-secondary"}`}>
+                    <td className={`py-1 text-right text-body ${row.status === "provisional" ? "text-code-bright" : "text-text-secondary"}`}>
                       {STATE_LABEL[row.status] ?? row.status}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-2 text-label text-text-muted">Each row is a logged calculation with its own calc_id.</p>
+            <p className="mt-1 text-label text-text-muted">Each row is a logged calculation with its own calc_id.</p>
           </div>
         )}
 
         {/* The agent's steps: available, and not a tab competing with the
             evidence an analyst actually opens. */}
         {trace.steps.length > 0 && (
-          <div className="border-t border-border px-6 py-4">
+          <div className="border-t border-border px-6 py-2">
             <button
               type="button"
               onClick={() => setShowActivity((v) => !v)}
@@ -219,17 +219,17 @@ export function CasefileFindings({
       <div className="min-w-0 space-y-4">
         {documents.length > 0 && (
           <section aria-label="Supporting evidence" className="rounded-lg border border-border-strong bg-surface shadow-card">
-            <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Supporting evidence</h2>
+            <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Supporting evidence</h2>
             {/* The governing documents first, and the rest on request. A loan
                 with four quarters of filings listed nine rows beside a
                 three-row finding list, which buried the agreement under the
                 statements. */}
             <ul className="px-6">
               {shownDocs.map((d, i) => (
-                <li key={d.id} className={`flex items-center gap-4 py-4 ${i > 0 ? "border-t border-border" : ""}`}>
+                <li key={d.id} className={`flex items-center gap-3 py-2 ${i > 0 ? "border-t border-border" : ""}`}>
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-body text-text-muted"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-label text-text-muted"
                   >
                     ▤
                   </span>
@@ -238,9 +238,10 @@ export function CasefileFindings({
                       {d.title}
                     </p>
                     {/* The date NAMED for what it is — an agreement has an
-                        effective date, financials a period end. Repeating the
-                        document type under a title that already contains it
-                        said nothing. */}
+                        effective date, financials a period end. It keeps its
+                        own line: folded onto the title it truncated in this
+                        column, and a date you cannot read is worse than a date
+                        that costs a line. */}
                     {d.date && (
                       <p className="text-label text-text-muted">
                         {dateLabel(d.docType)} {longDate(d.date)}
@@ -262,7 +263,7 @@ export function CasefileFindings({
               ))}
             </ul>
             {documents.length > EVIDENCE_SHOWN && (
-              <div className="px-6 pb-4">
+              <div className="px-6 pb-3 pt-1">
                 <button
                   type="button"
                   onClick={() => setAllDocs((v) => !v)}
@@ -282,8 +283,8 @@ export function CasefileFindings({
           aria-label="Outstanding review items"
           className="scroll-mt-4 rounded-lg border border-border-strong bg-surface shadow-card"
         >
-          <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Outstanding review items</h2>
-          <div className="space-y-4 px-6 pb-6">
+          <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Outstanding review items</h2>
+          <div className="space-y-3 px-6 pb-4">
             {unboarded.length === 0 && notes.length === 0 && missingEvidence.length === 0 && (
               <p className="text-body text-text-muted">Nothing is outstanding on this casefile.</p>
             )}
@@ -296,7 +297,7 @@ export function CasefileFindings({
                 </p>
                 <Link
                   href={`/facilities/${facilityId}/covenant-setup`}
-                  className="mt-2 inline-flex text-body text-model-bright underline-offset-2 hover:underline"
+                  className="mt-1 inline-flex text-body text-model-bright underline-offset-2 hover:underline"
                 >
                   Review amendment and terms&nbsp;<span aria-hidden="true">→</span>
                 </Link>
@@ -304,7 +305,7 @@ export function CasefileFindings({
             ))}
 
             {notes.length > 0 && (
-              <div className={unboarded.length > 0 ? "border-t border-border pt-4" : ""}>
+              <div className={unboarded.length > 0 ? "border-t border-border pt-3" : ""}>
                 <div className="flex items-start justify-between gap-3">
                   <p className="text-body text-text-secondary">
                     {notes.length} validation notice{notes.length === 1 ? "" : "s"} to review
@@ -331,7 +332,7 @@ export function CasefileFindings({
             )}
 
             {missingEvidence.length > 0 && (
-              <div className={unboarded.length > 0 || notes.length > 0 ? "border-t border-border pt-4" : ""}>
+              <div className={unboarded.length > 0 || notes.length > 0 ? "border-t border-border pt-3" : ""}>
                 <p className="text-body font-semibold text-text">Evidence the agent says is not on file</p>
                 <ul className="mt-1 space-y-1">
                   {missingEvidence.map((m, i) => (
