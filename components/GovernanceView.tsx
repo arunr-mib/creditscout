@@ -22,7 +22,7 @@ import { caseComparison,
  * ends up read as a pass.
  */
 export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; runs: EvalRunLike[] }) {
-  const [tab, setTab] = useState<"overview" | "details">("overview");
+  const [tab, setTab] = useState<"overview" | "details" | "knowledge">("overview");
   const { cold, warm } = evalScoreboardState(runs);
   const { recordedAt, cases } = runProvenance(runs);
 
@@ -51,6 +51,9 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
         </button>
         <button type="button" role="tab" aria-selected={tab === "details"} onClick={() => setTab("details")} className={tabBtn(tab === "details")}>
           Evaluation details
+        </button>
+        <button type="button" role="tab" aria-selected={tab === "knowledge"} onClick={() => setTab("knowledge")} className={tabBtn(tab === "knowledge")}>
+          Knowledge
         </button>
       </div>
 
@@ -163,8 +166,10 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
               </div>
             </section>
         </>
-      ) : (
+      ) : tab === "details" ? (
         <EvaluationDetails runs={runs} />
+      ) : (
+        <Knowledge />
       )}
 
       {/* Shown, not withheld: at n=6 the sample size is the first thing an
@@ -283,6 +288,79 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
           </p>
         )}
       </section>
+    </div>
+  );
+}
+
+/**
+ * The two diagrams, where someone asking "how does this work" can find them.
+ *
+ * They are GENERATED — `python3 docs/diagrams/generate.py` writes the same
+ * bytes to `docs/diagrams/` and to `public/diagrams/`. Never edit an SVG by
+ * hand; it will be overwritten on the next run.
+ *
+ * They stay dark on a lit page on purpose: a diagram is a figure, not a panel
+ * of the application, and the contrast makes it read as something to look at
+ * rather than something to operate.
+ */
+const DIAGRAMS: { id: string; file: string; title: string; detail: string }[] = [
+  {
+    id: "architecture",
+    file: "/diagrams/creditscout-architecture.svg",
+    title: "System architecture",
+    detail:
+      "One orchestrator, six function tools, and a deterministic core the model cannot reach. Shows the two authentication surfaces: a signed-in analyst's session, and the tool key the agent presents.",
+  },
+  {
+    id: "user-flow",
+    file: "/diagrams/creditscout-user-flow.svg",
+    title: "End-to-end covenant monitoring",
+    detail:
+      "The three flows: onboarding a loan, the quarterly test every loan takes, and the investigation that only an exception triggers.",
+  },
+];
+
+function Knowledge() {
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <h2 className="text-section font-bold text-text">How CreditScout works</h2>
+        <p className="mt-1 max-w-prose text-body text-text-secondary">
+          The same two diagrams the engineering documents use. A reasoning layer decides what evidence to inspect; a
+          calculation layer never guesses; a human always approves.
+        </p>
+      </section>
+
+      {DIAGRAMS.map((d) => (
+        <section key={d.id} className="rounded-lg border border-border-strong bg-surface shadow-card">
+          <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-3">
+            <div>
+              <h3 className="text-card font-bold text-text">{d.title}</h3>
+              <p className="mt-px max-w-prose text-label text-text-secondary">{d.detail}</p>
+            </div>
+            <a
+              href={d.file}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+            >
+              Open full size <span aria-hidden="true">→</span>
+            </a>
+          </header>
+          <div className="overflow-x-auto p-4">
+            {/* A plain <img>: the SVG is a static build artifact with no
+                interactivity to preserve, and inlining it would put 10 kB of
+                markup into the page for no gain. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={d.file} alt={`${d.title} diagram`} className="h-auto w-full min-w-[960px] rounded-md" />
+          </div>
+        </section>
+      ))}
+
+      <p className="text-label text-text-muted">
+        Generated from <span className="font-mono">docs/diagrams/generate.py</span>. Edit the generator and re-run —
+        never the SVG.
+      </p>
     </div>
   );
 }

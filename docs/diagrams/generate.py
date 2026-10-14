@@ -16,7 +16,19 @@ for a human step.
 The diagrams stay dark on purpose: they are read in documents and decks, not in
 the lit workspace the application itself now uses.
 """
+import os
 from html import escape
+
+# The app serves these too (Governance -> Knowledge), so every run writes both
+# copies from the same string. `public/` is a build artifact of this script, not
+# a second source — never edit either SVG by hand.
+PUBLIC = "public/diagrams"
+
+
+def write(name, svg):
+    open(f"docs/diagrams/{name}", "w").write(svg)
+    os.makedirs(PUBLIC, exist_ok=True)
+    open(f"{PUBLIC}/{name}", "w").write(svg)
 
 BG, PANEL, BORDER = "#0A1628", "#11243D", "#2A3A52"
 TEXT, SECOND, MUTED = "#F8FAFC", "#CBD5E1", "#94A3B8"
@@ -157,10 +169,10 @@ P.append(f'<line x1="64" y1="{tools_y+86}" x2="1600" y2="{tools_y+86}" stroke="{
 P.append(f'<text x="64" y="{tools_y+118}" fill="{SECOND}" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="{MONO}" fill="{ACCENT}">search_past_cases</tspan> on the next similar exception.</text>')
 P.append(f'<text x="64" y="{tools_y+140}" fill="{MUTED}" font-size="12.5">Measured across three live runs it has not shortened investigations — the effect is neutral, and the claim that memory saves steps is not made.</text>')
 
-open("docs/diagrams/creditscout-user-flow.svg", "w").write(
-    doc(1664, 960, "CreditScout — end-to-end covenant monitoring",
-        "A reasoning layer decides what evidence to inspect. A calculation layer never guesses. A human always approves.",
-        "\n  ".join(P)))
+write("creditscout-user-flow.svg",
+      doc(1664, 960, "CreditScout — end-to-end covenant monitoring",
+          "A reasoning layer decides what evidence to inspect. A calculation layer never guesses. A human always approves.",
+          "\n  ".join(P)))
 print("user flow written")
 
 # ========================================================= ARCHITECTURE
@@ -212,8 +224,8 @@ A.append(box(CX, y5, CW, 96, "Postgres + pgvector",
 A.append(f'<line x1="{RAIL}" y1="{y5+134}" x2="1600" y2="{y5+134}" stroke="{BORDER}" stroke-width="1"/>')
 A.append(f'<text x="{RAIL}" y="{y5+166}" fill="{SECOND}" font-size="13.5">The boundary that matters: <tspan fill="{ACCENT}">the model never produces a number.</tspan> It decides what to inspect; <tspan font-family="{MONO}">calc/dscr.js</tspan> computes and <tspan font-family="{MONO}">guardrails/*.js</tspan> enforces — both zero-dependency, neither reachable by the model.</text>')
 
-open("docs/diagrams/creditscout-architecture.svg", "w").write(
-    doc(1664, 1010, "CreditScout — system architecture",
-        "One orchestrator, six function tools, and a deterministic core the model cannot reach.",
-        "\n  ".join(A)))
+write("creditscout-architecture.svg",
+      doc(1664, 1010, "CreditScout — system architecture",
+          "One orchestrator, six function tools, and a deterministic core the model cannot reach.",
+          "\n  ".join(A)))
 print("architecture written")
