@@ -186,3 +186,116 @@ export function runProvenance(runs: readonly EvalRunLike[] | null | undefined): 
   }
   return { recordedAt, cases };
 }
+
+// ------------------------------------------------ the paired case comparison
+
+/**
+ * The two conditions side by side, one row per case.
+ *
+ * Governance was rendering one table PER RUN — the same ten cases repeated,
+ * most of them "not counted" em-dashes, several runs carrying no per-case
+ * detail at all. An analyst comparing conditions had to hold two tables in
+ * their head and scroll between them.
+ *
+ * "cold"/"warm" are the harness's words. An analyst reads "without prior
+ * lessons" and "with prior lessons"; the identifiers stay in the technical
+ * metadata.
+ */
+export interface CaseComparisonRow {
+  caseId: string;
+  /** The borrower, when the case id carries one. Fixture ids stay secondary. */
+  expected: string | null;
+  without: { recommendation: string | null; steps: number | null; matched: boolean | null } | null;
+  with_: { recommendation: string | null; steps: number | null; matched: boolean | null } | null;
+  /** Scored in at least one condition. Unscored cases are listed once, quietly. */
+  counted: boolean;
+}
+
+interface RawCase {
+  case_id?: unknown;
+  expected_outcome?: unknown;
+  recommendation?: unknown;
+  steps?: unknown;
+  outcome_match?: unknown;
+  counted?: unknown;
+}
+
+const casesOf = (metrics: unknown): RawCase[] => {
+  if (typeof metrics !== "object" || metrics === null) return [];
+  const c = (metrics as Record<string, unknown>).cases;
+  return Array.isArray(c) ? (c as RawCase[]) : [];
+};
+
+const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+/**
+ * One row per case, both conditions joined on `case_id`.
+ *
+ * A case present in only one run still appears, with the missing side null —
+ * dropping it would silently shrink the comparison.
+ */
+export function caseComparison(cold: EvalRunLike | null, warm: EvalRunLike | null): CaseComparisonRow[] {
+  const c = casesOf(cold?.metrics);
+  const w = casesOf(warm?.metrics);
+  const order: string[] = [];
+  const seen = new Set<string>();
+  for (const row of [...c, ...w]) {
+    const id = str(row.case_id);
+    if (id && !seen.has(id)) {
+      seen.add(id);
+      order.push(id);
+    }
+  }
+  const side = (rows: RawCase[], id: string) => {
+    const r = rows.find((x) => str(x.case_id) === id);
+    if (!r) return null;
+    return {
+      recommendation: str(r.recommendation),
+      steps: num(r.steps),
+      matched: typeof r.outcome_match === "boolean" ? r.outcome_match : null,
+    };
+  };
+  return order.map((id) => {
+    const inCold = c.find((x) => str(x.case_id) === id);
+    const inWarm = w.find((x) => str(x.case_id) === id);
+    return {
+      caseId: id,
+      expected: str(inCold?.expected_outcome) ?? str(inWarm?.expected_outcome),
+      without: side(c, id),
+      with_: side(w, id),
+      counted: inCold?.counted === true || inWarm?.counted === true,
+    };
+  });
+}
+
+/**
+ * The honest one-line read of the pair.
+ *
+ * Never asserts that lessons CAUSED a difference: two runs of five cases cannot
+ * support that, and the measured history (60/100/60 cold across three runs) is
+ * why. It states what changed and leaves the inference to the reader.
+ */
+export function comparisonSummary(
+  cold: EvalRunLike | null,
+  warm: EvalRunLike | null,
+): { headline: string; detail: string } | null {
+  const rows = caseComparison(cold, warm).filter((r) => r.counted);
+  if (rows.length === 0) return null;
+  const hit = (s: { matched: boolean | null } | null) => (s?.matched === true ? 1 : 0);
+  const cHits = rows.reduce((n, r) => n + hit(r.without), 0);
+  const wHits = rows.reduce((n, r) => n + hit(r.with_), 0);
+  const d = wHits - cHits;
+  const headline =
+    d === 0
+      ? "Both conditions matched the same number of expected outcomes"
+      : d > 0
+        ? "The run with prior lessons matched more expected outcomes"
+        : "The run with prior lessons matched fewer expected outcomes";
+  const word = Math.abs(d) === 1 ? "outcome" : "outcomes";
+  const detail =
+    d === 0
+      ? `${cHits} of ${rows.length} scored cases in each condition.`
+      : `${Math.abs(d)} additional expected ${word} ${d > 0 ? "matched with" : "missed with"} prior lessons, across ${rows.length} scored cases. Two runs cannot show that lessons caused the difference.`;
+  return { headline, detail };
+}

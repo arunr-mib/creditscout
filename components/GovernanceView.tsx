@@ -5,7 +5,9 @@ import { GovernancePanel } from "./GovernancePanel";
 import { Scoreboard } from "./Scoreboard";
 import { ENFORCEMENT_ACTION_LABEL, ENFORCEMENT_RULES } from "./enforcementModel";
 import type { PolicyTableRow } from "./governanceModel";
-import { evalScoreboardState, runProvenance, scoreboardRows, type EvalRunLike } from "./scoreboardModel";
+import { caseComparison,
+  comparisonSummary,
+  evalScoreboardState, runProvenance, scoreboardRows, type EvalRunLike } from "./scoreboardModel";
 
 /**
  * Policy and performance on one screen.
@@ -177,72 +179,106 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
   );
 }
 
-/** The per-case record behind the headline numbers. */
+/**
+ * The per-case record behind the headline numbers, as ONE paired table.
+ *
+ * It used to be a table per run: the same ten cases repeated, most of them
+ * "not counted" em-dashes, and several runs rendering only "This run recorded
+ * no per-case detail." Comparing the two conditions meant holding two tables in
+ * your head and scrolling between them.
+ *
+ * The analyst-facing headings are "Without prior lessons" and "With prior
+ * lessons"; `cold`/`warm` are the harness's words and stay in the metadata line.
+ */
 function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
-  if (runs.length === 0) {
+  const { cold, warm } = evalScoreboardState(runs);
+  const rows = caseComparison(cold, warm);
+  const summary = comparisonSummary(cold, warm);
+  const scored = rows.filter((r) => r.counted);
+  const unscored = rows.filter((r) => !r.counted);
+
+  if (rows.length === 0) {
     return <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">No evaluation run recorded yet.</p>;
   }
+
+  // The Result must describe BOTH conditions. Showing only the warm verdict
+  // read "matched" on a case the cold run missed.
+  const verdict = (r: { without: { matched: boolean | null } | null; with_: { matched: boolean | null } | null }) => {
+    const a = r.without?.matched ?? null;
+    const b = r.with_?.matched ?? null;
+    if (a === null && b === null) return <span className="text-label text-text-muted">Not measured</span>;
+    if (a === b) {
+      return a === true
+        ? <span className="text-label text-success">matched in both</span>
+        : <span className="text-label text-danger">missed in both</span>;
+    }
+    return (
+      <span className="text-label text-code">
+        {b === true ? "matched only with lessons" : "matched only without lessons"}
+      </span>
+    );
+  };
+
+  // A case the code decided without an agent was still SCORED. Calling that
+  // "Not measured" reads as a gap in the evaluation when it is the design.
+  const cellOf = (side: { recommendation: string | null; steps: number | null; matched: boolean | null } | null) =>
+    side == null ? <span className="text-text-muted">Not run</span> : side.recommendation == null ? (
+      <span className="text-text-muted">No investigation — decided by code</span>
+    ) : (
+      <>
+        <span className="text-text-secondary">{side.recommendation}</span>
+        {side.steps != null && <span className="ml-2 font-mono text-label text-text-muted">{side.steps} steps</span>}
+      </>
+    );
+
   return (
     <div className="space-y-4">
-      {runs.map((r, i) => {
-        const m = (r.metrics ?? {}) as Record<string, unknown>;
-        const cases = Array.isArray(m.cases) ? (m.cases as Record<string, unknown>[]) : [];
-        return (
-          <section key={`${r.mode}-${i}`} className="rounded-lg border border-border bg-surface shadow-card shadow-card">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
-              <h2 className="text-card text-text">
-                {r.mode === "warm" ? "With prior lessons" : "Without prior lessons"}
-                <span className="ml-2 font-mono text-label text-text-muted">{r.mode}</span>
-              </h2>
-              <span className="font-mono text-label text-text-muted">
-                {typeof r.created_at === "string" ? r.created_at.slice(0, 19).replace("T", " ") : "—"}
-              </span>
-            </div>
-            {cases.length === 0 ? (
-              <p className="p-4 text-body text-text-muted">This run recorded no per-case detail.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left">
-                  <thead className="bg-model-bg/50">
-                    <tr className="text-label uppercase tracking-wide text-model-bright">
-                      <th className="px-4 py-2 font-medium">Case</th>
-                      <th className="px-4 py-2 font-medium">Expected</th>
-                      <th className="px-4 py-2 font-medium">Recommended</th>
-                      <th className="px-4 py-2 text-right font-medium">Steps</th>
-                      <th className="px-4 py-2 font-medium">Match</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cases.map((c, j) => {
-                      const match = c.outcome_match === true;
-                      const counted = c.counted === true;
-                      return (
-                        <tr key={j} className="border-t border-border">
-                          <td className="px-4 py-2 font-mono text-num text-text">{String(c.case_id ?? "—")}</td>
-                          <td className="px-4 py-2 text-body text-text-secondary">{String(c.expected_outcome ?? "—")}</td>
-                          <td className="px-4 py-2 text-body text-text-secondary">{String(c.recommendation ?? "—")}</td>
-                          <td className="px-4 py-2 text-right font-mono text-num tabular-nums text-text-secondary">
-                            {c.steps == null ? "—" : String(c.steps)}
-                          </td>
-                          <td className="px-4 py-2">
-                            {!counted ? (
-                              <span className="text-label text-text-muted">not counted</span>
-                            ) : match ? (
-                              <span className="text-label text-success">matched</span>
-                            ) : (
-                              <span className="text-label text-danger">missed</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        );
-      })}
+      {summary && (
+        <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+          <h2 className="text-card text-text">{summary.headline}</h2>
+          <p className="mt-1 max-w-prose text-body text-text-secondary">{summary.detail}</p>
+        </section>
+      )}
+
+      <section className="rounded-lg border border-border bg-surface shadow-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <h2 className="text-card text-text">Case comparison</h2>
+          <span className="font-mono text-label text-text-muted">
+            {cold?.created_at ? cold.created_at.slice(0, 10) : ""} · cold / warm
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead className="bg-surface-raised">
+              <tr className="text-label uppercase tracking-wide text-text-muted">
+                <th className="px-4 py-2 font-medium">Case</th>
+                <th className="px-4 py-2 font-medium">Expected</th>
+                <th className="px-4 py-2 font-medium">Without prior lessons</th>
+                <th className="px-4 py-2 font-medium">With prior lessons</th>
+                <th className="px-4 py-2 font-medium">Result</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scored.map((r) => (
+                <tr key={r.caseId} className="border-t border-border">
+                  <td className="px-4 py-2 font-mono text-num text-text">{r.caseId}</td>
+                  <td className="px-4 py-2 text-body text-text-secondary">{r.expected ?? "Not measured"}</td>
+                  <td className="px-4 py-2 text-body">{cellOf(r.without)}</td>
+                  <td className="px-4 py-2 text-body">{cellOf(r.with_)}</td>
+                  <td className="px-4 py-2">{verdict(r)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {/* Listed ONCE, quietly, instead of filling both tables with dashes. */}
+        {unscored.length > 0 && (
+          <p className="border-t border-border px-4 py-3 text-label text-text-muted">
+            Not scored in either condition ({unscored.length}): {unscored.map((r) => r.caseId).join(", ")}. The five
+            onboarding borrowers are never seeded, so the harness lists them and does not investigate them.
+          </p>
+        )}
+      </section>
     </div>
   );
 }

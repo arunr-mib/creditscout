@@ -8,6 +8,8 @@ import {
   evalScoreboardState,
   runProvenance,
   scoreboardRows,
+  caseComparison,
+  comparisonSummary,
 } from "./scoreboardModel.ts";
 
 // ------------------------------------------------------------- scoreboardRows
@@ -124,4 +126,59 @@ test("provenance of nothing is nulls, never a zero that reads as a measurement",
   assert.equal(caseCount({ cases: "not an array" }), null);
   assert.equal(caseCount({ cases: [{ counted: false }, { counted: false }] }), 0, "listed but never scored");
   assert.equal(caseCount(null), null);
+});
+
+// ------------------------------------------------ the paired case comparison
+
+const run = (mode, cases) => ({ mode, created_at: "2026-10-08T03:24:51Z", metrics: { cases } });
+const kase = (id, over = {}) => ({ case_id: id, expected_outcome: "resolve", counted: true, outcome_match: true, steps: 6, recommendation: "resolve", ...over });
+
+test("caseComparison: one row per case, both conditions joined — not one table per run", () => {
+  // Governance rendered a table PER RUN: the same ten cases repeated, mostly
+  // "not counted" dashes, with several runs carrying no per-case detail at all.
+  const rows = caseComparison(
+    run("cold", [kase("F1-2026Q2", { recommendation: "escalate", outcome_match: false, steps: 5 })]),
+    run("warm", [kase("F1-2026Q2", { recommendation: "resolve", outcome_match: true, steps: 8 })]),
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].without.recommendation, "escalate");
+  assert.equal(rows[0].without.matched, false);
+  assert.equal(rows[0].with_.recommendation, "resolve");
+  assert.equal(rows[0].with_.matched, true);
+  assert.equal(rows[0].expected, "resolve");
+});
+
+test("caseComparison: a case present in only one run still appears, with the other side null", () => {
+  // Dropping it would silently shrink the comparison.
+  const rows = caseComparison(run("cold", [kase("F1-2026Q2")]), run("warm", [kase("F3-2026Q2")]));
+  assert.deepEqual(rows.map((r) => r.caseId), ["F1-2026Q2", "F3-2026Q2"]);
+  assert.equal(rows[0].with_, null);
+  assert.equal(rows[1].without, null);
+});
+
+test("caseComparison: an unscored case is marked, not silently counted", () => {
+  const rows = caseComparison(run("cold", [kase("VANTAGE-2026Q3", { counted: false, outcome_match: null, steps: null, recommendation: null })]), null);
+  assert.equal(rows[0].counted, false);
+});
+
+test("comparisonSummary: states what changed and refuses to claim lessons caused it", () => {
+  // Three live runs read 60% / 100% / 60% cold while fixes were only added.
+  // Two runs of five cases cannot support a causal claim.
+  const s = comparisonSummary(
+    run("cold", [kase("a", { outcome_match: false }), kase("b")]),
+    run("warm", [kase("a", { outcome_match: true }), kase("b")]),
+  );
+  assert.match(s.headline, /matched more expected outcomes/);
+  assert.match(s.detail, /cannot show that lessons caused/);
+});
+
+test("comparisonSummary: equal conditions are reported as equal, with the denominator", () => {
+  const s = comparisonSummary(run("cold", [kase("a"), kase("b")]), run("warm", [kase("a"), kase("b")]));
+  assert.match(s.headline, /same number/);
+  assert.match(s.detail, /2 of 2 scored cases/);
+});
+
+test("comparisonSummary: nothing scored yields no summary rather than a 0% claim", () => {
+  assert.equal(comparisonSummary(null, null), null);
+  assert.equal(comparisonSummary(run("cold", [kase("a", { counted: false })]), null), null);
 });
