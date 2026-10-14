@@ -91,9 +91,16 @@ export function stageFile(file: { name: string; size: number }): StagedFile {
  * An agreement or amendment with no effective date cannot have its terms
  * extracted, so it is refused here rather than stored unusable.
  */
-export function stagingBlockers(files: readonly StagedFile[], hasBorrower: boolean): string[] {
+export function stagingBlockers(
+  files: readonly StagedFile[],
+  hasBorrower: boolean,
+  /** What to say when there is no borrower yet. On the onboarding screen the
+   *  borrower is being TYPED, not chosen, and "Choose a borrower" names a
+   *  control that is not on that screen. */
+  noBorrower = "Choose a borrower.",
+): string[] {
   const out: string[] = [];
-  if (!hasBorrower) out.push("Choose a borrower.");
+  if (!hasBorrower) out.push(noBorrower);
   if (files.length === 0) return out;
   const big = oversizeNames(files);
   if (big.length > 0) {

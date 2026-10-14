@@ -157,3 +157,10 @@ test("the in-flight state is named for everything it covers", () => {
   assert.equal(UPLOAD_STATUS_LABEL.uploading, "Uploading and indexing");
   assert.equal(UPLOAD_STATUS_LABEL.ready, "Ready");
 });
+
+test("stagingBlockers: the no-borrower message fits the screen it is shown on", () => {
+  // Onboarding TYPES a borrower name; "Choose a borrower" names a dropdown
+  // that does not exist there.
+  assert.deepEqual(stagingBlockers([], false), ["Choose a borrower."]);
+  assert.deepEqual(stagingBlockers([], false, "Enter a borrower name."), ["Enter a borrower name."]);
+});

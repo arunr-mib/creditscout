@@ -49,7 +49,33 @@ type State =
  * an indexed document is a human action, not a passing test. A rejection states
  * the reason (a scanned PDF, a wrong type) so the analyst knows what to fix.
  */
-export function UploadPackage({ facilities, fixedFacilityId }: { facilities: UploadFacility[]; fixedFacilityId?: string }) {
+export function UploadPackage({
+  facilities,
+  fixedFacilityId,
+  resolveFacility,
+  borrowerReady,
+  borrowerBlocker,
+  submitLabel,
+  onUploaded,
+}: {
+  facilities: UploadFacility[];
+  fixedFacilityId?: string;
+  /**
+   * Create the borrower the moment it is needed, and not before.
+   *
+   * A document cannot be stored before the record it hangs off exists — but
+   * that is a STORAGE order, not an order the analyst should have to follow.
+   * With this, the files are staged and classified on the same screen as the
+   * borrower's name, and the record is created in the same gesture that
+   * uploads them.
+   */
+  resolveFacility?: () => Promise<{ id: string } | { error: string }>;
+  /** Whether the parent has what it needs to create the borrower. */
+  borrowerReady?: boolean;
+  borrowerBlocker?: string;
+  submitLabel?: (files: number) => string;
+  onUploaded?: (facilityId: string) => void;
+}) {
   const router = useRouter();
   const [facilityId, setFacilityId] = useState(fixedFacilityId ?? facilities[0]?.id ?? "");
   const [staged, setStaged] = useState<Row[]>([]);
@@ -60,11 +86,28 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
   const baseId = useId();
 
 
+  /**
+   * The facility to store against, creating it on first use when the parent
+   * deferred that. Returns null when creation failed, with the reason already
+   * on screen — nothing is sent in that case.
+   */
+  async function ensureFacility(): Promise<string | null> {
+    if (facilityId !== "") return facilityId;
+    if (!resolveFacility) return null;
+    const r = await resolveFacility();
+    if ("error" in r) {
+      setState({ kind: "rejected", reason: r.error });
+      return null;
+    }
+    setFacilityId(r.id);
+    return r.id;
+  }
+
   /** Send one file WITH ITS OWN TYPE. Returns its outcome so a batch can report every file. */
-  async function send(file: File, meta: StagedFile): Promise<Result> {
+  async function send(file: File, meta: StagedFile, id: string): Promise<Result> {
     const form = new FormData();
     form.set("file", file);
-    form.set("facility_id", facilityId);
+    form.set("facility_id", id);
     form.set("doc_type", meta.docType);
     if (meta.date) form.set("effective_date", meta.date);
     try {
@@ -104,12 +147,17 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
    */
   async function upload(only?: string) {
     const queue = staged.filter((r) => (only ? r.key === only : r.status === "staged" || r.status === "failed"));
-    const blockers = stagingBlockers(queue, facilityId !== "");
+    const blockers = stagingBlockers(queue, hasBorrower, borrowerBlocker);
     if (blockers.length > 0) {
       setState({ kind: "rejected", reason: blockers[0] });
       return;
     }
     setState({ kind: "uploading" });
+    const id = await ensureFacility();
+    if (id === null) {
+      setState((s) => (s.kind === "uploading" ? { kind: "idle" } : s));
+      return;
+    }
     for (const meta of queue) {
       const file = picked.find((f) => f.name === meta.name && f.size === meta.size);
       if (!file) {
@@ -117,7 +165,7 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
         continue;
       }
       patch(meta.key, { status: "uploading", error: undefined });
-      const result = await send(file, meta);
+      const result = await send(file, meta, id);
       patch(
         meta.key,
         result.ok
@@ -127,6 +175,7 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
     }
     setState({ kind: "idle" });
     router.refresh();
+    onUploaded?.(id);
   }
 
   function onDrop(e: React.DragEvent) {
@@ -138,7 +187,10 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
   const field = "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
   const pendingRows = staged.filter((r) => r.status === "staged" || r.status === "failed");
   const pending = pendingRows.length;
-  const blockers = stagingBlockers(pendingRows, facilityId !== "");
+  // With deferred creation the borrower does not exist yet, so "has a
+  // borrower" is the parent's readiness, not a stored id.
+  const hasBorrower = resolveFacility ? borrowerReady === true : facilityId !== "";
+  const blockers = stagingBlockers(pendingRows, hasBorrower, borrowerBlocker);
   const dupes = duplicateNames(staged);
 
   return (
@@ -147,8 +199,8 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
         Add borrower documents
       </h3>
 
-      <div className="mt-3 flex flex-wrap gap-3">
-        {!fixedFacilityId && (
+      <div className={resolveFacility ? "hidden" : "mt-3 flex flex-wrap gap-3"}>
+        {!fixedFacilityId && !resolveFacility && (
         <label className="flex flex-col gap-1 text-label text-text-muted">
           Borrower
           <select value={facilityId} onChange={(e) => setFacilityId(e.target.value)} className={field}>
@@ -199,8 +251,9 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
       {/* ONE ROW PER FILE. The type is suggested from the name and confirmed by
           the analyst — never applied batch-wide, which is how an agreement used
           to be stored as `financials` and vanish from terms extraction. */}
-      {staged.length > 0 && (
+      {(staged.length > 0 || resolveFacility) && (
         <div className="mt-4 space-y-2">
+          {staged.length > 0 && (
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h4 className="text-label text-text-muted">
               {staged.length} file{staged.length === 1 ? "" : "s"}
@@ -210,10 +263,15 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
               <p className="text-label text-code">Same name twice: {dupes.join(", ")}</p>
             )}
           </div>
+          )}
 
           {staged.map((f) => (
             <div key={f.key} className="flex flex-wrap items-end gap-3 rounded-md border border-border bg-surface p-3">
-              <span className="min-w-0 flex-1 truncate font-mono text-label text-text" title={f.name}>{f.name}</span>
+              {/* min-w-0 let the name collapse to "am…" beside the controls in a
+                  720px column. It keeps a floor and the row wraps instead. */}
+              <span className="min-w-[180px] flex-1 truncate text-body text-text" title={f.name}>
+                {f.name}
+              </span>
 
               <label className="flex flex-col gap-1 text-label text-text-muted">
                 Document type
@@ -277,14 +335,16 @@ export function UploadPackage({ facilities, fixedFacilityId }: { facilities: Upl
             <button
               type="button"
               onClick={() => void upload()}
-              disabled={state.kind === "uploading" || pending === 0}
+              disabled={state.kind === "uploading" || (pending === 0 && !resolveFacility)}
               className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
             >
               {state.kind === "uploading"
-                ? "Indexing…"
-                : pending === 0
-                  ? "All documents uploaded"
-                  : `Upload ${pending} document${pending === 1 ? "" : "s"}`}
+                ? "Working…"
+                : submitLabel
+                  ? submitLabel(pending)
+                  : pending === 0
+                    ? "All documents uploaded"
+                    : `Upload ${pending} document${pending === 1 ? "" : "s"}`}
             </button>
             {blockers.length > 0 && <p className="text-label text-text-muted">{blockers[0]}</p>}
           </div>
