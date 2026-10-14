@@ -1,128 +1,150 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1664" height="960" viewBox="0 0 1664 960" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1664" height="1012" viewBox="0 0 1664 1012" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">
   <defs>
-    <marker id="a" markerWidth="9" markerHeight="7" refX="8.5" refY="3.5" orient="auto">
-      <path d="M0,0 L9,3.5 L0,7 Z" fill="#4A5B76"/>
+    <marker id="l" markerWidth="8" markerHeight="7" refX="7.5" refY="3.5" orient="auto">
+      <path d="M0,0 L8,3.5 L0,7 Z" fill="#DED7CE"/>
     </marker>
   </defs>
-  <rect width="1664" height="960" fill="#0A1628"/>
-  <text x="64" y="54" fill="#F8FAFC" font-size="26" font-weight="700" letter-spacing="-0.4">CreditScout — end-to-end covenant monitoring</text>
-  <text x="64" y="80" fill="#94A3B8" font-size="14">A reasoning layer decides what evidence to inspect. A calculation layer never guesses. A human always approves.</text>
-  <rect x="1477.4" y="41" width="13" height="13" rx="3" fill="#2B4A6B" stroke="#C3D5E8" stroke-dasharray="3 2.5" stroke-width="1.25"/>
-  <text x="1497.4" y="52" fill="#CBD5E1" font-size="12" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">Human approval</text>
-  <rect x="1313.2" y="41" width="13" height="13" rx="3" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="1333.2" y="52" fill="#CBD5E1" font-size="12" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">Deterministic code</text>
-  <rect x="1183.5" y="41" width="13" height="13" rx="3" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
-  <text x="1203.5" y="52" fill="#CBD5E1" font-size="12" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif">Agent / model</text>
-  <text x="64" y="140" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW A — LOAN ONBOARDING</text>
-  <text x="294.79999999999995" y="140" fill="#94A3B8" font-size="12">once per loan · re-runs when an amendment arrives</text>
-  <line x1="64" y1="152" x2="1600" y2="152" stroke="#2A3A52" stroke-width="1"/>
-  <rect x="64" y="166" width="232" height="104" rx="7" fill="#2B4A6B" stroke="#C3D5E8" stroke-width="1.25" stroke-dasharray="5 4"/>
-  <text x="180.0" y="186" fill="#DCE7F2" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ANALYST</text>
-  <text x="180.0" y="208" fill="#FFFFFF" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Add a borrower</text>
-  <text x="180.0" y="229" fill="#DCE7F2" font-size="12.5" text-anchor="middle">name + documents on ONE</text>
-  <text x="180.0" y="246" fill="#DCE7F2" font-size="12.5" text-anchor="middle">screen; each file classified</text>
-  <line x1="302" y1="218.0" x2="336" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="342" y="166" width="256" height="104" rx="7" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
-  <text x="470.0" y="186" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">EXTRACT</text>
-  <text x="470.0" y="208" fill="#8FD8D1" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">definition_agent</text>
-  <text x="470.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">reads the definitions article</text>
-  <text x="470.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">and every amendment on file</text>
-  <line x1="604" y1="218.0" x2="638" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="644" y="166" width="244" height="104" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="766.0" y="186" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">VERIFY</text>
-  <text x="766.0" y="208" fill="#F8FAFC" font-size="14" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">provenance checks</text>
-  <text x="766.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">every term needs a citation</text>
-  <text x="766.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">and a verbatim quote</text>
-  <line x1="894" y1="218.0" x2="928" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="934" y="166" width="232" height="104" rx="7" fill="#2B4A6B" stroke="#C3D5E8" stroke-width="1.25" stroke-dasharray="5 4"/>
-  <text x="1050.0" y="186" fill="#DCE7F2" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ANALYST</text>
-  <text x="1050.0" y="208" fill="#FFFFFF" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Approve terms</text>
-  <text x="1050.0" y="229" fill="#DCE7F2" font-size="12.5" text-anchor="middle">four-eyes; nothing is</text>
-  <text x="1050.0" y="246" fill="#DCE7F2" font-size="12.5" text-anchor="middle">testable until approved</text>
-  <line x1="1172" y1="218.0" x2="1206" y2="218.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="1212" y="166" width="388" height="104" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="1406.0" y="186" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">BOARDED</text>
-  <text x="1406.0" y="208" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">covenant_terms v1 — approved</text>
-  <text x="1406.0" y="229" fill="#94A3B8" font-size="12.5" text-anchor="middle">versioned, effective-dated; an amendment creates v2</text>
-  <text x="1406.0" y="246" fill="#94A3B8" font-size="12.5" text-anchor="middle">and supersedes, it never overwrites</text>
-  <text x="64" y="336" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW B — QUARTERLY COVENANT TEST</text>
-  <text x="360.4" y="336" fill="#94A3B8" font-size="12">every loan, every quarter · no model involved</text>
-  <line x1="64" y1="348" x2="1600" y2="348" stroke="#2A3A52" stroke-width="1"/>
-  <rect x="64" y="362" width="232" height="104" rx="7" fill="#2B4A6B" stroke="#C3D5E8" stroke-width="1.25" stroke-dasharray="5 4"/>
-  <text x="180.0" y="382" fill="#DCE7F2" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ANALYST</text>
-  <text x="180.0" y="404" fill="#FFFFFF" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Run Covenant Tests</text>
-  <text x="180.0" y="425" fill="#DCE7F2" font-size="12.5" text-anchor="middle">one click, whole book</text>
-  <line x1="302" y1="414.0" x2="336" y2="414.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="342" y="362" width="256" height="104" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="470.0" y="382" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">COMPUTE</text>
-  <text x="470.0" y="404" fill="#F8FAFC" font-size="14" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">calc/dscr.js</text>
-  <text x="470.0" y="425" fill="#94A3B8" font-size="12.5" text-anchor="middle">computes EVERY test from the</text>
-  <text x="470.0" y="442" fill="#94A3B8" font-size="12.5" text-anchor="middle">approved terms — never infers</text>
-  <line x1="604" y1="414.0" x2="638" y2="414.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="644" y="362" width="244" height="104" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="766.0" y="382" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">COMPARE</text>
-  <text x="766.0" y="404" fill="#F8FAFC" font-size="14" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">reconcile</text>
-  <text x="766.0" y="425" fill="#94A3B8" font-size="12.5" text-anchor="middle">our figure vs the borrower's</text>
-  <text x="766.0" y="442" fill="#94A3B8" font-size="12.5" text-anchor="middle">reported figure</text>
-  <path d="M894 414.0 H912 V384 H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <path d="M894 414.0 H912 V442 H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="934" y="362" width="666" height="46" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="1267.0" y="392" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Meets minimum — no action</text>
-  <text x="1267.0" y="413" fill="#94A3B8" font-size="12.5" text-anchor="middle">variance logged if the borrower's figure disagrees with ours</text>
-  <rect x="934" y="420" width="666" height="46" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="1267.0" y="450" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Below minimum — exception raised</text>
-  <text x="1267.0" y="471" fill="#94A3B8" font-size="12.5" text-anchor="middle">OUR figure raises it, never theirs: a borrower whose arithmetic favours them is invisible otherwise</text>
-  <text x="64" y="532" fill="#5EC2BA" font-size="11.5" font-weight="700" letter-spacing="1.6">FLOW C — INVESTIGATION</text>
-  <text x="278.4" y="532" fill="#94A3B8" font-size="12">only on an exception · the agent decides what to read next</text>
-  <line x1="64" y1="544" x2="1600" y2="544" stroke="#2A3A52" stroke-width="1"/>
-  <rect x="64" y="558" width="232" height="150" rx="7" fill="#2B4A6B" stroke="#C3D5E8" stroke-width="1.25" stroke-dasharray="5 4"/>
-  <text x="180.0" y="578" fill="#DCE7F2" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ANALYST</text>
-  <text x="180.0" y="600" fill="#FFFFFF" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Investigate</text>
-  <text x="180.0" y="621" fill="#DCE7F2" font-size="12.5" text-anchor="middle">analyst starts it;</text>
-  <text x="180.0" y="638" fill="#DCE7F2" font-size="12.5" text-anchor="middle">nothing runs unasked</text>
-  <line x1="302" y1="633.0" x2="336" y2="633.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="342" y="558" width="388" height="150" rx="7" fill="#10302E" stroke="#5EC2BA" stroke-width="1.25"/>
-  <text x="536.0" y="578" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">REASON</text>
-  <text x="536.0" y="600" fill="#8FD8D1" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">CreditScout Agent</text>
-  <text x="536.0" y="621" fill="#94A3B8" font-size="12.5" text-anchor="middle">gpt-4.1-mini orchestrator, six function tools.</text>
-  <text x="536.0" y="638" fill="#94A3B8" font-size="12.5" text-anchor="middle">Plans, reads, delegates, re-calculates —</text>
-  <text x="536.0" y="655" fill="#94A3B8" font-size="12.5" text-anchor="middle">then decides whether the evidence is enough.</text>
-  <line x1="736" y1="633.0" x2="770" y2="633.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="776" y="558" width="300" height="150" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="926.0" y="578" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">ENFORCE</text>
-  <text x="926.0" y="600" fill="#F8FAFC" font-size="14" font-weight="600" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">guardrails/*.js</text>
-  <text x="926.0" y="621" fill="#94A3B8" font-size="12.5" text-anchor="middle">six checks, zero dependencies.</text>
-  <text x="926.0" y="638" fill="#94A3B8" font-size="12.5" text-anchor="middle">A figure with no logged calculation</text>
-  <text x="926.0" y="655" fill="#94A3B8" font-size="12.5" text-anchor="middle">and no cited quote forces abstain.</text>
-  <line x1="1082" y1="633.0" x2="1116" y2="633.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="1122" y="558" width="220" height="150" rx="7" fill="#11243D" stroke="#2A3A52" stroke-width="1.25"/>
-  <text x="1232.0" y="578" fill="#94A3B8" font-size="10.5" letter-spacing="1.3" text-anchor="middle">OUTPUT</text>
-  <text x="1232.0" y="600" fill="#F8FAFC" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Casefile</text>
-  <text x="1232.0" y="621" fill="#94A3B8" font-size="12.5" text-anchor="middle">recommendation,</text>
-  <text x="1232.0" y="638" fill="#94A3B8" font-size="12.5" text-anchor="middle">cited claims,</text>
-  <text x="1232.0" y="655" fill="#94A3B8" font-size="12.5" text-anchor="middle">calculation log</text>
-  <line x1="1348" y1="633.0" x2="1382" y2="633.0" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>
-  <rect x="1388" y="558" width="212" height="150" rx="7" fill="#2B4A6B" stroke="#C3D5E8" stroke-width="1.25" stroke-dasharray="5 4"/>
-  <text x="1494.0" y="578" fill="#DCE7F2" font-size="10.5" letter-spacing="1.3" text-anchor="middle">REVIEW</text>
-  <text x="1494.0" y="600" fill="#FFFFFF" font-size="15" font-weight="600" font-family="Inter, -apple-system, Helvetica, Arial, sans-serif" text-anchor="middle">Analyst decides</text>
-  <text x="1494.0" y="621" fill="#DCE7F2" font-size="12.5" text-anchor="middle">approve or override —</text>
-  <text x="1494.0" y="638" fill="#DCE7F2" font-size="12.5" text-anchor="middle">the decision of record</text>
-  <text x="1494.0" y="655" fill="#DCE7F2" font-size="12.5" text-anchor="middle">is always a person's</text>
-  <text x="342" y="740" fill="#94A3B8" font-size="11.5" letter-spacing="1.3">THE SIX TOOLS IT CHOOSES BETWEEN</text>
-  <rect x="342" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#2A3A52" stroke-width="1"/>
-  <text x="440.0" y="774" fill="#CBD5E1" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">search_documents</text>
-  <rect x="550" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#2A3A52" stroke-width="1"/>
-  <text x="648.0" y="774" fill="#CBD5E1" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">dscr_calculator</text>
-  <rect x="758" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#2A3A52" stroke-width="1"/>
-  <text x="856.0" y="774" fill="#CBD5E1" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">search_past_cases</text>
-  <rect x="966" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
-  <text x="1064.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">definition_agent</text>
-  <rect x="1174" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
-  <text x="1272.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">research_agent</text>
-  <rect x="1382" y="752" width="196" height="34" rx="5" fill="#11243D" stroke="#146C67" stroke-width="1"/>
-  <text x="1480.0" y="774" fill="#5EC2BA" font-size="12.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">document_agent</text>
-  <line x1="64" y1="826" x2="1600" y2="826" stroke="#2A3A52" stroke-width="1"/>
-  <text x="64" y="858" fill="#CBD5E1" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#5EC2BA">search_past_cases</tspan> on the next similar exception.</text>
-  <text x="64" y="880" fill="#94A3B8" font-size="12.5">Measured across three live runs it has not shortened investigations — the effect is neutral, and the claim that memory saves steps is not made.</text>
-  <text x="64" y="934" fill="#5A6B86" font-size="11.5">CreditScout · synthetic data only · the agent recommends, a human decides</text>
+  <rect width="1664" height="1012" fill="#FAF8F5"/>
+  <text x="64" y="58" fill="#1F2A2E" font-size="27" font-weight="700" letter-spacing="-0.5">What it is like to use CreditScout</text>
+  <text x="64" y="86" fill="#51626A" font-size="15">Three moments in a quarter. You start every one of them, and you finish every one of them.</text>
+  <circle cx="77" cy="146" r="13" fill="#146C67"/>
+  <text x="77" y="150.5" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">1</text>
+  <text x="100" y="152" fill="#1F2A2E" font-size="19" font-weight="700" letter-spacing="-0.2">Onboarding a loan</text>
+  <text x="280.2" y="151" fill="#8A959B" font-size="13.5">once per loan — and again when an amendment arrives</text>
+  <circle cx="86" cy="244.0" r="19" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.6"/><circle cx="86" cy="239.0" r="5.7" fill="#2B4A6B"/><path d="M76.1,255.8 a9.9,8.7 0 0 1 19.8,0" fill="#2B4A6B"/>
+  <rect x="118" y="176" width="262" height="136" rx="14" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.4"/>
+  <circle cx="142" cy="200" r="12" fill="#2B4A6B"/>
+  <text x="142" y="204.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">1</text>
+  <text x="140" y="232" fill="#2B4A6B" font-size="15.5" font-weight="700">You add the borrower</text>
+  <text x="140" y="254" fill="#51626A" font-size="13">Name, industry and the documents,</text>
+  <text x="140" y="272" fill="#51626A" font-size="13">all on one screen. Every file is</text>
+  <text x="140" y="290" fill="#51626A" font-size="13">classified as you drop it in.</text>
+  <line x1="386" y1="244.0" x2="406" y2="244.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="410" y="176" width="288" height="136" rx="14" fill="#E6F2F0" stroke="#146C67" stroke-width="1.4"/>
+  <circle cx="434" cy="200" r="12" fill="#146C67"/>
+  <text x="434" y="204.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">2</text>
+  <text x="432" y="232" fill="#146C67" font-size="15.5" font-weight="700">It reads the agreement</text>
+  <text x="432" y="254" fill="#51626A" font-size="13">The definitions article and every</text>
+  <text x="432" y="272" fill="#51626A" font-size="13">amendment on file — and quotes</text>
+  <text x="432" y="290" fill="#51626A" font-size="13">back what it found.</text>
+  <line x1="704" y1="244.0" x2="724" y2="244.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="728" y="176" width="268" height="136" rx="14" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.4"/>
+  <circle cx="752" cy="200" r="12" fill="#A4590B"/>
+  <text x="752" y="204.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">3</text>
+  <text x="750" y="232" fill="#A4590B" font-size="15.5" font-weight="700">Code checks the work</text>
+  <text x="750" y="254" fill="#51626A" font-size="13">Every term needs a citation and a</text>
+  <text x="750" y="272" fill="#51626A" font-size="13">verbatim quote, or it does not</text>
+  <text x="750" y="290" fill="#51626A" font-size="13">reach you.</text>
+  <line x1="1002" y1="244.0" x2="1022" y2="244.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <circle cx="1048" cy="244.0" r="19" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.6"/><circle cx="1048" cy="239.0" r="5.7" fill="#2B4A6B"/><path d="M1038.1,255.8 a9.9,8.7 0 0 1 19.8,0" fill="#2B4A6B"/>
+  <rect x="1080" y="176" width="226" height="136" rx="14" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.4"/>
+  <circle cx="1104" cy="200" r="12" fill="#2B4A6B"/>
+  <text x="1104" y="204.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">4</text>
+  <text x="1102" y="232" fill="#2B4A6B" font-size="15.5" font-weight="700">You approve</text>
+  <text x="1102" y="254" fill="#51626A" font-size="13">Nothing can be tested</text>
+  <text x="1102" y="272" fill="#51626A" font-size="13">until you say so.</text>
+  <line x1="1312" y1="244.0" x2="1332" y2="244.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="1336" y="176" width="264" height="136" rx="14" fill="#FFFFFF" stroke="#DED7CE" stroke-width="1.4"/>
+  <text x="1358" y="210" fill="#1F2A2E" font-size="15.5" font-weight="700">The terms go live</text>
+  <text x="1358" y="232" fill="#51626A" font-size="13">Version 1, effective-dated. An</text>
+  <text x="1358" y="250" fill="#51626A" font-size="13">amendment makes version 2 —</text>
+  <text x="1358" y="268" fill="#51626A" font-size="13">it never overwrites.</text>
+  <circle cx="77" cy="358" r="13" fill="#146C67"/>
+  <text x="77" y="362.5" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">2</text>
+  <text x="100" y="364" fill="#1F2A2E" font-size="19" font-weight="700" letter-spacing="-0.2">The quarterly test</text>
+  <text x="290.79999999999995" y="363" fill="#8A959B" font-size="13.5">every loan, every quarter — no AI anywhere in this row</text>
+  <circle cx="86" cy="456.0" r="19" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.6"/><circle cx="86" cy="451.0" r="5.7" fill="#2B4A6B"/><path d="M76.1,467.8 a9.9,8.7 0 0 1 19.8,0" fill="#2B4A6B"/>
+  <rect x="118" y="388" width="262" height="136" rx="14" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.4"/>
+  <circle cx="142" cy="412" r="12" fill="#2B4A6B"/>
+  <text x="142" y="416.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">1</text>
+  <text x="140" y="444" fill="#2B4A6B" font-size="15.5" font-weight="700">You press one button</text>
+  <text x="140" y="466" fill="#51626A" font-size="13">Runs the whole book for</text>
+  <text x="140" y="484" fill="#51626A" font-size="13">the quarter.</text>
+  <line x1="386" y1="456.0" x2="406" y2="456.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="410" y="388" width="288" height="136" rx="14" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.4"/>
+  <circle cx="434" cy="412" r="12" fill="#A4590B"/>
+  <text x="434" y="416.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">2</text>
+  <text x="432" y="444" fill="#A4590B" font-size="15.5" font-weight="700">We compute every test</text>
+  <text x="432" y="466" fill="#51626A" font-size="13">From the approved terms only.</text>
+  <text x="432" y="484" fill="#51626A" font-size="13">A missing input is refused, never</text>
+  <text x="432" y="502" fill="#51626A" font-size="13">guessed at.</text>
+  <line x1="704" y1="456.0" x2="724" y2="456.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="728" y="388" width="268" height="136" rx="14" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.4"/>
+  <circle cx="752" cy="412" r="12" fill="#A4590B"/>
+  <text x="752" y="416.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">3</text>
+  <text x="750" y="444" fill="#A4590B" font-size="15.5" font-weight="700">We compare</text>
+  <text x="750" y="466" fill="#51626A" font-size="13">Our figure against the one the</text>
+  <text x="750" y="484" fill="#51626A" font-size="13">borrower reported.</text>
+  <path d="M1002,456.0 H1018 V420 H1034" fill="none" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <path d="M1002,456.0 H1018 V492 H1034" fill="none" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="1038" y="398" width="562" height="44" rx="14" fill="#FFFFFF" stroke="#DED7CE" stroke-width="1.4"/>
+  <text x="1060" y="419" fill="#1F2A2E" font-size="14.5" font-weight="700">It passes — nothing to do</text>
+  <text x="1060" y="435" fill="#51626A" font-size="12.5">a disagreement with the borrower’s own figure is still logged</text>
+  <rect x="1038" y="470" width="562" height="44" rx="14" fill="#FFFFFF" stroke="#DED7CE" stroke-width="1.4"/>
+  <text x="1060" y="491" fill="#1F2A2E" font-size="14.5" font-weight="700">It fails — an exception is raised</text>
+  <text x="1060" y="507" fill="#51626A" font-size="12.5">OUR figure raises it, never theirs</text>
+  <circle cx="77" cy="570" r="13" fill="#146C67"/>
+  <text x="77" y="574.5" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">3</text>
+  <text x="100" y="576" fill="#1F2A2E" font-size="19" font-weight="700" letter-spacing="-0.2">The investigation</text>
+  <text x="280.2" y="575" fill="#8A959B" font-size="13.5">only when a test fails — and only when you ask for it</text>
+  <circle cx="86" cy="677.0" r="19" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.6"/><circle cx="86" cy="672.0" r="5.7" fill="#2B4A6B"/><path d="M76.1,688.8 a9.9,8.7 0 0 1 19.8,0" fill="#2B4A6B"/>
+  <rect x="118" y="600" width="262" height="154" rx="14" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.4"/>
+  <circle cx="142" cy="624" r="12" fill="#2B4A6B"/>
+  <text x="142" y="628.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">1</text>
+  <text x="140" y="656" fill="#2B4A6B" font-size="15.5" font-weight="700">You press Investigate</text>
+  <text x="140" y="678" fill="#51626A" font-size="13">Nothing runs unasked. This is</text>
+  <text x="140" y="696" fill="#51626A" font-size="13">the only thing that starts it.</text>
+  <line x1="386" y1="677.0" x2="406" y2="677.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="410" y="600" width="340" height="154" rx="14" fill="#E6F2F0" stroke="#146C67" stroke-width="1.4"/>
+  <circle cx="434" cy="624" r="12" fill="#146C67"/>
+  <text x="434" y="628.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">2</text>
+  <text x="432" y="656" fill="#146C67" font-size="15.5" font-weight="700">The agent goes and looks</text>
+  <text x="432" y="678" fill="#51626A" font-size="13">It plans, reads what it chooses to</text>
+  <text x="432" y="696" fill="#51626A" font-size="13">read, asks a specialist when it needs</text>
+  <text x="432" y="714" fill="#51626A" font-size="13">one, and re-calculates. It stops when</text>
+  <text x="432" y="732" fill="#51626A" font-size="13">the evidence is enough.</text>
+  <line x1="756" y1="677.0" x2="776" y2="677.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="780" y="600" width="300" height="154" rx="14" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.4"/>
+  <circle cx="804" cy="624" r="12" fill="#A4590B"/>
+  <text x="804" y="628.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">3</text>
+  <text x="802" y="656" fill="#A4590B" font-size="15.5" font-weight="700">Guardrails check it</text>
+  <text x="802" y="678" fill="#51626A" font-size="13">Six of them, in plain code. A figure</text>
+  <text x="802" y="696" fill="#51626A" font-size="13">with no calculation behind it and no</text>
+  <text x="802" y="714" fill="#51626A" font-size="13">quote to stand on forces the answer</text>
+  <text x="802" y="732" fill="#51626A" font-size="13">back to “abstain”.</text>
+  <line x1="1086" y1="677.0" x2="1106" y2="677.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <rect x="1110" y="600" width="228" height="154" rx="14" fill="#FFFFFF" stroke="#DED7CE" stroke-width="1.4"/>
+  <circle cx="1134" cy="624" r="12" fill="#1F2A2E"/>
+  <text x="1134" y="628.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">4</text>
+  <text x="1132" y="656" fill="#1F2A2E" font-size="15.5" font-weight="700">A recommendation</text>
+  <text x="1132" y="678" fill="#51626A" font-size="13">With its calculations, its</text>
+  <text x="1132" y="696" fill="#51626A" font-size="13">citations, and whatever is</text>
+  <text x="1132" y="714" fill="#51626A" font-size="13">still unresolved.</text>
+  <line x1="1344" y1="677.0" x2="1364" y2="677.0" stroke="#DED7CE" stroke-width="2" marker-end="url(#l)"/>
+  <circle cx="1390" cy="677.0" r="19" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.6"/><circle cx="1390" cy="672.0" r="5.7" fill="#2B4A6B"/><path d="M1380.1,688.8 a9.9,8.7 0 0 1 19.8,0" fill="#2B4A6B"/>
+  <rect x="1422" y="600" width="178" height="154" rx="14" fill="#E9F0F7" stroke="#2B4A6B" stroke-width="1.4"/>
+  <circle cx="1446" cy="624" r="12" fill="#2B4A6B"/>
+  <text x="1446" y="628.5" fill="#FFFFFF" font-size="12.5" font-weight="700" text-anchor="middle">5</text>
+  <text x="1444" y="656" fill="#2B4A6B" font-size="15.5" font-weight="700">You decide</text>
+  <text x="1444" y="678" fill="#51626A" font-size="13">Approve or override.</text>
+  <text x="1444" y="696" fill="#51626A" font-size="13">Yours is the decision</text>
+  <text x="1444" y="714" fill="#51626A" font-size="13">of record.</text>
+  <text x="64" y="790" fill="#1F2A2E" font-size="15.5" font-weight="700">What the agent can reach for, in step 2</text>
+  <text x="64" y="811" fill="#8A959B" font-size="13.5">Six tools. It chooses which, and when — nothing is handed to it in advance.</text>
+  <rect x="64" y="826" width="238" height="40" rx="20" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.3"/>
+  <text x="183" y="851" fill="#A4590B" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">search_documents</text>
+  <rect x="314" y="826" width="238" height="40" rx="20" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.3"/>
+  <text x="433" y="851" fill="#A4590B" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">dscr_calculator</text>
+  <rect x="564" y="826" width="238" height="40" rx="20" fill="#FCF4E6" stroke="#A4590B" stroke-width="1.3"/>
+  <text x="683" y="851" fill="#A4590B" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">search_past_cases</text>
+  <rect x="814" y="826" width="238" height="40" rx="20" fill="#E6F2F0" stroke="#146C67" stroke-width="1.3"/>
+  <text x="933" y="851" fill="#146C67" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">definition_agent</text>
+  <rect x="1064" y="826" width="238" height="40" rx="20" fill="#E6F2F0" stroke="#146C67" stroke-width="1.3"/>
+  <text x="1183" y="851" fill="#146C67" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">research_agent</text>
+  <rect x="1314" y="826" width="238" height="40" rx="20" fill="#E6F2F0" stroke="#146C67" stroke-width="1.3"/>
+  <text x="1433" y="851" fill="#146C67" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" text-anchor="middle">document_agent</text>
+  <line x1="64" y1="898" x2="1600" y2="898" stroke="#DED7CE" stroke-width="1"/>
+  <text x="64" y="928" fill="#1F2A2E" font-size="14.5">It remembers. A decision you record becomes a lesson, and the next similar exception starts with that lesson in hand.</text>
+  <text x="64" y="952" fill="#8A959B" font-size="13">Across three live runs that has not made investigations shorter. The effect is neutral, and we do not claim otherwise.</text>
+  <text x="64" y="986" fill="#8A959B" font-size="12">CreditScout · synthetic data only · the agent recommends, a human decides</text>
 </svg>

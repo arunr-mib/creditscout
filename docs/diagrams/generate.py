@@ -120,108 +120,225 @@ def legend(xr, y):
     return "\n  ".join(out)
 
 # ============================================================ USER FLOW
+#
+# A DIFFERENT DIAGRAM, ON PURPOSE. The architecture picture answers "what is
+# wired to what"; this one answers "what is it like to use". It was being read
+# as a second architecture diagram because it looked like one — same dark page,
+# same rectangles, same tags.
+#
+# So: a lit page, warm neutrals, the product's own teal, rounded cards, a
+# person at the start of every flow, and copy in the second person. The facts
+# are unchanged; only the register is.
+
+# the app's own light palette, warmed half a step
+L_BG, L_CARD, L_EDGE = "#FAF8F5", "#FFFFFF", "#DED7CE"
+L_TEXT, L_SECOND, L_MUTED = "#1F2A2E", "#51626A", "#8A959B"
+L_MODEL, L_MODEL_BG = "#146C67", "#E6F2F0"
+L_CODE, L_CODE_BG = "#A4590B", "#FCF4E6"
+L_YOU, L_YOU_BG = "#2B4A6B", "#E9F0F7"
+
+
+def avatar(x, y, r=19):
+    """The analyst. A person, not a dashed rectangle."""
+    return (f'<circle cx="{x}" cy="{y}" r="{r}" fill="{L_YOU_BG}" stroke="{L_YOU}" stroke-width="1.6"/>'
+            f'<circle cx="{x}" cy="{y-5}" r="{r*0.3:.1f}" fill="{L_YOU}"/>'
+            f'<path d="M{x-r*0.52:.1f},{y+r*0.62:.1f} a{r*0.52:.1f},{r*0.46:.1f} 0 0 1 {r*1.04:.1f},0" fill="{L_YOU}"/>')
+
+
+def card(x, y, w, h, title, lines=(), kind="plain", step=None):
+    """A soft card. `kind` tints it: you | model | code | plain."""
+    fill, edge, tcol = L_CARD, L_EDGE, L_TEXT
+    if kind == "you":
+        fill, edge, tcol = L_YOU_BG, L_YOU, L_YOU
+    elif kind == "model":
+        fill, edge, tcol = L_MODEL_BG, L_MODEL, L_MODEL
+    elif kind == "code":
+        fill, edge, tcol = L_CODE_BG, L_CODE, L_CODE
+    o = [f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="14" fill="{fill}" stroke="{edge}" stroke-width="1.4"/>']
+    ty = y + 34
+    if step is not None:
+        o.append(f'<circle cx="{x+24}" cy="{y+24}" r="12" fill="{tcol}"/>')
+        o.append(f'<text x="{x+24}" y="{y+28.5}" fill="{L_CARD}" font-size="12.5" font-weight="700" text-anchor="middle">{step}</text>')
+        ty = y + 56
+    o.append(f'<text x="{x+22}" y="{ty}" fill="{tcol}" font-size="15.5" font-weight="700">{esc(title)}</text>')
+    for i, ln in enumerate(lines):
+        o.append(f'<text x="{x+22}" y="{ty+22+i*18}" fill="{L_SECOND}" font-size="13">{esc(ln)}</text>')
+    return "\n  ".join(o)
+
+
+def flow(x, y, n, name, when):
+    """A flow's heading: a numbered dot, the name, and when it happens."""
+    return "\n  ".join([
+        f'<circle cx="{x+13}" cy="{y-6}" r="13" fill="{L_MODEL}"/>',
+        f'<text x="{x+13}" y="{y-1.5}" fill="#FFFFFF" font-size="13" font-weight="700" text-anchor="middle">{n}</text>',
+        f'<text x="{x+36}" y="{y}" fill="{L_TEXT}" font-size="19" font-weight="700" letter-spacing="-0.2">{esc(name)}</text>',
+        f'<text x="{x+36+len(name)*10.6}" y="{y-1}" fill="{L_MUTED}" font-size="13.5">{esc(when)}</text>',
+    ])
+
+
+def hop(x1, y, x2):
+    """A soft arrow between cards."""
+    return f'<line x1="{x1}" y1="{y}" x2="{x2-4}" y2="{y}" stroke="{L_EDGE}" stroke-width="2" marker-end="url(#l)"/>'
+
+
+def ldoc(w, h, body):
+    head = f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}" font-family="{SANS}">'
+    return "\n".join([
+        head,
+        '  <defs>',
+        '    <marker id="l" markerWidth="8" markerHeight="7" refX="7.5" refY="3.5" orient="auto">',
+        f'      <path d="M0,0 L8,3.5 L0,7 Z" fill="{L_EDGE}"/>',
+        '    </marker>',
+        '  </defs>',
+        f'  <rect width="{w}" height="{h}" fill="{L_BG}"/>',
+        f'  <text x="64" y="58" fill="{L_TEXT}" font-size="27" font-weight="700" letter-spacing="-0.5">What it is like to use CreditScout</text>',
+        f'  <text x="64" y="86" fill="{L_SECOND}" font-size="15">Three moments in a quarter. You start every one of them, and you finish every one of them.</text>',
+        "  " + body,
+        f'  <text x="64" y="{h-26}" fill="{L_MUTED}" font-size="12">CreditScout · synthetic data only · the agent recommends, a human decides</text>',
+        '</svg>',
+        '',
+    ])
+
+
 P = []
-P.append(lane(140, "Flow A — Loan onboarding", "once per loan · re-runs when an amendment arrives"))
-ay, ah = 166, 104
-P.append(box(64, ay, 232, ah, "Add a borrower", ["name + documents on ONE", "screen; each file classified"], "human", tag="Analyst"))
-P.append(arrow(302, ay+ah/2, 336, ay+ah/2))
-P.append(box(342, ay, 256, ah, "definition_agent", ["reads the definitions article", "and every amendment on file"], "model", tag="Extract"))
-P.append(arrow(604, ay+ah/2, 638, ay+ah/2))
-P.append(box(644, ay, 244, ah, "provenance checks", ["every term needs a citation", "and a verbatim quote"], "code", tag="Verify"))
-P.append(arrow(894, ay+ah/2, 928, ay+ah/2))
-P.append(box(934, ay, 232, ah, "Approve terms", ["four-eyes; nothing is", "testable until approved"], "human", tag="Analyst"))
-P.append(arrow(1172, ay+ah/2, 1206, ay+ah/2))
-P.append(box(1212, ay, 388, ah, "covenant_terms v1 — approved", ["versioned, effective-dated; an amendment creates v2", "and supersedes, it never overwrites"], "plain", tag="Boarded"))
 
-P.append(lane(336, "Flow B — Quarterly covenant test", "every loan, every quarter · no model involved"))
-by, bh = 362, 104
-P.append(box(64, by, 232, bh, "Run Covenant Tests", ["one click, whole book"], "human", tag="Analyst"))
-P.append(arrow(302, by+bh/2, 336, by+bh/2))
-P.append(box(342, by, 256, bh, "calc/dscr.js", ["computes EVERY test from the", "approved terms — never infers"], "code", tag="Compute"))
-P.append(arrow(604, by+bh/2, 638, by+bh/2))
-P.append(box(644, by, 244, bh, "reconcile", ["our figure vs the borrower's", "reported figure"], "code", tag="Compare"))
-# Pass and fail are BRANCHES, not a sequence. Chaining them read as
-# "a pass leads to a breach", which is the opposite of what happens.
-P.append(f'<path d="M894 {by+bh/2} H912 V{by+22} H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>')
-P.append(f'<path d="M894 {by+bh/2} H912 V{by+80} H928" fill="none" stroke="#4A5B76" stroke-width="1.25" marker-end="url(#a)"/>')
-P.append(box(934, by, 666, 46, "Meets minimum — no action", ["variance logged if the borrower's figure disagrees with ours"], "plain", tag=None))
-P.append(box(934, by+58, 666, 46, "Below minimum — exception raised", ["OUR figure raises it, never theirs: a borrower whose arithmetic favours them is invisible otherwise"], "plain", tag=None))
+# Card heights are driven by the longest body: with a step badge the first body
+# line sits 78px below the card top and each line is 18 more. Three lines needs
+# 136, four needs 154. They were 104 and the last line fell out of the card.
+H3, H4 = 136, 154
 
-P.append(lane(532, "Flow C — Investigation", "only on an exception · the agent decides what to read next"))
-cy, ch = 558, 150
-P.append(box(64, cy, 232, ch, "Investigate", ["analyst starts it;", "nothing runs unasked"], "human", tag="Analyst"))
-P.append(arrow(302, cy+ch/2, 336, cy+ch/2))
-P.append(box(342, cy, 388, ch, "CreditScout Agent", ["gpt-4.1-mini orchestrator, six function tools.", "Plans, reads, delegates, re-calculates —", "then decides whether the evidence is enough."], "model", tag="Reason"))
-P.append(arrow(736, cy+ch/2, 770, cy+ch/2))
-P.append(box(776, cy, 300, ch, "guardrails/*.js", ["six checks, zero dependencies.", "A figure with no logged calculation", "and no cited quote forces abstain."], "code", tag="Enforce"))
-P.append(arrow(1082, cy+ch/2, 1116, cy+ch/2))
-P.append(box(1122, cy, 220, ch, "Casefile", ["recommendation,", "cited claims,", "calculation log"], "plain", tag="Output"))
-P.append(arrow(1348, cy+ch/2, 1382, cy+ch/2))
-P.append(box(1388, cy, 212, ch, "Analyst decides", ["approve or override —", "the decision of record", "is always a person's"], "human", tag="Review"))
+# ----------------------------------------------------------------- flow 1
+y = 152
+P.append(flow(64, y, 1, "Onboarding a loan", "once per loan \u2014 and again when an amendment arrives"))
+ry, mid = y + 24, y + 24 + H3 / 2
+P.append(avatar(86, mid))
+P.append(card(118, ry, 262, H3, "You add the borrower", ["Name, industry and the documents,", "all on one screen. Every file is", "classified as you drop it in."], "you", step=1))
+P.append(hop(386, mid, 410))
+P.append(card(410, ry, 288, H3, "It reads the agreement", ["The definitions article and every", "amendment on file \u2014 and quotes", "back what it found."], "model", step=2))
+P.append(hop(704, mid, 728))
+P.append(card(728, ry, 268, H3, "Code checks the work", ["Every term needs a citation and a", "verbatim quote, or it does not", "reach you."], "code", step=3))
+P.append(hop(1002, mid, 1026))
+P.append(avatar(1048, mid))
+P.append(card(1080, ry, 226, H3, "You approve", ["Nothing can be tested", "until you say so."], "you", step=4))
+P.append(hop(1312, mid, 1336))
+P.append(card(1336, ry, 264, H3, "The terms go live", ["Version 1, effective-dated. An", "amendment makes version 2 \u2014", "it never overwrites."]))
 
-tools_y = 740
-P.append(f'<text x="342" y="{tools_y}" fill="{MUTED}" font-size="11.5" letter-spacing="1.3">THE SIX TOOLS IT CHOOSES BETWEEN</text>')
+# ----------------------------------------------------------------- flow 2
+y = 364
+P.append(flow(64, y, 2, "The quarterly test", "every loan, every quarter \u2014 no AI anywhere in this row"))
+ry, mid = y + 24, y + 24 + H3 / 2
+P.append(avatar(86, mid))
+P.append(card(118, ry, 262, H3, "You press one button", ["Runs the whole book for", "the quarter."], "you", step=1))
+P.append(hop(386, mid, 410))
+P.append(card(410, ry, 288, H3, "We compute every test", ["From the approved terms only.", "A missing input is refused, never", "guessed at."], "code", step=2))
+P.append(hop(704, mid, 728))
+P.append(card(728, ry, 268, H3, "We compare", ["Our figure against the one the", "borrower reported."], "code", step=3))
+P.append(f'<path d="M1002,{mid} H1018 V{ry+32} H1034" fill="none" stroke="{L_EDGE}" stroke-width="2" marker-end="url(#l)"/>')
+P.append(f'<path d="M1002,{mid} H1018 V{ry+104} H1034" fill="none" stroke="{L_EDGE}" stroke-width="2" marker-end="url(#l)"/>')
+P.append(f'<rect x="1038" y="{ry+10}" width="562" height="44" rx="14" fill="{L_CARD}" stroke="{L_EDGE}" stroke-width="1.4"/>')
+P.append(f'<text x="1060" y="{ry+31}" fill="{L_TEXT}" font-size="14.5" font-weight="700">It passes \u2014 nothing to do</text>')
+P.append(f'<text x="1060" y="{ry+47}" fill="{L_SECOND}" font-size="12.5">a disagreement with the borrower\u2019s own figure is still logged</text>')
+P.append(f'<rect x="1038" y="{ry+82}" width="562" height="44" rx="14" fill="{L_CARD}" stroke="{L_EDGE}" stroke-width="1.4"/>')
+P.append(f'<text x="1060" y="{ry+103}" fill="{L_TEXT}" font-size="14.5" font-weight="700">It fails \u2014 an exception is raised</text>')
+P.append(f'<text x="1060" y="{ry+119}" fill="{L_SECOND}" font-size="12.5">OUR figure raises it, never theirs</text>')
+
+# ----------------------------------------------------------------- flow 3
+y = 576
+P.append(flow(64, y, 3, "The investigation", "only when a test fails \u2014 and only when you ask for it"))
+ry, mid = y + 24, y + 24 + H4 / 2
+P.append(avatar(86, mid))
+P.append(card(118, ry, 262, H4, "You press Investigate", ["Nothing runs unasked. This is", "the only thing that starts it."], "you", step=1))
+P.append(hop(386, mid, 410))
+P.append(card(410, ry, 340, H4, "The agent goes and looks", ["It plans, reads what it chooses to", "read, asks a specialist when it needs", "one, and re-calculates. It stops when", "the evidence is enough."], "model", step=2))
+P.append(hop(756, mid, 780))
+P.append(card(780, ry, 300, H4, "Guardrails check it", ["Six of them, in plain code. A figure", "with no calculation behind it and no", "quote to stand on forces the answer", "back to \u201cabstain\u201d."], "code", step=3))
+P.append(hop(1086, mid, 1110))
+P.append(card(1110, ry, 228, H4, "A recommendation", ["With its calculations, its", "citations, and whatever is", "still unresolved."], "plain", step=4))
+P.append(hop(1344, mid, 1368))
+P.append(avatar(1390, mid))
+P.append(card(1422, ry, 178, H4, "You decide", ["Approve or override.", "Yours is the decision", "of record."], "you", step=5))
+
+# ----------------------------------------------------------------- the tools
+ty = 790
+P.append(f'<text x="64" y="{ty}" fill="{L_TEXT}" font-size="15.5" font-weight="700">What the agent can reach for, in step 2</text>')
+P.append(f'<text x="64" y="{ty+21}" fill="{L_MUTED}" font-size="13.5">Six tools. It chooses which, and when — nothing is handed to it in advance.</text>')
 tools = [("search_documents", "code"), ("dscr_calculator", "code"), ("search_past_cases", "code"),
          ("definition_agent", "model"), ("research_agent", "model"), ("document_agent", "model")]
-tx = 342
+tx = 64
 for name, kind in tools:
-    w = 196
-    col = ACCENT if kind == "model" else SECOND
-    bd = ACCENT_DIM if kind == "model" else BORDER
-    P.append(f'<rect x="{tx}" y="{tools_y+12}" width="{w}" height="34" rx="5" fill="{PANEL}" stroke="{bd}" stroke-width="1"/>')
-    P.append(f'<text x="{tx+w/2}" y="{tools_y+34}" fill="{col}" font-size="12.5" font-family="{MONO}" text-anchor="middle">{name}</text>')
-    tx += w + 12
+    col, bg, bd = (L_MODEL, L_MODEL_BG, L_MODEL) if kind == "model" else (L_CODE, L_CODE_BG, L_CODE)
+    P.append(f'<rect x="{tx}" y="{ty+36}" width="238" height="40" rx="20" fill="{bg}" stroke="{bd}" stroke-width="1.3"/>')
+    P.append(f'<text x="{tx+119}" y="{ty+61}" fill="{col}" font-size="13.5" font-family="{MONO}" text-anchor="middle">{name}</text>')
+    tx += 250
 
-P.append(f'<line x1="64" y1="{tools_y+86}" x2="1600" y2="{tools_y+86}" stroke="{BORDER}" stroke-width="1"/>')
-P.append(f'<text x="64" y="{tools_y+118}" fill="{SECOND}" font-size="13.5">Memory closes the loop: an approved or overridden casefile becomes a lesson, retrieved by <tspan font-family="{MONO}" fill="{ACCENT}">search_past_cases</tspan> on the next similar exception.</text>')
-P.append(f'<text x="64" y="{tools_y+140}" fill="{MUTED}" font-size="12.5">Measured across three live runs it has not shortened investigations — the effect is neutral, and the claim that memory saves steps is not made.</text>')
+# ----------------------------------------------------------------- the footer
+fy = 898
+P.append(f'<line x1="64" y1="{fy}" x2="1600" y2="{fy}" stroke="{L_EDGE}" stroke-width="1"/>')
+P.append(f'<text x="64" y="{fy+30}" fill="{L_TEXT}" font-size="14.5">It remembers. A decision you record becomes a lesson, and the next similar exception starts with that lesson in hand.</text>')
+P.append(f'<text x="64" y="{fy+54}" fill="{L_MUTED}" font-size="13">Across three live runs that has not made investigations shorter. The effect is neutral, and we do not claim otherwise.</text>')
 
-write("creditscout-user-flow.svg",
-      doc(1664, 960, "CreditScout — end-to-end covenant monitoring",
-          "A reasoning layer decides what evidence to inspect. A calculation layer never guesses. A human always approves.",
-          "\n  ".join(P)))
+write("creditscout-user-flow.svg", ldoc(1664, 1012, "\n  ".join(P)))
 print("user flow written")
 
 # ========================================================= ARCHITECTURE
 A = []
 RAIL, CX, CW = 64, 238, 1362
 
-def mark(kind, x, y, col):
-    """A 20px glyph for the rail.
+# ---------------------------------------------------------------- brand marks
+#
+# THE REAL MARKS, not approximations. Vercel, Node.js and Supabase come from
+# simple-icons (the icon files are CC0; the trademarks remain their owners').
+# Azure comes from devicons (MIT) with its gradients flattened to Azure blue —
+# Microsoft's marks are not in simple-icons, which honours their removal
+# request. Using them here identifies the actual platform in an architecture
+# diagram, which is what they are for.
+#
+# Each entry is (viewBox size, [paths], brand colour). `mark()` scales to 20px.
+LOGOS = {
+    "vercel": (24, [
+        'M24 22.525H0l12-21.05 12 21.05z',
+    ], "#FFFFFF"),
+    "azure": (128, [
+        'M46.09.002h40.685L44.541 125.137a6.485 6.485 0 01-6.146 4.413H6.733a6.482 6.482 0 01-5.262-2.699 6.474 6.474 0 01-.876-5.848L39.944 4.414A6.488 6.488 0 0146.09 0z',
+        'M97.28 81.607H37.987a2.743 2.743 0 00-1.874 4.751l38.1 35.562a5.991 5.991 0 004.087 1.61h33.574z',
+        'M46.09.002A6.434 6.434 0 0039.93 4.5L.644 120.897a6.469 6.469 0 006.106 8.653h32.48a6.942 6.942 0 005.328-4.531l7.834-23.089 27.985 26.101a6.618 6.618 0 004.165 1.519h36.396l-15.963-45.616-46.533.011L86.922.002z',
+        'M98.055 4.408A6.476 6.476 0 0091.917.002H46.575a6.478 6.478 0 016.137 4.406l39.35 116.594a6.476 6.476 0 01-6.137 8.55h45.344a6.48 6.48 0 006.136-8.55z',
+    ], "#2E8FDF"),
+    "node": (24, [
+        'M11.998,24c-0.321,0-0.641-0.084-0.922-0.247l-2.936-1.737c-0.438-0.245-0.224-0.332-0.08-0.383 c0.585-0.203,0.703-0.25,1.328-0.604c0.065-0.037,0.151-0.023,0.218,0.017l2.256,1.339c0.082,0.045,0.197,0.045,0.272,0l8.795-5.076 c0.082-0.047,0.134-0.141,0.134-0.238V6.921c0-0.099-0.053-0.192-0.137-0.242l-8.791-5.072c-0.081-0.047-0.189-0.047-0.271,0 L3.075,6.68C2.99,6.729,2.936,6.825,2.936,6.921v10.15c0,0.097,0.054,0.189,0.139,0.235l2.409,1.392 c1.307,0.654,2.108-0.116,2.108-0.89V7.787c0-0.142,0.114-0.253,0.256-0.253h1.115c0.139,0,0.255,0.112,0.255,0.253v10.021 c0,1.745-0.95,2.745-2.604,2.745c-0.508,0-0.909,0-2.026-0.551L2.28,18.675c-0.57-0.329-0.922-0.945-0.922-1.604V6.921 c0-0.659,0.353-1.275,0.922-1.603l8.795-5.082c0.557-0.315,1.296-0.315,1.848,0l8.794,5.082c0.57,0.329,0.924,0.944,0.924,1.603 v10.15c0,0.659-0.354,1.273-0.924,1.604l-8.794,5.078C12.643,23.916,12.324,24,11.998,24z M19.099,13.993 c0-1.9-1.284-2.406-3.987-2.763c-2.731-0.361-3.009-0.548-3.009-1.187c0-0.528,0.235-1.233,2.258-1.233 c1.807,0,2.473,0.389,2.747,1.607c0.024,0.115,0.129,0.199,0.247,0.199h1.141c0.071,0,0.138-0.031,0.186-0.081 c0.048-0.054,0.074-0.123,0.067-0.196c-0.177-2.098-1.571-3.076-4.388-3.076c-2.508,0-4.004,1.058-4.004,2.833 c0,1.925,1.488,2.457,3.895,2.695c2.88,0.282,3.103,0.703,3.103,1.269c0,0.983-0.789,1.402-2.642,1.402 c-2.327,0-2.839-0.584-3.011-1.742c-0.02-0.124-0.126-0.215-0.253-0.215h-1.137c-0.141,0-0.254,0.112-0.254,0.253 c0,1.482,0.806,3.248,4.655,3.248C17.501,17.007,19.099,15.91,19.099,13.993z',
+    ], "#5FA04E"),
+    "supabase": (24, [
+        'M11.9 1.036c-.015-.986-1.26-1.41-1.874-.637L.764 12.05C-.33 13.427.65 15.455 2.409 15.455h9.579l.113 7.51c.014.985 1.259 1.408 1.873.636l9.262-11.653c1.093-1.375.113-3.403-1.645-3.403h-9.642z',
+    ], "#3FCF8E"),
+}
 
-    SIMPLIFIED MARKS, DRAWN HERE — not the vendors' brand assets. They evoke
-    the platform (a triangle for Vercel, a hexagon for Node, a bolt for
-    Supabase, a chevron pair for Azure) without shipping a trademark into a
-    document we redraw at will. Swap in official SVGs if this ever leaves
-    internal use.
-    """
-    g = {
-        # a browser window
-        "browser": f'<rect x="{x}" y="{y}" width="20" height="16" rx="2.5" fill="none" stroke="{col}" stroke-width="1.6"/>'
-                   f'<line x1="{x}" y1="{y+5.5}" x2="{x+20}" y2="{y+5.5}" stroke="{col}" stroke-width="1.6"/>'
-                   f'<circle cx="{x+3.4}" cy="{y+2.9}" r="1" fill="{col}"/>',
-        # Vercel-style triangle
-        "vercel": f'<path d="M{x+10},{y+1} L{x+20},{y+17} L{x},{y+17} Z" fill="{col}"/>',
-        # Azure-style chevrons
-        "azure": f'<path d="M{x+8},{y+1} L{x+1},{y+17} L{x+8},{y+17} Z" fill="{col}"/>'
-                 f'<path d="M{x+12},{y+5} L{x+6.5},{y+17} L{x+20},{y+17} L{x+16},{y+12.5} Z" fill="{col}"/>',
-        # Node-style hexagon
-        "node": f'<path d="M{x+10},{y} L{x+19},{y+4.8} L{x+19},{y+13.2} L{x+10},{y+18} L{x+1},{y+13.2} L{x+1},{y+4.8} Z" fill="none" stroke="{col}" stroke-width="1.7"/>',
-        # Supabase-style bolt
-        "supabase": f'<path d="M{x+12},{y} L{x+2},{y+10.5} L{x+9},{y+10.5} L{x+8},{y+18} L{x+18},{y+7.5} L{x+11},{y+7.5} Z" fill="{col}"/>',
-    }
-    return g.get(kind, "")
+BROWSER_GLYPH = "browser"  # drawn, not a brand: the analyst's browser has no vendor
+
+
+def mark(kind, x, y, col):
+    """A 20px mark for the rail."""
+    if kind == BROWSER_GLYPH:
+        return (f'<rect x="{x}" y="{y}" width="20" height="16" rx="2.5" fill="none" stroke="{col}" stroke-width="1.6"/>'
+                f'<line x1="{x}" y1="{y+5.5}" x2="{x+20}" y2="{y+5.5}" stroke="{col}" stroke-width="1.6"/>'
+                f'<circle cx="{x+3.4}" cy="{y+2.9}" r="1" fill="{col}"/>')
+    logo = LOGOS.get(kind)
+    if not logo:
+        return ""
+    vb, paths, brand = logo
+    k = 20 / vb
+    body = "".join(f'<path d="{d}" fill="{brand}"/>' for d in paths)
+    return f'<g transform="translate({x},{y}) scale({k:.6f})">{body}</g>'
 
 
 def band(y, name, note, glyph=None):
     tx = RAIL + (30 if glyph else 0)
     if glyph:
-        A.append(mark(glyph, RAIL, y + 7, SECOND))
+        A.append(mark(glyph, RAIL, y + 6, SECOND))
     A.append(f'<text x="{tx}" y="{y+22}" fill="{TEXT}" font-size="16" font-weight="700" letter-spacing="-0.2">{esc(name)}</text>')
     A.append(f'<text x="{RAIL}" y="{y+44}" fill="{MUTED}" font-size="13" font-weight="500">{esc(note)}</text>')
 
 y1 = 132
-band(y1, "Analyst", "Browser", "browser")
+band(y1, "Analyst", "Browser", BROWSER_GLYPH)
 A.append(box(CX, y1, CW, 78, "Onboarding · Credit Analysis Queue · Recommendation · Documents · Covenant terms · Lessons · Governance",
              ["User sign-in required.",
               "The browser can only read what the rules allow it to see. Every change is made by the server, never by the browser."], "human"))
@@ -233,7 +350,7 @@ A.append(box(CX, y2, 432, 108, "Analyst API + Server Actions", ["investigate · 
 A.append(box(CX+450, y2, 432, 108, "Agent tool routes",
              ["Published as OpenAPI; every call must present a secret key.",
               "The agent can reach nothing else — not the database,",
-              "not the analyst's screens."], "code", tag="The agent's only door"))
+              "not the analyst's screens."], "code", tag="AI access · secret key required"))
 A.append(box(CX+900, y2, 462, 108, "Ingest + embeddings",
              ["chunk by section, 1536-dim vectors", "text-embedding-3-small", "Searched by the agent, not pre-loaded — see Agentic RAG below"], "code", tag="Retrieval index"))
 
