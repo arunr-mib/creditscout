@@ -8,6 +8,7 @@ import { ProposeTrace } from "./ProposeTrace";
 import { ReviewNotices } from "./ReviewNotices";
 import { TermEditor } from "./TermEditor";
 import { TermRow } from "./TermRow";
+import { TermsDiffTable } from "./TermsDiffTable";
 import { UncitedClauses, clauseKeyOf } from "./UncitedClauses";
 import {
   amendmentDocs,
@@ -88,6 +89,10 @@ export function CovenantSetup(props: {
   history: HistoryRow[];
   clauses: Clause[];
   initial: Proposal | null;
+  /** The terms in force. The proposal is a change TO this, and the screen says what changes. */
+  approved: { version: number; terms: Terms } | null;
+  /** The signed-in analyst, offered as the approver name — never recorded unless chosen. */
+  signedInAs: string | null;
 }) {
   const { facility, documents, history, clauses } = props;
 
@@ -420,10 +425,25 @@ export function CovenantSetup(props: {
     // pb-16 so the last section can scroll clear of the sticky approve bar
     // rather than sitting permanently underneath it.
     <div className="space-y-6 pb-16">
+      {/* The screen is a REVIEW, and it is of a specific version. "Covenant
+          setup · Coastal Marine" named a place in the app; this names the
+          decision and the thing being decided. */}
       <header className="space-y-2">
-        <h1 className="text-title text-text">Covenant setup · {facility.borrower_name}</h1>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h1 className="text-title text-text">Review covenant terms</h1>
+          {proposal && !approved && (
+            <span className="rounded border border-code bg-code-bg px-2 py-px text-label text-code-bright">
+              Pending analyst approval
+            </span>
+          )}
+        </div>
         <p className="text-body text-text-secondary">
-          The agent proposes each term with a clause behind it. Read each term beside that clause. Nothing governs a test
+          {facility.borrower_name}
+          {proposal?.version ? ` · Proposed v${proposal.version}` : ""}
+          {props.approved ? ` · Approved v${props.approved.version} in force` : " · No approved version yet"}
+        </p>
+        <p className="text-body text-text-secondary">
+          Compare the proposed terms with the source documents before approving this version. Nothing governs a test
           until a person approves it.
         </p>
       </header>
@@ -440,13 +460,13 @@ export function CovenantSetup(props: {
                 : "h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
             }
           >
-            {proposal || phase.kind === "not_found" || proposeError ? "Propose again" : "Extract covenant terms"}
+            {proposal || phase.kind === "not_found" || proposeError ? "Re-extract terms" : "Extract covenant terms"}
           </button>
           <p className="text-label text-text-muted">
             {busy
               ? "The CreditScout Agent is extracting the covenant terms from your loan agreement"
               : proposal
-              ? "Agent extracts the terms again for approval."
+              ? "Reads the documents again and REPLACES the draft below, including any edits you have made here. The approved version is untouched."
               : "The agent reads the agreement and any amendments. The proposal is saved but governs nothing until a person approves it."}
           </p>
         </div>
@@ -523,6 +543,16 @@ export function CovenantSetup(props: {
             )}
           </div>
 
+          <TermsDiffTable
+            approved={props.approved}
+            proposedVersion={proposal.version}
+            proposedTerms={effectiveTerms}
+            onOpenTerm={(field) => {
+              const entry = entryFor(field, proposal.citations, edits);
+              if (entry) openCitation(entry.citation);
+            }}
+          />
+
           <ReviewNotices
             warnings={proposal.warnings}
             note={proposal.warningsNote}
@@ -590,6 +620,9 @@ export function CovenantSetup(props: {
           {onFile}
 
           <ApproveBar
+            version={proposal.version}
+            effectiveFrom={proposal.effectiveFrom}
+            signedInAs={props.signedInAs}
             approver={approver}
             onApprover={setApprover}
             blockers={approved ? [] : blockerList}

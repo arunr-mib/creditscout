@@ -1,3 +1,7 @@
+import { useState } from "react";
+
+import { COVERAGE_NOTE, coverageLine } from "./noticeGroups";
+import { longDate } from "@/lib/terms-labels";
 import type { Refusal } from "./termsReview";
 
 /** What is open for the analyst to read. None of it blocks approval; none of it is nothing. */
@@ -34,6 +38,11 @@ export type ApprovalState =
  * dress the field up as an identity control.
  */
 export function ApproveBar(props: {
+  /** The version being approved and the date it would take effect. */
+  version?: number;
+  effectiveFrom?: string;
+  /** The signed-in analyst, offered — never recorded unless they choose it. */
+  signedInAs?: string | null;
   approver: string;
   onApprover: (v: string) => void;
   blockers: string[];
@@ -47,6 +56,14 @@ export function ApproveBar(props: {
 }) {
   const { approver, onApprover, blockers, state, editCount, omission, uncheckedLists, onApprove, onReload } = props;
   const sending = state.kind === "sending";
+  // Approval creates a version other people will rely on. The last step is
+  // deliberate, and it restates exactly what is about to be recorded.
+  const [confirming, setConfirming] = useState(false);
+  const identity = props.version ? `Proposed v${props.version}` : "This proposal";
+  const effective = props.effectiveFrom ? ` · Effective ${longDate(props.effectiveFrom)}` : "";
+  // `blockers` already carries the unconfirmed completeness check, so this is
+  // the count of things asking for attention — not a second tally beside it.
+  const attention = blockers.length;
 
   if (state.kind === "approved") {
     return (
@@ -55,8 +72,11 @@ export function ApproveBar(props: {
           Approved as version {state.version}, effective from <span className="font-mono">{state.effectiveFrom}</span>, by{" "}
           {state.by}.
         </p>
-        <p className="mt-1 text-body text-text-secondary">
-          These terms now govern tests from that date. The approver&rsquo;s name was typed, not verified.
+        <p className="mt-1 max-w-prose text-body text-text-secondary">
+          CreditScout will use this version for applicable tests from that date. It does not change the loan
+          agreement — it records CreditScout&rsquo;s approved reading of it. Tests already recorded keep the terms
+          they ran on; reassessing any of them is an explicit new run. The approver&rsquo;s name was typed, not
+          verified.
         </p>
       </footer>
     );
@@ -90,11 +110,65 @@ export function ApproveBar(props: {
         </div>
       )}
 
+      {confirming && (
+        <div role="dialog" aria-label="Confirm approval" className="mb-4 rounded-md border-2 border-model bg-surface p-4">
+          <p className="text-card text-text">
+            Record {identity}
+            {effective}?
+          </p>
+          <p className="mt-1 max-w-prose text-body text-text-secondary">
+            This creates the version CreditScout uses for applicable tests from that date. It does not change the loan
+            agreement. Tests already recorded keep the terms they ran on.
+          </p>
+          {uncheckedLists.length > 0 && (
+            <p className="mt-2 max-w-prose text-body text-code-bright">
+              Recorded with no completeness check for {uncheckedLists.join(", ")}.
+            </p>
+          )}
+          <p className="mt-2 text-body text-text-secondary">
+            Recorded approver name: <span className="text-text">{approver || "—"}</span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setConfirming(false);
+                onApprove();
+              }}
+              className="h-8 rounded-md bg-model px-4 text-body font-medium text-bg"
+            >
+              Confirm approval
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              className="h-8 rounded-md border border-border-strong px-4 text-body text-text hover:bg-surface-raised"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-6 items-start gap-6">
         <div className="col-span-2">
-          <label className="block text-label uppercase tracking-wide text-text-muted" htmlFor="approver">
-            Approver (required)
-          </label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <label className="block text-label uppercase tracking-wide text-text-muted" htmlFor="approver">
+              Recorded approver name (required)
+            </label>
+            {/* Offered, never filled in for them. The session is one shared demo
+                credential, so prefilling it would record an attribution nobody
+                made. */}
+            {props.signedInAs && approver !== props.signedInAs && (
+              <button
+                type="button"
+                onClick={() => onApprover(props.signedInAs as string)}
+                className="text-label text-model-bright underline-offset-2 hover:underline"
+              >
+                Use my name ({props.signedInAs})
+              </button>
+            )}
+          </div>
           <input
             id="approver"
             type="text"
@@ -107,7 +181,7 @@ export function ApproveBar(props: {
             className="mt-1 block w-full rounded-md border border-border-strong bg-surface px-3 py-1 text-body text-text"
           />
           <p id="approver-note" className="mt-1 text-label text-text-muted">
-            A typed name, recorded with the approval. Not a verified identity; nothing checks it is not the proposer.
+            Recorded as entered. Identity is not verified, and nothing checks it is not the proposer.
           </p>
         </div>
 
@@ -135,14 +209,23 @@ export function ApproveBar(props: {
         </div>
 
         <div className="col-span-1 flex flex-col items-end gap-1">
+          <p className="text-label text-text-muted">
+            {identity}
+            {effective}
+          </p>
           <button
             type="button"
-            onClick={onApprove}
+            onClick={() => setConfirming(true)}
             disabled={disabled}
             className="h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
             {sending ? "Sending…" : uncheckedLists.length > 0 ? "Approve without a completeness check" : "Approve terms"}
           </button>
+          {attention > 0 && (
+            <span className="text-label text-code-bright">
+              {attention} review {attention === 1 ? "item requires" : "items require"} attention
+            </span>
+          )}
           {editCount > 0 && (
             <span className="text-label text-text-muted">
               {editCount} edit{editCount === 1 ? "" : "s"} will be sent
@@ -164,19 +247,29 @@ export function ApproveBar(props: {
 function Open({ omission: o, uncheckedLists }: { omission: OmissionCounts; uncheckedLists: string[] }) {
   const items: string[] = [];
   if (uncheckedLists.length > 0) items.push(`no completeness check ran for ${uncheckedLists.join(", ")}`);
-  if (o.unboarded > 0) items.push(`${o.unboarded} amendment${o.unboarded === 1 ? "" : "s"} on file not boarded`);
+    // "Boarded" is our word for a row in `covenant_terms`, not an analyst's.
+  if (o.unboarded > 0) items.push(`${o.unboarded} amendment${o.unboarded === 1 ? "" : "s"} on file not incorporated into the approved terms`);
   if (o.notes > 0) items.push(`${o.notes} note${o.notes === 1 ? "" : "s"} from automated checks`);
-  if (o.looseParagraphs > 0) {
-    items.push(`${o.looseParagraphs} paragraph${o.looseParagraphs === 1 ? "" : "s"} in ${o.looseWhere.join(", ")} that no term rests on`);
-  }
+  // A bare count read as a completeness measure. It is not one, and the note
+  // below says so rather than leaving the analyst to assume either way.
+  const coverage = coverageLine(o.looseParagraphs, o.looseWhere);
   // The uncited-clause count used to be pushed unconditionally, so this line
   // always had something after the colon. Now every item is conditional and a
   // clean proposal leaves none — a trailing colon over nothing reads broken.
-  if (items.length === 0) return null;
+  if (items.length === 0 && !coverage) return null;
   return (
-    <p className="mt-3 border-t border-border-strong pt-3 font-mono text-label text-code">
-      <span aria-hidden="true">⟡ </span>counted by code, open for you to read (none of it blocks approval): {items.join(" · ")}
-    </p>
+    <div className="mt-3 border-t border-border-strong pt-3">
+      {items.length > 0 && (
+        <p className="text-label text-text-muted">
+          Counted by code, open for you to read — none of it blocks approval: {items.join(" · ")}
+        </p>
+      )}
+      {coverage && (
+        <p className="mt-1 text-label text-text-muted">
+          {coverage}. {COVERAGE_NOTE}
+        </p>
+      )}
+    </div>
   );
 }
 

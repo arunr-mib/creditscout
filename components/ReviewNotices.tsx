@@ -1,4 +1,5 @@
-import { splitWarnings, WARNING_LABEL, type Warning } from "./termsReview";
+import { CONSEQUENCE_LABEL, CONSEQUENCE_NOTE, noticeHeadline, splitFieldPath } from "./noticeGroups";
+import { splitWarnings, type Warning } from "./termsReview";
 
 export interface BoardingNotice {
   title: string;
@@ -45,6 +46,9 @@ export function ReviewNotices(props: {
           onConfirm={onConfirm}
         />
       )}
+      {notRun.length > 0 && (
+        <p className="text-label uppercase tracking-wide text-text-muted">{CONSEQUENCE_LABEL.acknowledge}</p>
+      )}
       {notRun.map((w) => (
         <NotRun
           key={`${w.code}-${w.field}`}
@@ -57,64 +61,87 @@ export function ReviewNotices(props: {
         />
       ))}
 
-      {boarding.map((b) => (
-        <div key={b.title} role="note" className="rounded-md border-l-4 border-code bg-code-bg p-3">
-          <p className="text-label uppercase tracking-wide text-code">
-            <span aria-hidden="true">⟡ </span>Not boarded · by code
-          </p>
-          <p className="mt-1 text-body text-text">
-            {b.title}
-            {b.effectiveDate ? ` (effective ${b.effectiveDate})` : ""} is on file and is not part of the terms in force.
-          </p>
-          {/* Judged by document title (see amendmentsNotBoarded): "boards it" claims the terms NAME the amendment, not that every provision of it is reflected. */}
-          <p className="mt-1 text-body text-text-secondary">
-            {b.inTerms
-              ? "These proposed terms include it. Approving them boards it: every test from that date on uses the amended covenant."
-              : "These proposed terms do not include it. Approving them leaves it on file and still unboarded."}
-          </p>
-        </div>
-      ))}
-
-      {note && <p className="text-label text-text-muted">{note}</p>}
-
-      {warnings !== null && (
-        <div className="rounded-md border border-border-strong bg-surface-raised p-3">
-          {/* A count of nothing is noise: "(0)" invites the analyst to work out
-              what it counts. The number appears only when there is something to
-              count. "The server" was ours, not theirs — these are just checks. */}
-          <p className="text-card text-text">
-            Automated checks{notes.length > 0 ? ` (${notes.length})` : ""}{" "}
-            <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
-              <span aria-hidden="true">⟡ </span>by code
-            </span>
-          </p>
-          {notes.length === 0 ? (
-            <p className="mt-1 text-body text-text-secondary">No issues found.</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {notes.map((w, i) => (
-                <li key={`${w.code}-${i}`} className="rounded-sm border-l-4 border-code bg-code-bg p-2">
-                  <p className="text-label uppercase tracking-wide text-code">
-                    <span aria-hidden="true">⟡ </span>
-                    {WARNING_LABEL[w.code] ?? w.code}
-                  </p>
-                  <p className="text-body text-text-secondary">{w.message}</p>
+      {(boarding.length > 0 || (warnings !== null && notes.length > 0)) && (
+        <Group consequence="information">
+          {boarding.map((b) => (
+            <li key={b.title} className="rounded-md border border-border bg-surface p-3">
+              {/* "Not boarded · by code" named an internal state in our own
+                  vocabulary. What the analyst needs is what this proposal does
+                  about it. */}
+              <p className="text-body font-medium text-text">
+                {b.inTerms ? "Amendment included in this proposal" : "Amendment not included in this proposal"}
+              </p>
+              <p className="mt-1 text-body text-text-secondary">
+                {b.title} is not incorporated into the approved terms
+                {b.effectiveDate ? ` (effective ${b.effectiveDate})` : ""}.{" "}
+                {/* Judged by document title (see amendmentsNotBoarded): "includes" claims
+                    the terms NAME the amendment, not that every provision of it is reflected. */}
+                {b.inTerms
+                  ? "The proposal includes changes from this amendment. Approving it means every test from that date on uses the amended covenant."
+                  : "This proposal does not include it. Approving it leaves the amendment on file and still not incorporated."}
+              </p>
+            </li>
+          ))}
+          {warnings !== null &&
+            notes.map((w, i) => {
+              const { path, rest } = splitFieldPath(w.message ?? "");
+              return (
+                <li key={`${w.code}-${i}`} className="rounded-md border border-border bg-surface p-3">
+                  <p className="text-body font-medium text-text">{noticeHeadline(w)}</p>
+                  <p className="mt-1 text-body text-text-secondary">{rest}</p>
                   {w.citation && (
                     <button
                       type="button"
                       onClick={() => onOpenCitation(w.citation as string)}
-                      className="mt-1 rounded-sm border border-border-strong px-2 py-px font-mono text-label text-model hover:bg-model-bg"
+                      className="mt-2 rounded-md border border-border-strong px-2 py-px text-label text-model-bright hover:bg-model-bg"
                     >
-                      {w.citation} ↗
+                      Open {w.citation}
                     </button>
                   )}
+                  {/* The field path is true and is not what an analyst reads
+                      first. It led every one of these notices. */}
+                  {path && (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer list-none text-label text-text-muted underline-offset-2 hover:underline marker:content-['']">
+                        <span aria-hidden="true">▸ </span>Technical details
+                      </summary>
+                      <dl className="mt-1 grid gap-x-4 sm:grid-cols-[max-content_1fr]">
+                        <dt className="text-label text-text-muted">Field</dt>
+                        <dd className="font-mono text-label text-text-secondary">{path}</dd>
+                        <dt className="text-label text-text-muted">Check</dt>
+                        <dd className="font-mono text-label text-text-secondary">{w.code}</dd>
+                      </dl>
+                    </details>
+                  )}
                 </li>
-              ))}
-            </ul>
-          )}
-        </div>
+              );
+            })}
+        </Group>
+      )}
+
+      {note && <p className="text-label text-text-muted">{note}</p>}
+
+      {warnings !== null && notes.length === 0 && boarding.length === 0 && (
+        <p className="rounded-md border border-border bg-surface p-3 text-body text-text-secondary">
+          Automated checks found no issues with these terms.
+        </p>
       )}
     </section>
+  );
+}
+
+/**
+ * One consequence, with its heading said once. Grouping is the point: an
+ * analyst reads "Requires acknowledgment" and knows what the list below asks of
+ * them, instead of inferring it from the colour of each box.
+ */
+function Group({ consequence, children }: { consequence: "must_resolve" | "acknowledge" | "information"; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-label uppercase tracking-wide text-text-muted">{CONSEQUENCE_LABEL[consequence]}</p>
+      <p className="mt-px text-label text-text-muted">{CONSEQUENCE_NOTE[consequence]}</p>
+      <ul className="mt-2 space-y-2">{children}</ul>
+    </div>
   );
 }
 

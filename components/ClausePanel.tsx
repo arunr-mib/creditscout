@@ -72,12 +72,13 @@ export function ClausePanel(props: {
           {clause.effective_date ? ` · effective ${clause.effective_date}` : ""}
         </p>
         {reason && <p className="mt-1 text-label text-text-muted">{reason}</p>}
+        {/* Mono amber read as a system error. It is a count, in the page's own
+            typeface; the detail of WHICH paragraphs is marked on them below. */}
         {judged && (
-          <p className={`mt-2 font-mono text-label ${loose > 0 ? "text-code" : "text-text-muted"}`}>
-            <span aria-hidden="true">⟡ </span>
+          <p className="mt-2 text-label text-text-muted">
             {loose > 0
-              ? `by code · ${loose} of ${paras.filter((p) => !p.heading).length} paragraphs of this clause are not rested on by any term`
-              : "by code · every paragraph of this clause is touched by some term's quote"}
+              ? `${loose} of ${paras.filter((p) => !p.heading).length} paragraphs in this clause are not linked to any proposed term.`
+              : "Every paragraph in this clause is quoted by some term."}
           </p>
         )}
       </header>
@@ -98,9 +99,7 @@ export function ClausePanel(props: {
           return (
             <div key={i} className={`whitespace-pre-wrap ${unrested ? "my-2 border-l-4 border-code bg-code-bg p-2" : "my-1"}`}>
               {unrested && (
-                <span className="mb-1 block font-mono text-badge uppercase tracking-wide text-code">
-                  <span aria-hidden="true">⟡ </span>no term rests on this paragraph
-                </span>
+                <span className="mb-1 block text-badge text-code-bright">Not linked to any proposed term</span>
               )}
               {inside ? (
                 <>
