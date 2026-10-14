@@ -102,6 +102,27 @@ Fine for the demo's synthetic PDFs (small); note it if you upload big files.
    `curl -s https://<host>/api/tools/openapi | head -c 200` and check
    `servers[0].url` is the live host.
 
+## 5b. The credential that expires
+
+`AZURE_CLIENT_SECRET` is a service-principal secret on the Entra app
+registration **Credit Scout** (`6ebe7212-d966-4777-b347-9447078f944e`). The
+secret in use is `creditscout-vercel` and it **expires 2027-04-05**.
+
+When it lapses, investigations fail with 401/403 and nothing else does — the
+deterministic layer has no Azure dependency. Check it with:
+
+```
+az ad app credential list --id 6ebe7212-d966-4777-b347-9447078f944e \
+  --query "[].{name:displayName, expires:endDateTime}" -o json
+```
+
+Rotating: new secret on that app → update `AZURE_CLIENT_SECRET` in Production →
+**redeploy** (env vars are baked in at build time).
+
+Local work does not prove production is healthy: `AZURE_CLIENT_ID` is unset in
+`.env`, so locally the SDK uses your `az login` instead of the service
+principal.
+
 ## 6. Foundry note
 The orchestrator currently uses **function tools** (the run parks at
 `requires_action`; the server submits outputs via the self-calls above). This

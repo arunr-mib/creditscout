@@ -114,6 +114,40 @@ Preview and nothing else.
 | Deploy | push `main`; `vercel ls --prod` (run from the repo — `.vercel/` is linked); runbook in `docs/engineering/deploy-runbook.md` |
 | DB | Supabase project `rngsejqplndmygrozasc` (cloud only); service-role key in `.env`; Supabase MCP for SQL. **Ask before any DELETE.** |
 
+### 0.5b Credentials that expire — check before they bite (verified 2026-10-13)
+
+The agent authenticates to Azure AI Foundry with a service principal. Its
+client secret has an expiry date, and when it lapses **every investigation
+fails with a 401/403 while the rest of the product keeps working** — covenant
+tests, the calculator, the queue and the casefile are all Supabase and our own
+code, so the failure looks like "the agent broke", not "the app broke".
+
+| What | Value |
+|---|---|
+| Entra app registration | **Credit Scout** — `6ebe7212-d966-4777-b347-9447078f944e` |
+| Secret in use (Vercel `AZURE_CLIENT_SECRET`) | `creditscout-vercel` — **expires 2027-04-05** |
+| Second secret on the same app | `creditscout-smoky` — expires 2027-10-07, named after the Vercel project that was deleted; probably dead weight |
+| Tenant | `caa90f16-e00a-440e-a28e-8c07f6bee4a5` |
+
+To check: `az ad app credential list --id 6ebe7212-d966-4777-b347-9447078f944e --query "[].{name:displayName, expires:endDateTime}" -o json`
+
+To rotate: create a new secret on that app registration, update
+`AZURE_CLIENT_SECRET` in the Vercel project's Production environment, redeploy.
+Environment variables are baked in at build time, so a redeploy is required —
+changing the value alone does nothing.
+
+**Locally there is no service principal**: `AZURE_CLIENT_ID` is unset in `.env`
+and the SDK falls back to your `az login`. So local work can keep succeeding
+long after production's secret has expired. Do not use local success as
+evidence that production is fine.
+
+**Microsoft 365 is unrelated.** The M365 Business Standard + Copilot
+subscription was cancelled 2026-10-13 and nothing broke: M365 licences and the
+Azure subscription are separate products on separate billing, and cancelling
+M365 does not delete the Entra tenant the service principal lives in. Verified
+the same day — Foundry auth returned the orchestrator with all six tools, and
+all three model deployments responded.
+
 ### 0.6a Live eval — THREE runs, and the number is noisy (2026-10-08)
 
 Read this before quoting an outcome-accuracy figure. §0.6 below is runs 1–2 and
