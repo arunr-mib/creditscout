@@ -8,6 +8,7 @@ import { quarterLabel } from "../tests/extract-financials.ts";
 import {
   calcIdNotes,
   calcLogForCasefile,
+  chunksForCalcProvenance,
   chunksForClaims,
   chunksForTermsCitations,
   loadFacilityChunks,
@@ -501,7 +502,16 @@ export async function enforceCasefile(casefileId: string, deps: EnforceDeps = {}
   const calcs = await calcLogForCasefile(client, casefileId, exception.test_id);
   const governing = calcs.length > 0 ? calcs[calcs.length - 1] : null;
   const chunks = await loadFacilityChunks(client, exception.facility_id);
-  const citedChunks = chunksForClaims(casefile.claims, chunks, exception.facility_id);
+  // The claims' own chunks, PLUS the documents the calculations were verified
+  // against. The second half is not decoration: the brief hands the agent the
+  // borrower's reported ratio, so the certificate that sourced it must be in
+  // evidence or a correct answer abstains on a figure we ourselves supplied.
+  // Claims' chunks go LAST so they win the citation map — a claim is always
+  // checked against its full section, never a one-line provenance quote.
+  const citedChunks = [
+    ...chunksForCalcProvenance(calcs, chunks, exception.facility_id),
+    ...chunksForClaims(casefile.claims, chunks, exception.facility_id),
+  ];
   notes.push(...(calcIdNotes(casefile.calculations, calcs) as Note[]));
 
   // ---- 4. terms drift on the governing calculation -------------------------

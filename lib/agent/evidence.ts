@@ -173,6 +173,48 @@ export function chunksForTermsCitations(
 }
 
 /**
+ * Every citation a calculation was VERIFIED AGAINST, from its own log row.
+ *
+ * `runTest` records, on the originating calculation, the verbatim quote and
+ * citation behind each figure it used: `inputs.citations` for the six financial
+ * inputs and every add-back, and `inputs.reported` for the borrower's own
+ * ratio off their compliance certificate.
+ *
+ * Those documents belong in the evidence set, and leaving them out was a
+ * measured bug. The brief hands the agent "the borrower reports 1.31"; the
+ * guardrail then allows a figure only if a logged calculation produced it or a
+ * CITED chunk states it; the certificate was neither, so an agent that
+ * correctly discussed the number it was given was abstained for it. That was
+ * 3 of 4 misses in the 2026-10-08 eval (parking-lot 7.9), and the same shape
+ * abstained F1 on `620000`, a financials figure it paraphrased.
+ *
+ * This does not relax the check — it supplies the provenance the check asks
+ * for. `quote_verbatim` is unaffected: it matches each claim against the chunk
+ * of ITS OWN citation, so a wider evidence set cannot make a false quote pass.
+ */
+export function chunksForCalcProvenance(
+  rows: readonly CalcRow[],
+  chunks: readonly FacilityChunk[],
+  facilityId: string,
+): { citation: string; content: string }[] {
+  const cites: { citation: string }[] = [];
+  // The leaves are {quote, citation}; the shape nests (citations.addbacks[name]),
+  // so walk rather than enumerate — a new input field must not silently drop out.
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (!v || typeof v !== "object") return;
+    const c = (v as { citation?: unknown }).citation;
+    if (typeof c === "string" && c.trim() !== "") cites.push({ citation: c });
+    Object.values(v as Record<string, unknown>).forEach(walk);
+  };
+  for (const r of rows) {
+    walk(r.inputs?.citations);
+    walk(r.inputs?.reported);
+  }
+  return chunksForCitations(cites, chunks.filter((c) => c.facility_id === facilityId));
+}
+
+/**
  * `calc_id`s the MODEL listed that are not among the rows this casefile's
  * evidence was gathered from (ruling E-3). The model's array is never
  * authoritative — `casefiles.calc_ids` is written from the rows — so an id it
