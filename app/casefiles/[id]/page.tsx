@@ -39,6 +39,7 @@ interface CasefileRow {
   trace: unknown;
   recommendation: string | null;
   explanation: string | null;
+  agent_output: unknown;
   claims: unknown;
   calc_ids: string[] | null;
   missing_evidence: unknown;
@@ -56,6 +57,17 @@ interface ExceptionRow {
  * with the anon key under the RLS read policy. The one write, the analyst's
  * decision, is a Server Action on the service role (`app/casefiles/actions.ts`).
  */
+/** The recommendation inside the agent's raw answer, if it parses. Never trusted for anything but labelling. */
+function draftRecommendationOf(agentOutput: unknown): string | null {
+  try {
+    const o = typeof agentOutput === "string" ? JSON.parse(agentOutput) : agentOutput;
+    const r = (o as { recommendation?: unknown } | null)?.recommendation;
+    return typeof r === "string" && r.trim() !== "" ? r : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function CasefilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
@@ -141,6 +153,10 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         period: quarterLabel(exception.test_period_end),
         recommendation: casefile.recommendation ?? null,
         explanation: casefile.explanation ?? null,
+        // What the AGENT put forward, before enforcement. Needed to say who
+        // decided: a recommendation a code rule produced must not be
+        // attributed to the model.
+        draftRecommendation: draftRecommendationOf(casefile.agent_output),
         seenSimilar: seenSimilarCount(casefile.trace),
         claims,
         sections,

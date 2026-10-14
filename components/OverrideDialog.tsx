@@ -1,19 +1,35 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CORRECTED_OUTCOMES, OUTCOME_LABEL, TAGS, overrideBlockers, type OverrideDraft } from "./casefileModel";
+import {
+  CORRECTED_OUTCOMES,
+  OUTCOME_CHOICE,
+  OUTCOME_LABEL,
+  TAGS,
+  overrideBlockers,
+  tagLabel,
+  type OverrideDraft,
+} from "./casefileModel";
 
 /**
- * design.md 12.12. Three required fields, in this order: the reason, then the
- * suggested tag confirmed, then the corrected outcome. Submit stays disabled
- * until all three are set, and says what is missing rather than sitting dead.
+ * Recording a decision that differs from the recommendation.
+ *
+ * THE DECISION COMES FIRST. The dialog used to ask for the rationale before the
+ * outcome, which is backwards: an analyst knows what they have decided before
+ * they can explain it, and writing the reason first turns the task into an
+ * essay with no subject.
  *
  * THE REASON IS THE LESSON. It is stored verbatim and retrieved on similar
- * cases, so the dialog says that, and the text is sent exactly as typed: it is
- * checked trimmed, never sent trimmed. Whitespace is not a reason.
+ * cases, so the dialog says so, and the text is sent exactly as typed: checked
+ * trimmed, never sent trimmed. Whitespace is not a reason.
  *
- * A native <dialog> opened with showModal(), so the browser traps focus and
- * Escape closes it; there is no custom focus handling to get wrong.
+ * ERRORS APPEAR AFTER THE ANALYST ACTS, never before. The previous version
+ * listed three red failures the moment it opened, which reads as an accusation
+ * for having done nothing yet. Each field reports itself once it has been
+ * touched, or once submit has been attempted.
+ *
+ * A native <dialog> opened with showModal(), so the browser traps focus,
+ * restores it on close, and Escape works — no custom focus handling to get wrong.
  */
 export function OverrideDialog(props: {
   open: boolean;
@@ -21,12 +37,18 @@ export function OverrideDialog(props: {
   sending: boolean;
   /** A refusal from the server, shown inside the dialog so the analyst's draft is not lost. */
   error: string | null;
+  /** Context, so the analyst can see what they are deciding against. */
+  borrower?: string | null;
+  period?: string | null;
+  currentRecommendation?: string | null;
   onCancel: () => void;
   onSubmit: (draft: OverrideDraft) => void;
 }) {
-  const { open, suggestedTag, sending, error, onCancel, onSubmit } = props;
+  const { open, suggestedTag, sending, error, borrower, period, currentRecommendation, onCancel, onSubmit } = props;
   const ref = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<OverrideDraft>({ reason: "", confirmedTag: "", correctedOutcome: "" });
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [attempted, setAttempted] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -36,78 +58,134 @@ export function OverrideDialog(props: {
   }, [open]);
 
   const blockers = overrideBlockers(draft);
-  const field = "mt-1 block w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
+  const show = (key: string) => attempted || touched[key];
+
+  const missingOutcome = draft.correctedOutcome === "";
+  const missingReason = draft.reason.trim() === "";
+  const missingTag = draft.confirmedTag === "";
+
+  const field =
+    "mt-1 block w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
+  const err = "mt-1 text-label text-danger";
 
   return (
     <dialog
       ref={ref}
       onClose={onCancel}
       aria-labelledby="override-title"
-      className="m-auto w-full max-w-dialog rounded-lg border border-border-strong bg-surface-raised p-6 text-text-secondary backdrop:bg-bg/80"
+      className="m-auto w-full max-w-dialog rounded-lg border border-border bg-surface p-6 text-text-secondary shadow-raised backdrop:bg-night/60"
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
+          setAttempted(true);
           if (blockers.length === 0 && !sending) onSubmit(draft);
         }}
         className="space-y-4"
       >
-        <h2 id="override-title" className="text-section text-text">Override the recommendation</h2>
-
         <div>
-          <label htmlFor="override-reason" className="block text-label text-text-muted">1. Your reason (required)</label>
+          <h2 id="override-title" className="text-section text-text">Record a different decision</h2>
+          {(borrower || currentRecommendation) && (
+            <p className="mt-1 text-label text-text-muted">
+              {borrower}
+              {period ? ` · ${period}` : ""}
+              {currentRecommendation ? (
+                <>
+                  {borrower ? " · " : ""}Current recommendation:{" "}
+                  <span className="text-text">{currentRecommendation}</span>
+                </>
+              ) : null}
+            </p>
+          )}
+        </div>
+
+        {/* 1. WHAT you decided. A radio group, not a dropdown: three options
+            with consequences are a choice to read, not a list to open. */}
+        <fieldset onBlur={() => setTouched((t) => ({ ...t, outcome: true }))}>
+          <legend className="text-label text-text-muted">Your decision</legend>
+          <div className="mt-1 space-y-2">
+            {CORRECTED_OUTCOMES.map((o) => (
+              <label
+                key={o}
+                className={`flex cursor-pointer gap-3 rounded-md border p-3 ${
+                  draft.correctedOutcome === o ? "border-model bg-model-bg" : "border-border-strong bg-surface"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="override-outcome"
+                  value={o}
+                  checked={draft.correctedOutcome === o}
+                  onChange={() => setDraft({ ...draft, correctedOutcome: o })}
+                  className="mt-1"
+                />
+                <span>
+                  <span className="block text-body font-medium text-text">{OUTCOME_CHOICE[o].title}</span>
+                  <span className="block text-label text-text-muted">{OUTCOME_CHOICE[o].detail}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+          {show("outcome") && missingOutcome && <p className={err}>Choose the decision you reached</p>}
+        </fieldset>
+
+        {/* 2. WHY. Only now, when there is a decision to explain. */}
+        <div>
+          <label htmlFor="override-reason" className="block text-label text-text-muted">
+            Decision rationale <span className="text-text-muted">— required</span>
+          </label>
+          <p className="mt-1 text-label text-text-muted">
+            Explain why your decision differs from the recommendation. Reference relevant documents, calculations, or
+            unresolved issues.
+          </p>
           <textarea
             id="override-reason"
             value={draft.reason}
             onChange={(e) => setDraft({ ...draft, reason: e.target.value })}
-            rows={4}
-            required
+            onBlur={() => setTouched((t) => ({ ...t, reason: true }))}
+            rows={5}
+            placeholder="Describe the evidence supporting your decision…"
             aria-required="true"
             aria-describedby="override-lesson"
             className={field}
           />
+          {show("reason") && missingReason && <p className={err}>Enter a decision rationale</p>}
           <p id="override-lesson" className="mt-1 text-label text-text-muted">
-            Your reasoning is retained and retrieved on similar cases.
+            Saved to the casefile. May be retrieved as context for similar investigations.
           </p>
         </div>
 
+        {/* 3. Categorisation, in the analyst's vocabulary rather than the
+            model's. The identifier still travels in the value. */}
         <div>
-          <label htmlFor="override-tag" className="block text-label text-text-muted">2. Confirm the pattern tag</label>
-          <select id="override-tag" value={draft.confirmedTag} onChange={(e) => setDraft({ ...draft, confirmedTag: e.target.value })} required className={field}>
-            <option value="">Choose a tag</option>
+          <label htmlFor="override-tag" className="block text-label text-text-muted">Case category</label>
+          <select
+            id="override-tag"
+            value={draft.confirmedTag}
+            onChange={(e) => setDraft({ ...draft, confirmedTag: e.target.value })}
+            onBlur={() => setTouched((t) => ({ ...t, tag: true }))}
+            className={field}
+          >
+            <option value="">Choose a category</option>
             {TAGS.map((t) => (
               <option key={t} value={t}>
-                {t}{t === suggestedTag ? " (suggested by the agent)" : ""}
+                {tagLabel(t)}
+                {t === suggestedTag ? " — suggested" : ""}
               </option>
             ))}
           </select>
+          {show("tag") && missingTag && <p className={err}>Choose a case category</p>}
           <p className="mt-1 text-label text-text-muted">
-            {suggestedTag ? <>The agent suggested <span className="font-mono">{suggestedTag}</span>. Choosing a tag confirms it.</> : "The agent suggested no tag. Choose the one that fits."}
+            {suggestedTag ? (
+              <>
+                Suggested by CreditScout: <span className="text-text">{tagLabel(suggestedTag)}</span>. Confirm or change
+                it.
+              </>
+            ) : (
+              "CreditScout suggested no category. Choose the one that fits."
+            )}
           </p>
         </div>
-
-        <div>
-          <label htmlFor="override-outcome" className="block text-label text-text-muted">3. Corrected outcome</label>
-          <select id="override-outcome" value={draft.correctedOutcome} onChange={(e) => setDraft({ ...draft, correctedOutcome: e.target.value })} required className={field}>
-            <option value="">Choose the outcome you reached</option>
-            {CORRECTED_OUTCOMES.map((o) => (
-              <option key={o} value={o}>{OUTCOME_LABEL[o]}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* A preview of what becomes the retrievable lesson, so the analyst sees
-            the precedent they are authoring before saving it (audit 3.7). */}
-        {draft.reason.trim() !== "" && (
-          <div className="rounded-md border border-border border-l-2 border-l-model bg-surface p-3">
-            <p className="text-label text-text-muted">This becomes a lesson, retrieved on similar cases:</p>
-            <p className="mt-1 text-body text-text">
-              &ldquo;{draft.reason.trim()}&rdquo;
-              {draft.confirmedTag && <span className="text-text-muted"> · {draft.confirmedTag}</span>}
-              {draft.correctedOutcome && <span className="text-text-muted"> · reached {OUTCOME_LABEL[draft.correctedOutcome as keyof typeof OUTCOME_LABEL] ?? draft.correctedOutcome}</span>}
-            </p>
-          </div>
-        )}
 
         {error && (
           <p role="alert" className="rounded-md border border-danger bg-danger-bg p-3 text-body text-danger">
@@ -115,15 +193,9 @@ export function OverrideDialog(props: {
           </p>
         )}
 
-        <div id="override-blockers" aria-live="polite">
-          {blockers.length > 0 && (
-            <ul className="space-y-1">
-              {blockers.map((b) => (
-                <li key={b} className="text-label text-text-muted"><span aria-hidden="true" className="text-danger">✕ </span>{b}</li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <p className="text-label text-text-muted">
+          Recording a decision does not change approved covenant terms or clear outstanding review items.
+        </p>
 
         <div className="flex justify-end gap-3">
           <button type="button" onClick={onCancel} className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text">
@@ -131,11 +203,10 @@ export function OverrideDialog(props: {
           </button>
           <button
             type="submit"
-            disabled={blockers.length > 0 || sending}
-            aria-describedby="override-blockers"
+            disabled={sending}
             className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {sending ? "Recording…" : "Record override"}
+            {sending ? "Recording…" : "Record decision"}
           </button>
         </div>
       </form>

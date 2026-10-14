@@ -61,8 +61,8 @@ export function CasefileFindings({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       {/* ------------------------------------------------ what the agent found */}
-      <section aria-label="What the agent found" className="min-w-0 rounded-lg border border-border bg-surface shadow-card shadow-card lg:col-span-2">
-        <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">What the agent found</h2>
+      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border bg-surface shadow-card shadow-card lg:col-span-2">
+        <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Investigation findings</h2>
 
         <ol className="px-4 py-3">
           {summary.steps.map((step, i) => {
@@ -244,8 +244,8 @@ export function CasefileFindings({
           </section>
         )}
 
-        <section aria-label="What needs your attention" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
-          <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">What needs your attention</h2>
+        <section aria-label="Outstanding review items" className="rounded-lg border border-border bg-surface shadow-card shadow-card">
+          <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Outstanding review items</h2>
           <div className="space-y-3 px-4 py-3">
             {unboarded.map((a) => (
               <div key={a.title} className="flex gap-3">

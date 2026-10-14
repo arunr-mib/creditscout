@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import type { DecisionBasis } from "./casefileModel";
+
 /**
  * The recommendation, with the agent's own account one click away.
  *
@@ -17,6 +19,7 @@ export function RecommendationCard({
   humanReviewRequired,
   explanation,
   overridden,
+  basis,
 }: {
   accent: string;
   headline: string;
@@ -24,6 +27,7 @@ export function RecommendationCard({
   humanReviewRequired: boolean | null;
   explanation: string | null;
   overridden: boolean;
+  basis: DecisionBasis;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -33,7 +37,9 @@ export function RecommendationCard({
       className={`rounded-lg border border-border-strong border-l-2 ${accent} bg-surface p-4`}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="text-label text-model-bright">CreditScout Agent recommendation</p>
+        <p className="text-label text-model-bright">
+          {basis.policyDirected ? "Policy-directed recommendation" : "CreditScout Agent recommendation"}
+        </p>
         {explanation && (
           <button
             type="button"
@@ -41,7 +47,7 @@ export function RecommendationCard({
             aria-expanded={open}
             className="shrink-0 text-label text-model-bright underline-offset-2 hover:underline"
           >
-            {open ? "Hide" : overridden ? "Read the agent draft that was not accepted" : "Read the agent’s reasoning"}{" "}
+            {open ? "Hide" : overridden ? "View validation history" : "Read the agent’s reasoning"}{" "}
             <span aria-hidden="true">{open ? "⌃" : "›"}</span>
           </button>
         )}
@@ -58,8 +64,43 @@ export function RecommendationCard({
 
       {summary && <p className="mt-2 text-body text-text-secondary">{summary}</p>}
 
+      {/* WHY this recommendation stands, given everything else on the screen.
+          The analyst was being shown an escalation beside a pending amendment
+          and open notices with nothing connecting them. Each line renders only
+          when the data supports it. */}
+      {(basis.basis || basis.amendmentEffect || basis.outstanding) && (
+        <dl className="mt-3 space-y-2 border-t border-border pt-3 text-body">
+          {basis.basis && (
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="font-medium text-text">Decision basis:</dt>
+              <dd className="text-text-secondary">{basis.basis}</dd>
+            </div>
+          )}
+          {basis.amendmentEffect && (
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="font-medium text-text">Pending amendment:</dt>
+              <dd className="text-text-secondary">{basis.amendmentEffect}</dd>
+            </div>
+          )}
+          {basis.outstanding && (
+            <div className="flex flex-wrap gap-x-2">
+              <dt className="font-medium text-text">Outstanding review:</dt>
+              <dd className="text-text-secondary">{basis.outstanding}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
       {open && explanation && (
-        <p className="mt-3 max-w-prose border-t border-border pt-3 text-body text-text-secondary">{explanation}</p>
+        <div className="mt-3 max-w-prose border-t border-border pt-3 text-body text-text-secondary">
+          {basis.policyDirected && basis.draft && (
+            <p className="mb-2">
+              The agent proposed <span className="font-medium text-text">{basis.draft}</span>
+              {basis.overrideReason ? `. A code rule replaced it because ${basis.overrideReason}.` : ". A code rule replaced it."}
+            </p>
+          )}
+          <p>{explanation}</p>
+        </div>
       )}
     </section>
   );
