@@ -214,6 +214,12 @@ reduction from memory" is **not supported by two runs** — do not assert it.
 
 **Ranked remaining blockers, by how often they actually bit:**
 
+> **7.9 was fixed 2026-10-13** (`chunksForCalcProvenance`, commit `1794d76`) — the
+> figures we hand the agent in its brief are now in the evidence the guardrail
+> checks against. **Not yet re-measured in a live eval**, so every number in
+> §0.6/§0.6a still predates the fix. Expect F3 to stop abstaining on 1.31 and
+> F1-warm on 620000; F1-cold is 7.10 and is untouched.
+
 1. **7.9 — `figure_traceable` on figures that are facts but not calculations.**
    Caused **3 of run 2's 4 misses** (F3 both passes on `1.31`, F1-warm on
    `620000`). Reproducible across both runs. Single highest-leverage fix left.
