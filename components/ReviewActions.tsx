@@ -77,38 +77,43 @@ export function ReviewActions(props: {
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
-    <section aria-label="Review the recommendation" className="rounded-lg border border-border bg-surface shadow-card p-4">
+    <section aria-label="Review the recommendation" className="rounded-lg border border-border-strong bg-surface p-6 shadow-card">
       {/* The raw policy key was leaking into the analyst's view. The fact it
           states still holds — `humanReviewNotice` reads the ACTUAL policy
           value, never a hard-coded "mandatory" — it is just said in words. */}
-      <div className="mb-3 space-y-1">
-        <h2 className="text-card text-text">Record your decision</h2>
-        <p className="text-body text-text-secondary">
-          Review the recommendation and outstanding items before recording your decision.
-        </p>
-        <p className="text-label text-text-muted">{notice.text} Your decision and rationale are saved to the casefile.</p>
+      <div className="mb-4 space-y-1">
+        <h2 className="text-section font-bold text-text">Record your decision</h2>
+        {/* One line, not three. The instruction to read the findings first is
+            said once, on the recommendation card. */}
+        <p className="text-body text-text-secondary">Your decision and rationale will be saved to the casefile.</p>
       </div>
 
       {outcome && !dialog && <OutcomeNote outcome={outcome} />}
 
-      <div className="flex flex-wrap gap-3">
+      {/* Three actions, three weights: the recommendation, the departure from
+            it, and the one that decides nothing. They were three equal
+            bordered buttons, which made overriding look like the normal path. */}
+      <div className="flex flex-wrap items-center gap-4">
         <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-model bg-model text-bg`}>
           {pending ? "Sending…" : approveLabel}
         </button>
-        <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong text-text`}>
+        <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong bg-surface text-text`}>
           Override recommendation
         </button>
         {/* NOT "Request documents": this records a state, it sends nothing. The
             label must not imply a message went out (review 5). */}
-        <button type="button" disabled={pending} onClick={() => send("request_docs")} className={`${button} border-border-strong text-text`}>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => send("request_docs")}
+          title="Records that this loan is waiting on documents. It does not prepare or send a request to the borrower."
+          className="text-body text-text-secondary underline-offset-2 hover:text-text hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+        >
           Hold for borrower documents
         </button>
       </div>
 
-      <p className="mt-3 text-label text-text-muted">
-        Marking a loan as awaiting documents records that state on this casefile. It does not prepare or send a request
-        to the borrower.
-      </p>
+      <p className="mt-4 text-label text-text-muted">{notice.text}</p>
 
       <OverrideDialog
         open={dialog}

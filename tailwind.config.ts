@@ -59,8 +59,11 @@ export default {
         bg: "#F7F9FA",
         surface: "#FFFFFF",
         "surface-raised": "#F1F4F6",
-        border: "#DCE4E8",
-        "border-strong": "#C3CFD5",
+        // Darkened 2026-10-14. At #DCE4E8 a card edge all but vanished on
+        // #F7F9FA, so panels read as floating text rather than as the
+        // containers they are — the "no boxes" look the owner flagged.
+        border: "#C7D3DA",
+        "border-strong": "#94A6B0",
 
         text: "#19282F",
         "text-secondary": "#52646D",
@@ -113,10 +116,23 @@ export default {
         "human-bg": "#F1F5F9",
 
         // Red-700, not red-600: #DC2626 reads 4.41 on its own badge background.
+        //
+        // THE `-bg` TINTS ARE CONTRAST-BOUND, not taste. `danger` on
+        // `danger-bg` is badge text, and the pair has only ~0.3 of headroom
+        // over 4.5:1 — darkening the tint for looks took the success badge to
+        // 4.10 and the danger badge to 4.29, which is a real accessibility
+        // regression for a cosmetic gain. These two are as deep as AA allows.
         danger: "#C81E1E",
-        "danger-bg": "#FEF2F2",
+        "danger-bg": "#FBE3E3",
+        // The outcome mark on the recommendation card, which carries no small
+        // text and is therefore free to go deeper: `-strong` ink on `-tile`
+        // reads 7.1:1 (danger) and 6.4:1 (success).
+        "danger-strong": "#8C1515",
+        "danger-tile": "#F6CFCF",
         success: "#15803D",
-        "success-bg": "#F0FDF4",
+        "success-bg": "#E8F7EE",
+        "success-strong": "#115E32",
+        "success-tile": "#CDE9D8",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

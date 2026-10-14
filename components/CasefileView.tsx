@@ -1,4 +1,4 @@
-import { RECOMMENDATION_BADGE, type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, recommendationOverridden, reviewMode, tagLabel } from "./casefileModel";
+import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, headlineFor, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
@@ -57,6 +57,8 @@ export interface CasefileViewModel {
   testBasis: string | null;
   /** Amendments on file and whether the governing terms reflect them (boarding lag). */
   amendments: AmendmentStatus[];
+  /** Every document on file for the loan, so the evidence list can open the source. */
+  documents: { id: string; title: string; docType: string | null; date: string | null }[];
   humanReviewRequired: boolean | null;
   review: ReviewRecord | null;
   /** The owning exception's status, so a decided casefile can detect a failed close (A-4 drift). */
@@ -85,26 +87,20 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // The guardrail already flags it below; the header must not contradict it.
   const onAmendedTerms = view.notes.some((n) => n.check === "terms_differ_from_approved");
   const rec = isRecommendation(view.recommendation) ? view.recommendation : null;
-  const headline = headlineFor(view.sections);
-  const accent =
-    rec === "resolve" ? "border-l-success"
-      : rec === "escalate" ? "border-l-danger"
-        : rec === "request" ? "border-l-human"
-          : "border-l-border-strong";
-
   const summary = investigationSummary(view.sections, view.notes);
   // WHY this recommendation, given the amendment and the open notices. Derived
   // from the notes and the calculation log; never written by the model.
   const basis = decisionBasis(summary, view.notes, view.draftRecommendation, view.notes.length, view.amendments);
+  const outstanding = outstandingSummary(view.amendments, view.notes);
   const statusPill =
     mode === "active"
-      ? { label: "Ready for analyst decision", tone: "border-success bg-success-bg text-success" }
+      ? { label: "Ready for analyst decision", tone: "border-border-strong bg-surface text-text" }
       : mode === "read_only"
         ? { label: decidedHeadline(view.status), tone: "border-border-strong text-text-muted" }
         : { label: view.status, tone: "border-border-strong text-text-muted" };
 
   return (
-    <article className="space-y-3">
+    <article className="space-y-4">
       {/* ------------------------------------------------------------ header */}
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-2">
@@ -121,25 +117,28 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           <h1 className="text-title text-text">
             {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
           </h1>
-          <p className="max-w-prose text-body text-text-secondary">Covenant exception review</p>
+          {/* One line of context. The prior-case count used to be a chip hung
+              under the status pill — a second status object saying something
+              that is not a status. */}
+          <p className="max-w-prose text-body text-text-secondary">
+            Covenant exception review
+            {view.seenSimilar > 0 && ` · informed by ${view.seenSimilar} prior case${view.seenSimilar === 1 ? "" : "s"}`}
+          </p>
         </div>
-        {/* The memory badge sits under the status pill rather than taking a row
-            of its own below the subtitle. */}
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className={`inline-flex items-center gap-2 rounded border px-4 py-2 text-body ${statusPill.tone}`}>
-            <span aria-hidden="true">●</span> {statusPill.label}
-          </span>
-          <SeenSimilarBadge count={view.seenSimilar} />
-        </div>
+        {/* ONE status object on this screen. It was green for "ready for
+            analyst decision", which reads as *compliant* in this product —
+            green is reserved for a passing test and a recorded resolution. */}
+        <span className={`inline-flex shrink-0 items-center gap-2 rounded-md border px-4 py-2 text-body ${statusPill.tone}`}>
+          <span aria-hidden="true" className="text-text-muted">●</span> {statusPill.label}
+        </span>
       </header>
 
       {/* ------------------------------------------------- the recommendation */}
       {showRec && rec && (
         <RecommendationCard
-          accent={accent}
+          outcome={rec}
           headline={RECOMMENDATION_HEADLINE[rec]}
           summary={summary.headline}
-          humanReviewRequired={view.humanReviewRequired}
           explanation={view.explanation}
           overridden={overridden}
           basis={basis}
@@ -148,38 +147,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             termsUsed: view.termsVersion != null ? `Approved v${view.termsVersion}` : null,
             period: view.period,
           }}
+          outstanding={outstanding ? { label: outstanding.label, href: "#outstanding" } : null}
         />
-      )}
-
-      {/* ---------------------------------------------------------- figures */}
-      {showRec && (summary.initial || headline) && (
-        <dl className="grid gap-px overflow-hidden rounded-lg border border-border-strong bg-border sm:grid-cols-2 lg:grid-cols-4">
-          {summary.initial && (
-            <Figure
-              label="Initial DSCR"
-              value={fmtX(summary.initial.dscr)}
-              tag={summary.comparison[0]?.status === "below_minimum" ? "below minimum" : undefined}
-              tone={summary.comparison[0]?.status === "below_minimum" ? "danger" : undefined}
-            />
-          )}
-          {summary.comparison.length > 1 && summary.governing && (
-            <Figure
-              label={onAmendedTerms ? "Investigation recalculation" : "Recalculation"}
-              value={fmtX(summary.governing.dscr)}
-              tag={onAmendedTerms ? "provisional" : undefined}
-              tone={onAmendedTerms ? "code" : summary.governing.passes ? "success" : undefined}
-            />
-          )}
-          <Figure label="Minimum DSCR" value={fmtX(summary.required)} />
-          <Figure
-            label="Reporting period"
-            // The quarter, not the measurement basis. "TTM ending 2026-06-30"
-            // is how the covenant is computed; an analyst identifies the test
-            // by its reporting period, and the basis belongs with the terms.
-            value={view.period}
-            muted
-          />
-        </dl>
       )}
 
       {/* ---------------------------------- findings, evidence and attention */}
@@ -195,6 +164,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           termsVersion={view.termsVersion}
           facilityId={view.facilityId}
           missingEvidence={view.missingEvidence}
+          amendmentEffect={basis.amendmentEffect}
+          documents={view.documents}
         />
       )}
 
@@ -224,12 +195,16 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   );
 }
 
-/** The recommendation as a sentence, so the card does not just repeat a token. */
+/**
+ * The recommendation as the ACTION it proposes. "Recommends escalation" spent
+ * its first word restating the eyebrow above it, which already says this is a
+ * recommendation; the sentence now says what is being recommended.
+ */
 const RECOMMENDATION_HEADLINE: Record<string, string> = {
-  resolve: "Recommends exception resolution",
-  escalate: "Recommends escalation",
-  request: "Recommends requesting more documents",
-  abstain: "Reaches no conclusion",
+  resolve: "Resolve the covenant exception",
+  escalate: "Escalate for credit review",
+  request: "Request documents from the borrower",
+  abstain: "No recommendation",
 };
 
 const fmt = (v: number | null): string => (v == null ? "—" : v.toFixed(2));

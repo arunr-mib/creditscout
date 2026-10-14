@@ -9,20 +9,38 @@ import { TraceArc } from "./TraceArc";
 import { TraceStep } from "./TraceStep";
 import type { Clause } from "./termsReview";
 import type { LiveTraceView } from "./traceModel";
+import { dateLabel, longDate } from "@/lib/terms-labels";
 import type { AmendmentStatus, CalcSection, ClaimView, InvestigationSummary, Notice } from "./casefileModel";
 
 /**
- * What the investigation found, and what the analyst still has to check.
+ * What the investigation found, what it rests on, and what is still open.
  *
  * THE CALCULATION LIVES INSIDE THE FINDING THAT PRODUCED IT. It used to sit in
  * a long table below the fold, which meant the figure and the reason for it
- * were never on screen together. Each step now opens its own calculation in
+ * were never on screen together. Each finding opens its own calculation in
  * place, so "the original calculation returned 1.12x" and the rows that produce
  * 1.12x are one click apart.
+ *
+ * REBUILT 2026-10-14 against the reference composition. What went:
+ *   - the numbered timeline with connector arrows. The findings are a sequence
+ *     of three short rows; a rail and chevrons were more structure than the
+ *     content carries.
+ *   - the tabs over the evidence column. Two tabs to hold one list of documents
+ *     and one activity log, where the list is what an analyst opens and the log
+ *     is what they occasionally check.
+ *   - monospace figures and three colours of state pill in the comparison.
  *
  * Every number here was computed by `investigationSummary` from the calculation
  * log and the guardrail's notes. This component chooses layout, never meaning.
  */
+
+/** The mark on a finding. Outline, tinted once — it labels the kind, not a verdict. */
+const STEP_ICON: Record<string, string> = {
+  initial: "⌕",
+  addback: "§",
+  recalculation: "=",
+};
+
 export function CasefileFindings({
   summary,
   sections,
@@ -34,6 +52,8 @@ export function CasefileFindings({
   termsVersion,
   facilityId,
   missingEvidence,
+  amendmentEffect,
+  documents,
 }: {
   summary: InvestigationSummary;
   sections: CalcSection[];
@@ -45,11 +65,15 @@ export function CasefileFindings({
   termsVersion: number | null;
   facilityId: string;
   missingEvidence: string[];
+  /** Why the pending amendment does not change this period's result. */
+  amendmentEffect?: string | null;
+  documents: { id: string; title: string; docType: string | null; date: string | null }[];
 }) {
   const [openStep, setOpenStep] = useState<number | null>(null);
   const [showCitations, setShowCitations] = useState(false);
   const [showNotices, setShowNotices] = useState(false);
-  const [evidenceTab, setEvidenceTab] = useState<"evidence" | "activity">("evidence");
+  const [showActivity, setShowActivity] = useState(false);
+  const [allDocs, setAllDocs] = useState(false);
 
   const sectionFor = (calcId: string | null) => (calcId ? (sections.find((s) => s.calcId === calcId) ?? null) : null);
   const linkLabel = (kind: string) =>
@@ -57,6 +81,8 @@ export function CasefileFindings({
 
   const unboarded = amendments.filter((a) => a.effectiveForPeriod && !a.boarded);
   const termsNote = notes.find((n) => n.check === "terms_differ_from_approved") ?? null;
+  const unboardedTitles = new Set(unboarded.map((a) => a.title));
+  const shownDocs = allDocs ? documents : documents.slice(0, EVIDENCE_SHOWN);
 
   // items-start: without it the grid stretches every column to the tallest, so a
   // single finding left a panel of empty white and the investigation read as
@@ -64,45 +90,38 @@ export function CasefileFindings({
   return (
     <div className="grid items-start gap-4 lg:grid-cols-3">
       {/* ------------------------------------------------ what the agent found */}
-      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border bg-surface shadow-card lg:col-span-2">
-        <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Investigation findings</h2>
+      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border-strong bg-surface shadow-card lg:col-span-2">
+        <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Investigation findings</h2>
 
-        <ol className="px-4 py-3">
+        <ol className="px-6">
           {summary.steps.map((step, i) => {
             const open = openStep === step.n;
             const sec = sectionFor(step.calcId);
-            const last = i === summary.steps.length - 1;
+            const detail = step.kind === "addback" && amendmentEffect ? amendmentEffect : step.detail;
             return (
-              <li key={step.n} className="relative pb-4 last:pb-0">
-                {/* The connector: the findings are a sequence, and the arrow is
-                    what says so without a sentence. */}
-                {!last && (
-                  <span aria-hidden="true" className="absolute left-3 top-7 flex h-full w-px flex-col items-center bg-border-strong">
-                    <span className="absolute -bottom-1 text-label text-border-strong">▼</span>
-                  </span>
-                )}
-                <div className="flex gap-3">
+              <li key={step.n} className={i > 0 ? "border-t border-border py-4" : "py-4"}>
+                <div className="flex gap-4">
                   <span
                     aria-hidden="true"
-                    className="relative z-10 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-model bg-model-bg font-mono text-label text-model-bright"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-body text-text-muted"
                   >
-                    {step.n}
+                    {STEP_ICON[step.kind] ?? "·"}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
-                      <p className="text-body font-medium text-text">{step.title}</p>
+                      <p className="text-card font-bold text-text">{step.title}</p>
                       {(sec || step.kind === "addback") && (
                         <button
                           type="button"
                           onClick={() => setOpenStep(open ? null : step.n)}
                           aria-expanded={open}
-                          className="shrink-0 text-label text-model-bright underline-offset-2 hover:underline"
+                          className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
                         >
-                          {open ? "Hide" : linkLabel(step.kind)} <span aria-hidden="true">{open ? "⌃" : "›"}</span>
+                          {open ? "Hide" : linkLabel(step.kind)} <span aria-hidden="true">{open ? "⌃" : "→"}</span>
                         </button>
                       )}
                     </div>
-                    <p className="mt-1 max-w-prose text-body text-text-secondary">{step.detail}</p>
+                    <p className="mt-1 max-w-prose text-body text-text-secondary">{detail}</p>
 
                     {open && sec && (
                       <div className="mt-3">
@@ -110,7 +129,7 @@ export function CasefileFindings({
                       </div>
                     )}
                     {open && step.kind === "addback" && termsNote && (
-                      <p className="mt-3 rounded-md border-l-2 border-l-code bg-code-bg p-3 text-quote text-text-secondary">
+                      <p className="mt-3 rounded-md border border-border bg-surface-raised p-3 text-quote text-text-secondary">
                         {termsNote.detail}
                       </p>
                     )}
@@ -124,7 +143,7 @@ export function CasefileFindings({
                           type="button"
                           onClick={() => setShowCitations((v) => !v)}
                           aria-expanded={showCitations}
-                          className="text-label text-model-bright underline-offset-2 hover:underline"
+                          className="text-label text-text-muted underline-offset-2 hover:text-text-secondary hover:underline"
                         >
                           {showCitations ? "Hide citations" : `View citations · ${claims.length}`}{" "}
                           <span aria-hidden="true">{showCitations ? "⌃" : "›"}</span>
@@ -144,129 +163,143 @@ export function CasefileFindings({
         </ol>
 
         {summary.comparison.length > 1 && (
-          <div className="border-t border-border">
+          <div className="border-t border-border px-6 py-4">
             {/* VISIBLE, not behind a disclosure. This is the central evidence
-                for the decision — what the test produced under which basis —
-                and an unexplained "›" asked the analyst to guess that the thing
-                they most need is hidden inside it. */}
-            <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 py-3">
-              <h3 className="text-card text-text">Calculation comparison</h3>
-              <p className="text-label text-text-muted">Each row is a logged calculation with its own calc_id.</p>
-            </div>
-            <div className="px-4 pb-4">
-            <div className="overflow-x-auto rounded-md border border-border">
-              <table className="w-full border-collapse text-left">
-                <thead className="bg-surface-raised">
-                  <tr className="text-label uppercase tracking-wide text-text-muted">
-                    <th className="px-3 py-2 font-medium">Basis</th>
-                    <th className="px-3 py-2 text-right font-medium">DSCR</th>
-                    <th className="px-3 py-2 font-medium">Validation state</th>
+                for the decision — what the test produced under which basis.
+                Quiet, though: three coloured pills on three rows made a
+                two-line table look like a dashboard. */}
+            <h3 className="text-label font-semibold uppercase tracking-wide text-text">Calculation comparison</h3>
+            <table className="mt-2 w-full border-collapse text-left">
+              <tbody>
+                {summary.comparison.map((row) => (
+                  <tr key={row.basis} className="border-t border-border first:border-t-0">
+                    <td className="py-2 pr-4 text-body text-text">{row.basis}</td>
+                    <td className="py-2 pr-4 text-right text-body tabular-nums text-text">
+                      {row.dscr == null ? "—" : `${row.dscr.toFixed(2)}x`}
+                    </td>
+                    <td className={`py-2 text-right text-body ${row.status === "provisional" ? "text-code-bright" : "text-text-secondary"}`}>
+                      {STATE_LABEL[row.status] ?? row.status}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {summary.comparison.map((row) => (
-                    <tr key={row.basis} className="border-t border-border">
-                      <td className="px-3 py-2 text-body text-text">{row.basis}</td>
-                      <td className="px-3 py-2 text-right font-mono text-num tabular-nums text-text">
-                        {row.dscr == null ? "—" : `${row.dscr.toFixed(2)}x`}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Pill status={row.status} />
-                      </td>
-                    </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-label text-text-muted">Each row is a logged calculation with its own calc_id.</p>
+          </div>
+        )}
+
+        {/* The agent's steps: available, and not a tab competing with the
+            evidence an analyst actually opens. */}
+        {trace.steps.length > 0 && (
+          <div className="border-t border-border px-6 py-4">
+            <button
+              type="button"
+              onClick={() => setShowActivity((v) => !v)}
+              aria-expanded={showActivity}
+              className="text-label text-text-muted underline-offset-2 hover:text-text-secondary hover:underline"
+            >
+              {showActivity ? "Hide agent activity" : `Agent activity · ${trace.steps.length} steps`}{" "}
+              <span aria-hidden="true">{showActivity ? "⌃" : "›"}</span>
+            </button>
+            {showActivity && (
+              <div className="mt-3 space-y-3">
+                <TraceArc steps={trace.steps} />
+                <ol className="space-y-0">
+                  {trace.steps.map((st, i) => (
+                    <TraceStep key={st.n} step={st} last={i === trace.steps.length - 1} />
                   ))}
-                </tbody>
-              </table>
-            </div>
-            </div>
+                </ol>
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {/* ------------------------------------ supporting evidence + attention */}
       <div className="min-w-0 space-y-4">
-        {amendments.length > 0 && (
-          <section aria-label="Supporting evidence" className="rounded-lg border border-border bg-surface shadow-card">
-            <div role="tablist" className="flex border-b border-border-strong">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={evidenceTab === "evidence"}
-                onClick={() => setEvidenceTab("evidence")}
-                className={`px-4 py-3 text-card transition-colors ${evidenceTab === "evidence" ? "border-b-2 border-model text-text" : "text-text-muted hover:text-text-secondary"}`}
-              >
-                Supporting evidence
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={evidenceTab === "activity"}
-                onClick={() => setEvidenceTab("activity")}
-                className={`px-4 py-3 text-card transition-colors ${evidenceTab === "activity" ? "border-b-2 border-model text-text" : "text-text-muted hover:text-text-secondary"}`}
-              >
-                Agent activity{trace.steps.length > 0 ? ` · ${trace.steps.length}` : ""}
-              </button>
-            </div>
-            {evidenceTab === "activity" ? (
-              <div className="space-y-3 px-4 py-3">
-                {trace.steps.length === 0 ? (
-                  <p className="text-body text-text-muted">No activity was recorded for this investigation.</p>
-                ) : (
-                  <>
-                    <TraceArc steps={trace.steps} />
-                    <ol className="space-y-4">
-                      {trace.steps.map((st) => (
-                        <TraceStep key={st.n} step={st} />
-                      ))}
-                    </ol>
-                  </>
-                )}
-              </div>
-            ) : (
-            <ul className="space-y-3 px-4 py-3">
-              {amendments.map((a) => (
-                <li key={a.title}>
-                  <p className="text-body text-text">{a.title}</p>
-                  {a.effectiveDate && <p className="text-label text-text-muted">Effective {a.effectiveDate}</p>}
-                  <p className={`mt-1 text-label ${a.boarded ? "text-success" : a.effectiveForPeriod ? "text-code-bright" : "text-text-muted"}`}>
-                    {a.boarded
-                      ? "Included in approved terms"
-                      : a.effectiveForPeriod
-                        ? "Not reflected in approved terms"
-                        : "Effective after this period"}
-                  </p>
-                  {summary.addback && a.effectiveForPeriod && !a.boarded && (
-                    <p className="mt-2 text-label text-text-secondary">
-                      {summary.addback.name}
-                      {summary.addback.cap != null && ` add-back capped at $${summary.addback.cap.toLocaleString("en-US")}`}
-                      {summary.addback.cap == null && " add-back, no cap stated"}
+        {documents.length > 0 && (
+          <section aria-label="Supporting evidence" className="rounded-lg border border-border-strong bg-surface shadow-card">
+            <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Supporting evidence</h2>
+            {/* The governing documents first, and the rest on request. A loan
+                with four quarters of filings listed nine rows beside a
+                three-row finding list, which buried the agreement under the
+                statements. */}
+            <ul className="px-6">
+              {shownDocs.map((d, i) => (
+                <li key={d.id} className={`flex items-center gap-4 py-4 ${i > 0 ? "border-t border-border" : ""}`}>
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-body text-text-muted"
+                  >
+                    ▤
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-body font-semibold text-text" title={d.title}>
+                      {d.title}
                     </p>
-                  )}
+                    {/* The date NAMED for what it is — an agreement has an
+                        effective date, financials a period end. Repeating the
+                        document type under a title that already contains it
+                        said nothing. */}
+                    {d.date && (
+                      <p className="text-label text-text-muted">
+                        {dateLabel(d.docType)} {longDate(d.date)}
+                      </p>
+                    )}
+                    {/* The boarding lag, said on the document it is about. */}
+                    {unboardedTitles.has(d.title) && (
+                      <p className="text-label text-code-bright">Not reflected in approved terms</p>
+                    )}
+                  </div>
+                  {/* The source itself — the passages the agent read, in order. */}
+                  <Link
+                    href={`/documents/${d.id}`}
+                    className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+                  >
+                    View source <span aria-hidden="true">→</span>
+                  </Link>
                 </li>
               ))}
             </ul>
+            {documents.length > EVIDENCE_SHOWN && (
+              <div className="px-6 pb-4">
+                <button
+                  type="button"
+                  onClick={() => setAllDocs((v) => !v)}
+                  aria-expanded={allDocs}
+                  className="text-body text-model-bright underline-offset-2 hover:underline"
+                >
+                  {allDocs ? "Show fewer documents" : `Show all ${documents.length} documents`}{" "}
+                  <span aria-hidden="true">{allDocs ? "⌃" : "›"}</span>
+                </button>
+              </div>
             )}
           </section>
         )}
 
-        <section aria-label="Outstanding review items" className="rounded-lg border border-border bg-surface shadow-card">
-          <h2 className="border-b border-border-strong px-4 py-3 text-card text-text">Outstanding review items</h2>
-          <div className="space-y-3 px-4 py-3">
+        <section
+          id="outstanding"
+          aria-label="Outstanding review items"
+          className="scroll-mt-4 rounded-lg border border-border-strong bg-surface shadow-card"
+        >
+          <h2 className="px-6 pb-2 pt-6 text-section font-bold text-text">Outstanding review items</h2>
+          <div className="space-y-4 px-6 pb-6">
+            {unboarded.length === 0 && notes.length === 0 && missingEvidence.length === 0 && (
+              <p className="text-body text-text-muted">Nothing is outstanding on this casefile.</p>
+            )}
+
             {unboarded.map((a) => (
-              <div key={a.title} className="flex gap-3">
-                <span aria-hidden="true" className="text-card text-code-bright">⚠</span>
-                <div className="min-w-0">
-                  <p className="text-body text-text">Amendment review pending</p>
-                  <p className="mt-1 text-label text-text-muted">
-                    {a.title} is not reflected in approved terms{termsVersion != null ? ` v${termsVersion}` : ""}.
-                  </p>
-                  <Link
-                    href={`/facilities/${facilityId}/covenant-setup`}
-                    className="mt-2 inline-flex rounded-md border border-border-strong px-3 py-1 text-label text-text hover:bg-surface-raised"
-                  >
-                    Review amendment and terms
-                  </Link>
-                </div>
+              <div key={a.title}>
+                <p className="text-body font-semibold text-text">Amendment review pending</p>
+                <p className="mt-1 text-body text-text-secondary">
+                  {a.title} is not reflected in approved terms{termsVersion != null ? ` v${termsVersion}` : ""}.
+                </p>
+                <Link
+                  href={`/facilities/${facilityId}/covenant-setup`}
+                  className="mt-2 inline-flex text-body text-model-bright underline-offset-2 hover:underline"
+                >
+                  Review amendment and terms&nbsp;<span aria-hidden="true">→</span>
+                </Link>
               </div>
             ))}
 
@@ -280,7 +313,7 @@ export function CasefileFindings({
                     type="button"
                     onClick={() => setShowNotices((v) => !v)}
                     aria-expanded={showNotices}
-                    className="shrink-0 text-label text-model-bright underline-offset-2 hover:underline"
+                    className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
                   >
                     {showNotices ? "Hide" : "View"} notice{notes.length === 1 ? "" : "s"}
                   </button>
@@ -298,11 +331,13 @@ export function CasefileFindings({
             )}
 
             {missingEvidence.length > 0 && (
-              <div className="border-t border-border pt-4">
-                <p className="text-body text-text">Evidence the agent says is not on file</p>
+              <div className={unboarded.length > 0 || notes.length > 0 ? "border-t border-border pt-4" : ""}>
+                <p className="text-body font-semibold text-text">Evidence the agent says is not on file</p>
                 <ul className="mt-1 space-y-1">
                   {missingEvidence.map((m, i) => (
-                    <li key={i} className="text-label text-text-muted">{m}</li>
+                    <li key={i} className="text-body text-text-secondary">
+                      {m}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -314,16 +349,13 @@ export function CasefileFindings({
   );
 }
 
-function Pill({ status }: { status: string }) {
-  const tone =
-    status === "below_minimum" ? "border-danger bg-danger-bg text-danger"
-      : status === "meets_minimum" ? "border-success bg-success-bg text-success"
-        : status === "provisional" ? "border-code bg-code-bg text-code-bright"
-          : "border-border-strong text-text-muted";
-  const label =
-    status === "below_minimum" ? "Below minimum"
-      : status === "meets_minimum" ? "Meets minimum"
-        : status === "provisional" ? "Provisional"
-          : "Not computed";
-  return <span className={`inline-flex whitespace-nowrap rounded border px-3 py-px text-label ${tone}`}>{label}</span>;
-}
+/** How many documents the evidence panel shows before asking. */
+const EVIDENCE_SHOWN = 4;
+
+/** The comparison's state, in words. It was three coloured pills on three rows. */
+const STATE_LABEL: Record<string, string> = {
+  below_minimum: "Below minimum",
+  meets_minimum: "Meets minimum",
+  provisional: "Provisional",
+  unknown: "Not computed",
+};

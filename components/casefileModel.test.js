@@ -33,6 +33,7 @@ import {
   noticesOf,
   overrideBlockers,
   reviewMode,
+  outstandingSummary,
   seenSimilarCount,
   seenSimilarLabel,
 } from "./casefileModel.ts";
@@ -499,9 +500,14 @@ test("the recommendation headline is composed from branches, never generated", (
   // The same shape that does NOT clear the floor must not claim it did.
   const below = investigationSummary([sec("c1", 1.02, false, 1.25), sec("c2", 1.18, true, 1.25)], [TERMS_NOTE]);
   assert.match(below.headline, /still below the minimum/);
-  // No add-back: it falls back to the last finding rather than inventing one.
-  const plain = investigationSummary([sec("c1", 1.4, true, 1.25)], []);
-  assert.equal(plain.headline, plain.steps[0].detail);
+  // No add-back: it STATES THE SITUATION. It used to repeat the first
+  // finding's sentence verbatim, so the card and the finding under it said the
+  // same words twice.
+  const pass = investigationSummary([sec("c1", 1.4, true, 1.25)], []);
+  assert.equal(pass.headline, "The covenant test passes under the approved terms.");
+  assert.notEqual(pass.headline, pass.steps[0].detail);
+  const fail = investigationSummary([sec("c1", 1.12, false, 1.25)], []);
+  assert.equal(fail.headline, "The covenant exception remains unresolved under the approved terms.");
   assert.equal(investigationSummary([], []).headline, null);
 });
 
@@ -671,4 +677,23 @@ test("every grouping has a label that says what it demands", () => {
   for (const w of ["changed_the_outcome", "needs_acknowledgement", "informational"]) {
     assert.ok(NOTICE_WEIGHT_LABEL[w].length > 0, w);
   }
+});
+
+test("outstandingSummary: names what is open, and counts it", () => {
+  const amendments = [
+    { title: "Amendment No. 2", effectiveDate: "2026-04-01", effectiveForPeriod: true, boarded: false },
+    { title: "Amendment No. 1", effectiveDate: "2024-08-01", effectiveForPeriod: true, boarded: true },
+  ];
+  assert.deepEqual(outstandingSummary(amendments, [{ check: "a" }, { check: "b" }]), {
+    label: "Amendment No. 2 · 2 notices",
+    count: 3,
+  });
+});
+
+test("outstandingSummary: a boarded amendment is not outstanding, and nothing open says nothing", () => {
+  // A line that always appears is a line nobody reads.
+  const boarded = [{ title: "Amendment No. 1", effectiveDate: "2024-08-01", effectiveForPeriod: true, boarded: true }];
+  assert.equal(outstandingSummary(boarded, []), null);
+  assert.equal(outstandingSummary([], []), null);
+  assert.deepEqual(outstandingSummary([], [{ check: "a" }]), { label: "1 notice", count: 1 });
 });

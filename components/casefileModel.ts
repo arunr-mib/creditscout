@@ -718,6 +718,13 @@ export function investigationSummary(
     headline = movedAbove
       ? "The agent identified an additional permitted add-back and recalculated the DSCR above the minimum."
       : "The agent identified an additional permitted add-back, and the recalculated DSCR is still below the minimum.";
+  } else if (governing?.passes === false) {
+    // A STATEMENT OF THE SITUATION, not a repeat of the finding below it. This
+    // used to be `steps[last].detail`, so the card's sentence and the first
+    // finding's sentence were the same words twice on one screen.
+    headline = "The covenant exception remains unresolved under the approved terms.";
+  } else if (governing?.passes === true) {
+    headline = "The covenant test passes under the approved terms.";
   } else if (steps.length > 0) {
     headline = steps[steps.length - 1].detail;
   }
@@ -849,4 +856,28 @@ export function groupNotices(notes: readonly Notice[]): { weight: NoticeWeight; 
   return order
     .map((weight) => ({ weight, notices: notes.filter((n) => noticeWeight(n) === weight) }))
     .filter((g) => g.notices.length > 0);
+}
+
+// --------------------------------------------------- the one outstanding line
+
+/**
+ * What is still open, named — "Amendment No. 2 · 2 notices".
+ *
+ * The card used to carry three stacked lines (decision basis, pending
+ * amendment, outstanding review), which is a paragraph where the analyst needs
+ * a pointer. The detail did not disappear: the basis is the finding that
+ * produced it, the amendment is a finding of its own, and this is the line that
+ * says there is something to go and read.
+ *
+ * Counted, never characterised. Nothing here decides whether an item matters.
+ */
+export function outstandingSummary(
+  amendments: readonly AmendmentStatus[],
+  notes: readonly Notice[],
+): { label: string; count: number } | null {
+  const pending = amendments.filter((a) => a.effectiveForPeriod && !a.boarded).map((a) => a.title);
+  const parts: string[] = [...pending];
+  if (notes.length > 0) parts.push(`${notes.length} notice${notes.length === 1 ? "" : "s"}`);
+  if (parts.length === 0) return null;
+  return { label: parts.join(" · "), count: pending.length + notes.length };
 }

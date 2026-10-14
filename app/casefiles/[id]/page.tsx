@@ -26,6 +26,14 @@ export const dynamic = "force-dynamic";
 // default (60s is the Hobby ceiling). Reads still return fast.
 export const maxDuration = 60;
 
+/** The order an analyst reads a loan's file in. Anything unknown sorts last. */
+const DOC_ORDER = ["agreement", "amendment", "financials", "compliance_certificate", "waiver"];
+const docRank = (t: string | null): number => {
+  // `indexOf` returns -1 for an unknown type, which would sort it FIRST.
+  const i = DOC_ORDER.indexOf(t ?? "");
+  return i === -1 ? DOC_ORDER.length : i;
+};
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const must = (res: { data: unknown; error: { message: string } | null }, what: string): unknown => {
@@ -140,7 +148,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
     // The facility's documents, for the amendment-status strip: an amendment on
     // file but not reflected in the governing terms is the boarding lag the
     // analyst must see before trusting a narrative that leans on it.
-    db.from("documents").select("doc_type, title, effective_date").eq("facility_id", exception.facility_id),
+    db.from("documents").select("id, doc_type, title, effective_date").eq("facility_id", exception.facility_id),
   ]);
 
   const claims = claimsOf(casefile.claims);
@@ -159,8 +167,14 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   const termsObj = (governingTerms?.terms ?? null) as Record<string, unknown> | null;
   const testPeriod = termsObj && typeof termsObj.test_period === "object" && termsObj.test_period !== null ? (termsObj.test_period as Record<string, unknown>) : null;
   const testBasis = testPeriod && typeof testPeriod.basis === "string" ? testPeriod.basis : null;
+  const documentRows = (must(documents, "select documents") ?? []) as {
+    id: string;
+    doc_type: string | null;
+    title: string;
+    effective_date: string | null;
+  }[];
   const amendments = amendmentStatuses(
-    (must(documents, "select documents") ?? []) as { doc_type: string | null; title: string; effective_date: string | null }[],
+    documentRows,
     termsObj?.effective_amendments,
     exception.test_period_end,
   );
@@ -194,6 +208,12 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         testPeriodEnd: exception.test_period_end ?? null,
         testBasis,
         amendments,
+        // Every document on file, so the evidence list links to the source
+        // rather than naming it. Ordered as the agreement, then what amends it,
+        // then the period's filings — the order an analyst reads them in.
+        documents: [...documentRows]
+          .sort((a, b) => docRank(a.doc_type) - docRank(b.doc_type))
+          .map((d) => ({ id: d.id, title: d.title, docType: d.doc_type, date: d.effective_date })),
         humanReviewRequired: humanReviewPolicy(must(policy, "select policy") as { key: string; value: unknown }[] | null),
         review: (((must(reviews, "select reviews") ?? []) as ReviewRecord[])[0]) ?? null,
         exceptionStatus: exception.status ?? null,
