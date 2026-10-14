@@ -32,16 +32,28 @@ import {
  * encoded in a colour that now means something else.
  */
 
+/**
+ * Three states, three treatments.
+ *
+ * `completed` is SLATE, filled — not green. Green in this product means a
+ * verified pass or a recorded resolution, and a finished retrieval step is
+ * neither: an investigation can complete every one of its steps and still
+ * escalate. Colouring the steps green would let an analyst read "all green" as
+ * "all clear", which is the one inference this screen must not invite.
+ *
+ * Slate is the human/settled tone and carries the weight the owner asked for —
+ * a filled chip at 10:1 rather than a grey outline that read as disabled.
+ */
 const DOT: Record<ActivityState, { icon: string; ring: string; ink: string }> = {
-  completed: { icon: "✓", ring: "border-border-strong bg-surface", ink: "text-text-muted" },
+  completed: { icon: "✓", ring: "border-human bg-human-bg", ink: "text-human" },
   needs_input: { icon: "!", ring: "border-code bg-code-bg", ink: "text-code-bright" },
   in_progress: { icon: "◌", ring: "border-model bg-model-bg", ink: "text-model-bright" },
 };
 
 const STATE_CHIP: Record<ActivityState, string> = {
-  completed: "border-border-strong text-text-muted",
-  needs_input: "border-code bg-code-bg text-code-bright",
-  in_progress: "border-model bg-model-bg text-model-bright",
+  completed: "border-human bg-human-bg font-medium text-human",
+  needs_input: "border-code bg-code-bg font-medium text-code-bright",
+  in_progress: "border-model bg-model-bg font-medium text-model-bright",
 };
 
 function clock(ts: string): string {
