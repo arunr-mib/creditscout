@@ -268,3 +268,60 @@ export function toSyncState(casefileId: string, raw: unknown): SyncState {
     error: typeof d.error === "string" ? d.error : null,
   };
 }
+
+// ------------------------------------- what the step DID, as an activity title
+
+/**
+ * An activity title, in the words an analyst would use.
+ *
+ * The trace led with the tool's identifier — `search_documents`, `dscr_calculator` —
+ * which reads as a developer log. Worse, every row carried the same CODE badge,
+ * so a column of identical amber tags implied that no reasoning happened. The
+ * opposite is true: the orchestrator chose every one of those calls and its
+ * arguments. That choice is the agentic part, and it was the least visible thing
+ * on the screen.
+ *
+ * Derived from the tool name alone. It adds no figure and changes no
+ * recommendation, and an unknown tool keeps its identifier rather than being
+ * given an invented title.
+ */
+const ACTIVITY_TITLE: Record<string, string> = {
+  document_agent: "Asked a specialist to read the filing",
+  definition_agent: "Asked a specialist to re-read the covenant definition",
+  research_agent: "Asked a specialist to weigh the evidence",
+  [CALCULATOR_TOOL]: "Calculated the ratio",
+  search_documents: "Retrieved covenant and financial evidence",
+  search_past_cases: "Looked up how similar exceptions were decided",
+};
+
+export function activityTitle(tool: unknown): string {
+  return ACTIVITY_TITLE[str(tool)] ?? str(tool);
+}
+
+/**
+ * Who performed the step — distinct from who CHOSE it.
+ *
+ * Every step is chosen by the orchestrator; this says what ran once it was
+ * chosen. Keeping the distinction explicit is the point: "code" on a retrieval
+ * step must not be read as "no model was involved in this investigation".
+ */
+export const ACTOR_LABEL: Record<TraceKind, string | null> = {
+  model: "Specialist model",
+  code: "Deterministic code",
+  marker: null,
+  unknown: null,
+};
+
+/**
+ * One sentence over the whole activity list, so the attribution is stated once
+ * rather than implied by a badge on every row.
+ *
+ * Says only what is true: the agent selected each call. It does NOT claim to
+ * show the agent's reasoning, which Foundry does not expose.
+ */
+export function activityAttribution(steps: readonly { kind: TraceKind }[]): string {
+  const delegations = steps.filter((s) => s.kind === "model").length;
+  const base = "The CreditScout Agent chose each of these steps and its arguments.";
+  if (delegations === 0) return `${base} It ran them against its own tools without delegating.`;
+  return `${base} ${delegations} ${delegations === 1 ? "was a delegation" : "were delegations"} to a specialist model.`;
+}

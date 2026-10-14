@@ -10,6 +10,9 @@ import {
   stepRole,
   investigationArc,
   LIVE_STATUS,
+  ACTOR_LABEL,
+  activityAttribution,
+  activityTitle,
 } from "./traceModel.ts";
 import { SPECIALIST_NAMES } from "../lib/agent/prompt.ts";
 import { CALCULATOR_TOOL, MEMORY_LOADED_STEP, MEMORY_UNAVAILABLE_STEP, memoryLoadedEntry } from "../lib/agent/trace.ts";
@@ -184,4 +187,53 @@ test("a delegation after a PASSING calculation is not framed as a rescue", () =>
   ];
   const { steps } = buildLiveTrace(trace);
   assert.equal(steps[1].decision, null);
+});
+
+// ------------------------------------- what the step DID, as an activity title
+
+test("activityTitle: a step reads as an activity, not as a function name", () => {
+  // The trace led with `search_documents` / `dscr_calculator`, which reads as a
+  // developer log rather than an investigation.
+  assert.equal(activityTitle("search_documents"), "Retrieved covenant and financial evidence");
+  assert.equal(activityTitle("dscr_calculator"), "Calculated the ratio");
+  assert.equal(activityTitle("definition_agent"), "Asked a specialist to re-read the covenant definition");
+});
+
+test("activityTitle: an unknown tool keeps its identifier rather than being given an invented title", () => {
+  assert.equal(activityTitle("some_new_tool"), "some_new_tool");
+});
+
+test("every tool and specialist the trace can show has an activity title", () => {
+  for (const name of ["search_documents", "dscr_calculator", "search_past_cases", "document_agent", "definition_agent", "research_agent"]) {
+    assert.notEqual(activityTitle(name), name, `${name} still shows its identifier`);
+  }
+});
+
+test("ACTOR_LABEL separates who RAN a step from who chose it", () => {
+  // "code" on a retrieval step must not be read as "no model was involved".
+  assert.equal(ACTOR_LABEL.model, "Specialist model");
+  assert.equal(ACTOR_LABEL.code, "Deterministic code");
+  assert.equal(ACTOR_LABEL.marker, null, "an app marker has no actor");
+});
+
+test("activityAttribution: states that the agent chose every step, delegation or not", () => {
+  // A column of identical CODE badges implied no reasoning happened. The
+  // attribution says the true thing once, instead.
+  const allCode = [{ kind: "code" }, { kind: "code" }];
+  assert.match(activityAttribution(allCode), /chose each of these steps/);
+  assert.match(activityAttribution(allCode), /without delegating/);
+
+  const withOne = [{ kind: "code" }, { kind: "model" }];
+  assert.match(activityAttribution(withOne), /1 was a delegation to a specialist model/);
+
+  const withTwo = [{ kind: "model" }, { kind: "model" }];
+  assert.match(activityAttribution(withTwo), /2 were delegations/);
+});
+
+test("activityAttribution never claims to show the agent's reasoning", () => {
+  // Foundry does not expose it. Saying otherwise would be fabrication.
+  for (const steps of [[{ kind: "code" }], [{ kind: "model" }]]) {
+    const s = activityAttribution(steps);
+    assert.doesNotMatch(s, /because|reasoned that|decided that/i);
+  }
 });

@@ -1,4 +1,4 @@
-import type { TraceKind, TraceStepView } from "./traceModel";
+import { ACTOR_LABEL, activityTitle, type TraceKind, type TraceStepView } from "./traceModel";
 
 /**
  * design.md §5.5 / §12.15. One row of the live trace: step number, the
@@ -52,15 +52,18 @@ export function TraceStep({ step }: { step: TraceStepView }) {
         <span className="font-mono text-label text-text-muted" aria-hidden="true">
           {step.n}
         </span>
-        <span className={`${step.calculator ? "text-card" : "text-body"} font-mono ${NAME[step.kind]}`}>{step.tool}</span>
-        {step.kind === "code" && (
-          <span className="rounded-sm bg-code-bg px-1 py-px text-badge uppercase tracking-wider text-code">code</span>
-        )}
+        {/* THE ACTIVITY LEADS, not the function name. A column of identical
+            `search_documents` rows each badged CODE read as a developer log,
+            and implied no reasoning happened — when in fact the agent chose
+            every one of these calls. The identifier moves to the technical
+            details below. */}
+        <span className={`${step.calculator ? "text-card" : "text-body"} ${NAME[step.kind]}`}>
+          {activityTitle(step.tool)}
+        </span>
         {step.kind === "model" && (
-          <>
-            <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">specialist</span>
-            <span className="text-label text-text-muted">delegated by the CreditScout Agent</span>
-          </>
+          <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">
+            specialist model
+          </span>
         )}
         {time && <span className="ml-auto font-mono text-label text-text-muted">{time}</span>}
       </p>
@@ -77,6 +80,30 @@ export function TraceStep({ step }: { step: TraceStepView }) {
           {step.output}
         </p>
       )}
+
+      {/* Tool name, actor and timestamp: true, and not what an analyst reads
+          first. Collapsed by default. */}
+      <details className="mt-1">
+        <summary className="cursor-pointer list-none text-label text-text-muted underline-offset-2 hover:underline marker:content-['']">
+          Technical details
+        </summary>
+        <dl className="mt-1 grid gap-x-4 gap-y-px sm:grid-cols-[max-content_1fr]">
+          <dt className="text-label text-text-muted">Tool</dt>
+          <dd className="font-mono text-label text-text-secondary">{step.tool}</dd>
+          {ACTOR_LABEL[step.kind] && (
+            <>
+              <dt className="text-label text-text-muted">Ran in</dt>
+              <dd className="text-label text-text-secondary">{ACTOR_LABEL[step.kind]}</dd>
+            </>
+          )}
+          {time && (
+            <>
+              <dt className="text-label text-text-muted">At</dt>
+              <dd className="font-mono text-label text-text-secondary">{time}</dd>
+            </>
+          )}
+        </dl>
+      </details>
     </li>
   );
 }
