@@ -145,3 +145,28 @@ export const dateLabel = (docType: string | null | undefined): string =>
 
 /** The column heading when one table mixes document types. */
 export const MIXED_DATE_HEADING = "Relevant date";
+
+// ------------------------------------------------- what counts as "pending"
+
+/**
+ * Whether a loan has a covenant update waiting on someone.
+ *
+ * ONE DEFINITION, used by the count and by the row. The chip counted only
+ * unboarded amendments while the row ALSO showed "v3 awaiting approval" for a
+ * proposed version, so the header said 2 while three rows said otherwise. A
+ * count that disagrees with the list under it teaches an analyst to distrust
+ * both.
+ *
+ * Two different things, both genuinely pending: a version proposed and not yet
+ * approved, and an amendment on file that the approved version does not carry.
+ */
+export function hasPendingUpdate(card: {
+  unboarded: readonly string[];
+  versions: readonly { status: string }[];
+}): boolean {
+  return card.unboarded.length > 0 || card.versions.some((v) => v.status === "proposed");
+}
+
+export const countPendingUpdates = (
+  cards: readonly { unboarded: readonly string[]; versions: readonly { status: string }[] }[],
+): number => cards.filter(hasPendingUpdate).length;
