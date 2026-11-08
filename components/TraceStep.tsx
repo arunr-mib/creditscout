@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AgentTag } from "./AgentTag";
 import {
   ACTIVITY_STATE_LABEL,
   activityResult,
@@ -26,10 +27,12 @@ import {
  *     searches made a working investigation look like a page of warnings, and
  *     left nothing to say the real issue with.
  *
- * The teal/amber attribution (design.md §12.15) survives in WORDS, which is
- * where it belongs on a screen that also has to signal state: the actor is
- * named on the row ("Specialist model" / "Deterministic code") rather than
- * encoded in a colour that now means something else.
+ * Attribution survives in WORDS, which is where it belongs on a screen that
+ * also has to signal state: the actor is named on the row ("Specialist model" /
+ * "Deterministic code"). The one colour it takes is the AGENT's: a step a
+ * specialist model performed, and the orchestrator's reasoning line above a
+ * step, carry the agent tag and an agent left edge. Calculator and retrieval
+ * steps are code, not the agent, and take neither.
  */
 
 /**
@@ -47,13 +50,13 @@ import {
 const DOT: Record<ActivityState, { icon: string; ring: string; ink: string }> = {
   completed: { icon: "✓", ring: "border-human bg-human-bg", ink: "text-human" },
   needs_input: { icon: "!", ring: "border-code bg-code-bg", ink: "text-code-bright" },
-  in_progress: { icon: "◌", ring: "border-model bg-model-bg", ink: "text-model-bright" },
+  in_progress: { icon: "◌", ring: "border-agent bg-agent-bg", ink: "text-agent-ink" },
 };
 
 const STATE_CHIP: Record<ActivityState, string> = {
   completed: "border-human bg-human-bg font-medium text-human",
   needs_input: "border-code bg-code-bg font-medium text-code-bright",
-  in_progress: "border-model bg-model-bg font-medium text-model-bright",
+  in_progress: "border-agent bg-agent-bg font-medium text-agent-ink",
 };
 
 function clock(ts: string): string {
@@ -78,6 +81,9 @@ export function TraceStep({
   const time = clock(step.ts);
   const dot = DOT[state];
   const hits = state === "completed" ? searchCitations(step.output) : null;
+  // A specialist model's step is the agent's own work: it gets the agent tag
+  // and an agent left edge. A code step (calculator, retrieval) does not.
+  const agentStep = step.kind === "model";
 
   return (
     <li className="relative pl-8">
@@ -90,11 +96,11 @@ export function TraceStep({
         {dot.icon}
       </span>
 
-      <div className={last ? "" : "pb-6"}>
-        {/* The orchestrator's turn that led here, read from the sequence. Teal:
-            it is the reasoning layer deciding, not a tool computing. */}
+      <div className={`${last ? "" : "pb-6"} ${agentStep ? "border-l-2 border-agent pl-3" : ""}`}>
+        {/* The orchestrator's turn that led here, read from the sequence. Agent
+            ink: it is the reasoning layer deciding, not a tool computing. */}
         {step.decision && (
-          <p className="mb-2 flex items-start gap-2 text-label text-model-bright">
+          <p className="mb-2 flex items-start gap-2 text-label text-agent-ink">
             <span aria-hidden="true">↳</span>
             {step.decision}
           </p>
@@ -110,11 +116,7 @@ export function TraceStep({
           <span className={`inline-flex rounded border px-2 py-px text-badge ${STATE_CHIP[state]}`}>
             {ACTIVITY_STATE_LABEL[state]}
           </span>
-          {step.kind === "model" && (
-            <span className="rounded-sm bg-model-bg px-1 py-px text-badge uppercase tracking-wider text-model">
-              specialist model
-            </span>
-          )}
+          {agentStep && <AgentTag>Specialist model</AgentTag>}
           {time && <span className="ml-auto text-label tabular-nums text-text-muted">{time}</span>}
         </p>
 
@@ -132,7 +134,7 @@ export function TraceStep({
             {hits.citations.map((c) => {
               const href = links.find((l) => l.citation === c)?.href ?? null;
               return href ? (
-                <Link key={c} href={href} className="text-model-bright underline-offset-2 hover:underline">
+                <Link key={c} href={href} className="text-text underline decoration-border-strong underline-offset-2 hover:decoration-text">
                   {c}
                 </Link>
               ) : (

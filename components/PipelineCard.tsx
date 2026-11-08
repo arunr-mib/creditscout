@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AgentTag } from "./AgentTag";
 import { InvestigateButton } from "./InvestigateButton";
 import { barGeometry, type PipelineCard as Card } from "./pipelineModel";
 
@@ -7,15 +8,6 @@ const dscr = (v: number | null): string => (v == null ? "—" : `${v.toFixed(2)}
 /** The one button style on a card: mint, forest text. Mint marks "you can act", never a status. */
 const ACTION_LINK =
   "inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-mint px-3 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast ease-out hover:bg-mint-hover";
-
-function AgentTag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-sm bg-agent-bg px-2 py-px text-badge text-agent-ink">
-      <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-agent" />
-      {children}
-    </span>
-  );
-}
 
 /**
  * One loan in a lane: the borrower, its computed DSCR against its own minimum,

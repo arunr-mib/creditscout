@@ -1,5 +1,6 @@
-import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
+import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, formatFigure, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
+import { CalcBadge } from "./CalcValue";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
@@ -51,6 +52,11 @@ export interface CasefileViewModel {
   /** The approved covenant terms version the test was computed on. */
   termsVersion: number | null;
   termsStatus: string | null;
+  /**
+   * The three figures that raised the exception, read from the exception row —
+   * the same ones the pipeline card shows. Evidence, never recomputed here.
+   */
+  figures: { computed: number | null; reported: number | null; required: number | null };
   /** The covenant test period end (quarter end) and its basis (e.g. TTM). */
   testPeriodEnd: string | null;
   testBasis: string | null;
@@ -88,45 +94,61 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // from the notes and the calculation log; never written by the model.
   const basis = decisionBasis(summary, view.notes, view.draftRecommendation, view.notes.length, view.amendments);
   const outstanding = outstandingSummary(view.amendments, view.notes);
-  const statusPill = {
-    // Never the raw column value: `superseded` and `failed` fell through to it
-    // and the screen's one status object spoke the database's words.
-    label: statusHeadline(view.status),
-    tone: mode === "active" ? "border-border-strong bg-surface text-text" : "border-border-strong text-text-muted",
-  };
+  // The state, in the analyst's words. Never the raw column value: `superseded`
+  // and `failed` fell through to it and the screen spoke the database's words.
+  const state = statusHeadline(view.status);
+  const { computed, reported, required } = view.figures;
+  const below = computed != null && required != null && computed < required;
+  // The amber marker names the calculation behind the computed figure, but only
+  // when the first logged calculation IS that figure — never a calc_id that
+  // merely sits nearby.
+  const initial = summary.initial;
+  const provenance = computed != null && initial?.dscr != null && Math.round(initial.dscr * 100) === Math.round(computed * 100) ? initial.calcId : null;
+  const basisLine = [
+    `${view.claims.filter((c) => c.cited).length} citation${view.claims.filter((c) => c.cited).length === 1 ? "" : "s"}`,
+    `${view.sections.length} calculation${view.sections.length === 1 ? "" : "s"}`,
+    view.termsVersion != null ? `terms v${view.termsVersion}` : null,
+  ]
+    .filter((p): p is string => p != null)
+    .join(" · ");
 
   return (
     <article className="space-y-4">
       {/* ------------------------------------------------------------ header */}
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="space-y-4">
         <div className="space-y-2">
-          {/* A breadcrumb back to the queue: the casefile is reached FROM a
-              list, and an analyst reviewing a book of loans needs the way
-              back. */}
+          {/* A way back to the pipeline: the casefile is reached FROM a
+              board of loans, and an analyst needs the way back. */}
           <nav aria-label="Breadcrumb" className="text-label text-text-muted">
             <Link href="/" className="underline-offset-2 hover:text-text hover:underline">
-              Credit Analysis Queue
+              <span aria-hidden="true">← </span>Pipeline
             </Link>
             <span aria-hidden="true" className="mx-2">/</span>
             <span className="text-text-secondary">{view.borrower}</span>
           </nav>
-          <h1 className="text-title text-text">
-            {view.borrower} <span className="font-normal text-text-secondary">· {view.period}</span>
-          </h1>
-          {/* One line of context. The prior-case count used to be a chip hung
-              under the status pill — a second status object saying something
-              that is not a status. */}
-          <p className="max-w-prose text-body text-text-secondary">
-            Covenant exception review
-            {view.seenSimilar > 0 && ` · informed by ${view.seenSimilar} prior case${view.seenSimilar === 1 ? "" : "s"}`}
+          {/* The identity line carries the state. Green is for a verified pass,
+              so the state is words, not a coloured status object. The loan
+              reference is an identifier, hence monospace. */}
+          <p className="text-label uppercase tracking-[0.12em] text-text-muted">
+            Loan <span className="font-mono normal-case tracking-normal">{view.facilityId.slice(0, 8)}</span> · {view.period}
+            {view.termsVersion != null && ` · Terms v${view.termsVersion}`} · {state}
           </p>
+          <h1 className="font-brand text-title text-text">{view.borrower}</h1>
+          {/* Memory is agent provenance, not a status: the agent tag. Renders
+              nothing when no prior case informed this run. */}
+          {view.seenSimilar > 0 && (
+            <p>
+              <SeenSimilarBadge count={view.seenSimilar} />
+            </p>
+          )}
         </div>
-        {/* ONE status object on this screen. It was green for "ready for
-            analyst decision", which reads as *compliant* in this product —
-            green is reserved for a passing test and a recorded resolution. */}
-        <span className={`inline-flex shrink-0 items-center gap-2 rounded-md border px-4 py-2 text-body ${statusPill.tone}`}>
-          <span aria-hidden="true" className="text-text-muted">●</span> {statusPill.label}
-        </span>
+        <dl className="grid gap-4 sm:grid-cols-3">
+          <HeaderFigure label="Computed DSCR" value={computed} tone={below ? "text-danger" : "text-text"}>
+            {provenance && <CalcBadge calcId={provenance} />}
+          </HeaderFigure>
+          <HeaderFigure label="Borrower reported" value={reported} tone="text-text" />
+          <HeaderFigure label="Minimum" value={required} tone="text-text" />
+        </dl>
       </header>
 
       {/* ------------------------------------------------- the recommendation */}
@@ -138,10 +160,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           explanation={view.explanation}
           overridden={overridden}
           basis={basis}
+          basisLine={basisLine}
           facts={{
             testResult: summary.governing?.passes === false ? "Outside covenant limit" : summary.governing?.passes === true ? "Within covenant limit" : null,
-            termsUsed: view.termsVersion != null ? `Approved v${view.termsVersion}` : null,
-            period: view.period,
           }}
           outstanding={outstanding ? { label: outstanding.label, href: "#outstanding" } : null}
         />
@@ -197,6 +218,27 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   );
 }
 
+/** One of the three header figures: label over a large tabular number, "—" when the log holds none (never 0). */
+function HeaderFigure({
+  label,
+  value,
+  tone,
+  children,
+}: {
+  label: string;
+  value: number | null;
+  tone: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-px">
+      <dt className="text-label text-text-muted">{label}</dt>
+      <dd className={`text-figure tabular-nums ${tone}`}>{value != null ? `${formatFigure(value, "ratio")}x` : "—"}</dd>
+      {children && <dd>{children}</dd>}
+    </div>
+  );
+}
+
 /**
  * The recommendation as the ACTION it proposes. "Recommends escalation" spent
  * its first word restating the eyebrow above it, which already says this is a
@@ -211,10 +253,10 @@ const RECOMMENDATION_HEADLINE: Record<string, string> = {
 
 function Superseded({ currentId }: { currentId: string | null }) {
   return (
-    <p role="status" className="rounded-md border border-border bg-surface p-4 text-body text-text-muted">
+    <p role="status" className="rounded-xl border border-border bg-surface p-4 text-body text-text-muted">
       Superseded by a later investigation. This casefile is kept as history.{" "}
       {currentId && (
-        <Link href={`/casefiles/${currentId}`} className="text-text-secondary underline">
+        <Link href={`/casefiles/${currentId}`} className="text-text underline decoration-border-strong hover:decoration-text">
           Open the current casefile
         </Link>
       )}
@@ -224,7 +266,7 @@ function Superseded({ currentId }: { currentId: string | null }) {
 
 function NotReady({ status }: { status: string }) {
   return (
-    <p role="status" className="rounded-md border border-border bg-surface p-4 text-body text-text-secondary">
+    <p role="status" className="rounded-xl border border-border bg-surface p-4 text-body text-text-secondary">
       {status === "investigating"
         ? "The investigation is still running, so there is nothing to review yet. Come back when it reaches pending review."
         : status === "failed"
@@ -255,7 +297,7 @@ function Decided({
 }) {
   const needsClosing = exceptionNeedsClosing(status, exceptionStatus);
   return (
-    <section aria-labelledby="decided-heading" className="rounded-md border border-border-strong border-t-2 bg-surface-raised p-4">
+    <section aria-labelledby="decided-heading" className="rounded-xl border border-border-strong border-t-2 bg-surface-raised p-4">
       <h2 id="decided-heading" className="text-card text-human">{decidedHeadline(status)}</h2>
       {review ? (
         <dl className="mt-2 space-y-1 text-body text-text-secondary">

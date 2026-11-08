@@ -91,7 +91,7 @@ export function CasefileFindings({
   return (
     <div className="grid items-start gap-4 lg:grid-cols-3">
       {/* ------------------------------------------------ what the agent found */}
-      <section aria-label="Investigation findings" className="min-w-0 rounded-lg border border-border-strong bg-surface shadow-card lg:col-span-2">
+      <section aria-label="Investigation findings" className="min-w-0 rounded-xl border border-border-strong bg-surface shadow-card lg:col-span-2">
         <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Investigation findings</h2>
 
         <ol className="px-6">
@@ -104,7 +104,7 @@ export function CasefileFindings({
                 <div className="flex gap-3">
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-label text-text-muted"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-raised text-label text-text-muted"
                   >
                     {STEP_ICON[step.kind] ?? "·"}
                   </span>
@@ -116,7 +116,7 @@ export function CasefileFindings({
                           type="button"
                           onClick={() => setOpenStep(open ? null : step.n)}
                           aria-expanded={open}
-                          className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+                          className="shrink-0 text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                         >
                           {open ? "Hide" : linkLabel(step.kind)} <span aria-hidden="true">{open ? "⌃" : "→"}</span>
                         </button>
@@ -226,7 +226,7 @@ export function CasefileFindings({
       {/* ------------------------------------ supporting evidence + attention */}
       <div className="min-w-0 space-y-4">
         {documents.length > 0 && (
-          <section aria-label="Supporting evidence" className="rounded-lg border border-border-strong bg-surface shadow-card">
+          <section aria-label="Supporting evidence" className="rounded-xl border border-border-strong bg-surface shadow-card">
             <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Supporting evidence</h2>
             {/* The governing documents first, and the rest on request. A loan
                 with four quarters of filings listed nine rows beside a
@@ -237,7 +237,7 @@ export function CasefileFindings({
                 <li key={d.id} className={`flex items-center gap-3 py-2 ${i > 0 ? "border-t border-border" : ""}`}>
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border bg-surface-raised text-label text-text-muted"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-raised text-label text-text-muted"
                   >
                     ▤
                   </span>
@@ -263,7 +263,7 @@ export function CasefileFindings({
                   {/* The source itself — the passages the agent read, in order. */}
                   <Link
                     href={`/documents/${d.id}`}
-                    className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+                    className="shrink-0 text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                   >
                     View source <span aria-hidden="true">→</span>
                   </Link>
@@ -276,7 +276,7 @@ export function CasefileFindings({
                   type="button"
                   onClick={() => setAllDocs((v) => !v)}
                   aria-expanded={allDocs}
-                  className="text-body text-model-bright underline-offset-2 hover:underline"
+                  className="text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                 >
                   {allDocs ? "Show fewer documents" : `Show all ${documents.length} documents`}{" "}
                   <span aria-hidden="true">{allDocs ? "⌃" : "›"}</span>
@@ -289,7 +289,7 @@ export function CasefileFindings({
         <section
           id="outstanding"
           aria-label="Outstanding review items"
-          className="scroll-mt-4 rounded-lg border border-border-strong bg-surface shadow-card"
+          className="scroll-mt-4 rounded-xl border border-border-strong bg-surface shadow-card"
         >
           <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Outstanding review items</h2>
           <div className="space-y-3 px-6 pb-4">
@@ -305,7 +305,7 @@ export function CasefileFindings({
                 </p>
                 <Link
                   href={`/facilities/${facilityId}/covenant-setup`}
-                  className="mt-1 inline-flex text-body text-model-bright underline-offset-2 hover:underline"
+                  className="mt-1 inline-flex text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                 >
                   Review amendment and terms&nbsp;<span aria-hidden="true">→</span>
                 </Link>
@@ -322,7 +322,7 @@ export function CasefileFindings({
                     type="button"
                     onClick={() => setShowNotices((v) => !v)}
                     aria-expanded={showNotices}
-                    className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+                    className="shrink-0 text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                   >
                     {showNotices ? "Hide" : "View"} notice{notes.length === 1 ? "" : "s"}
                   </button>

@@ -93,7 +93,7 @@ export function ReviewNotices(props: {
                     <button
                       type="button"
                       onClick={() => onOpenCitation(w.citation as string)}
-                      className="mt-2 rounded-md border border-border-strong px-2 py-px text-label text-model-bright hover:bg-model-bg"
+                      className="mt-2 rounded-md border border-border-strong px-2 py-px text-label text-text hover:bg-surface-raised"
                     >
                       Open {w.citation}
                     </button>

@@ -18,6 +18,7 @@ import {
   type LiveTraceView,
 } from "./traceModel";
 import { STALLED_NOTICE } from "./traceModel";
+import { AgentTag } from "./AgentTag";
 import { TraceStep } from "./TraceStep";
 
 /**
@@ -213,7 +214,7 @@ export function LiveTrace(props: LiveTraceProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <nav aria-label="Breadcrumb" className="text-label text-text-muted">
           <Link href="/" className="underline-offset-2 hover:text-text-secondary hover:underline">
-            Credit Analysis Queue
+            <span aria-hidden="true">← </span>Pipeline
           </Link>
           <span aria-hidden="true"> / </span>
           <span className="text-text-secondary">{borrower}</span>
@@ -223,16 +224,16 @@ export function LiveTrace(props: LiveTraceProps) {
             investigation needs), so "it continues without you" would be false. */}
         <Link
           href="/"
-          className="rounded-md border border-border-strong bg-surface px-3 py-1 text-label text-text-secondary hover:bg-surface-raised"
+          className="rounded-lg border border-border-strong bg-surface px-3 py-1 text-label text-text-secondary hover:bg-surface-raised"
         >
-          Back to queue
+          Back to pipeline
         </Link>
       </div>
 
       <header className="space-y-2">
         <p className="text-label uppercase tracking-[0.14em] text-text-muted">DSCR exception investigation</p>
         <div className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-title text-text">
+          <h1 className="font-brand text-title text-text">
             {borrower} <span className="font-normal text-text-secondary">· {period}</span>
           </h1>
           <StatusBadge started={started} running={running} phase={phase} />
@@ -244,7 +245,7 @@ export function LiveTrace(props: LiveTraceProps) {
 
       {/* ------------------------------------------- what raised the exception */}
       {(facts.computed !== null || facts.required !== null) && (
-        <section aria-label="Original test result" className="rounded-lg border border-border bg-surface shadow-card">
+        <section aria-label="Original test result" className="rounded-xl border border-border bg-surface shadow-card">
           <header className="border-b border-border px-4 py-2">
             <h2 className="text-label uppercase tracking-wide text-text-muted">Original test result</h2>
           </header>
@@ -269,7 +270,7 @@ export function LiveTrace(props: LiveTraceProps) {
         <section
           role="note"
           aria-label="Current issue"
-          className="rounded-lg border border-code bg-code-bg px-4 py-3 shadow-card"
+          className="rounded-xl border border-code bg-code-bg px-4 py-3 shadow-card"
         >
           <div className="flex items-start gap-3">
             <span aria-hidden="true" className="text-code-bright">
@@ -288,7 +289,7 @@ export function LiveTrace(props: LiveTraceProps) {
 
       {/* ----------------------------------- connection health, said separately */}
       {syncError && (
-        <div role="status" className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-border bg-surface p-4 shadow-card">
+        <div role="status" className="flex flex-wrap items-start justify-between gap-4 rounded-xl border border-border bg-surface p-4 shadow-card">
           <div>
             <p className="text-card text-text">{CONNECTION_INTERRUPTED}</p>
             <p className="mt-1 max-w-prose text-body text-text-secondary">{STALLED_NOTICE}</p>
@@ -300,7 +301,7 @@ export function LiveTrace(props: LiveTraceProps) {
           <button
             type="button"
             onClick={reconnect}
-            className="shrink-0 rounded-md border border-model px-4 py-2 text-body font-medium text-model-bright transition-colors duration-fast hover:bg-model-bg"
+            className="shrink-0 rounded-lg border border-text px-4 py-2 text-body font-medium text-text transition-colors duration-fast hover:bg-surface-raised"
           >
             Reconnect to updates
           </button>
@@ -309,7 +310,7 @@ export function LiveTrace(props: LiveTraceProps) {
 
       {/* ----------------------------------------------- timeline + what's next */}
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-        <section aria-label="Investigation progress" className="rounded-lg border border-border bg-surface shadow-card">
+        <section aria-label="Investigation progress" className="rounded-xl border border-border bg-surface shadow-card">
           <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <h2 className="text-section text-text">Investigation progress</h2>
@@ -368,7 +369,7 @@ export function LiveTrace(props: LiveTraceProps) {
         </section>
 
         <div className="space-y-4">
-          <section aria-label="Recommendation" className="rounded-lg border border-border bg-surface shadow-card">
+          <section aria-label="Recommendation" className="rounded-xl border border-border bg-surface shadow-card">
             <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-3">
               <h2 className="text-section text-text">Recommendation</h2>
               <span className="rounded border border-border-strong px-2 py-px text-label text-text-muted">
@@ -390,7 +391,7 @@ export function LiveTrace(props: LiveTraceProps) {
                     {evidence.map((e) => (
                       <li key={e.citation} className="text-body">
                         {e.href ? (
-                          <Link href={e.href} className="text-model-bright underline-offset-2 hover:underline">
+                          <Link href={e.href} className="text-text underline decoration-border-strong underline-offset-2 hover:decoration-text">
                             {e.citation}
                           </Link>
                         ) : (
@@ -409,7 +410,7 @@ export function LiveTrace(props: LiveTraceProps) {
                   travels with them. */}
               {(view?.lessons ?? 0) > 0 && (
                 <details className="border-t border-border pt-4">
-                  <summary className="cursor-pointer list-none text-body text-model-bright underline-offset-2 hover:underline marker:content-['']">
+                  <summary className="cursor-pointer list-none text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text marker:content-['']">
                     <span aria-hidden="true">▸ </span>
                     {view.lessons} related prior case{view.lessons === 1 ? "" : "s"}
                   </summary>
@@ -480,9 +481,6 @@ function StatusBadge({ started, running, phase }: { started: boolean; running: b
   }
   const label = started ? "Investigation in progress" : phase === "starting" ? "Starting investigation" : "Investigation in progress";
   return (
-    <span className="inline-flex items-center gap-2 rounded border border-model bg-model-bg px-2 py-px text-label text-model-bright">
-      <span aria-hidden="true">●</span>
-      {label}
-    </span>
+    <AgentTag>{label}</AgentTag>
   );
 }

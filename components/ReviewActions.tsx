@@ -68,7 +68,7 @@ export function ReviewActions(props: {
     });
 
   const dialogError = outcome && (outcome.kind === "refused" || outcome.kind === "failed" || outcome.kind === "not_found") ? outcome.message : null;
-  const button = "rounded-md border px-4 py-2 text-body font-medium leading-5 disabled:cursor-not-allowed disabled:opacity-40";
+  const button = "rounded-lg border px-4 py-2 text-body font-medium leading-5 disabled:cursor-not-allowed disabled:opacity-40";
 
   // The wording follows the ACTUAL policy value, never a hard-coded "mandatory".
   const notice = humanReviewNotice(humanReviewRequired);
@@ -77,12 +77,12 @@ export function ReviewActions(props: {
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
-    <section aria-label="Review the recommendation" className="rounded-lg border border-border-strong bg-surface p-6 shadow-card">
+    <section aria-label="Review the recommendation" className="rounded-xl border border-border-strong bg-surface p-6 shadow-card">
       {/* The raw policy key was leaking into the analyst's view. The fact it
           states still holds — `humanReviewNotice` reads the ACTUAL policy
           value, never a hard-coded "mandatory" — it is just said in words. */}
       <div className="mb-4 space-y-1">
-        <h2 className="text-section font-bold text-text">Record your decision</h2>
+        <h2 className="font-brand text-section font-extrabold text-text">Record your decision</h2>
         {/* One line, not three. The instruction to read the findings first is
             said once, on the recommendation card. */}
         <p className="text-body text-text-secondary">Your decision and rationale will be saved to the casefile.</p>
@@ -94,11 +94,11 @@ export function ReviewActions(props: {
             it, and the one that decides nothing. They were three equal
             bordered buttons, which made overriding look like the normal path. */}
       <div className="flex flex-wrap items-center gap-4">
-        <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-model bg-model text-bg`}>
+        <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-transparent bg-mint text-text hover:bg-mint-hover`}>
           {pending ? "Sending…" : approveLabel}
         </button>
-        <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong bg-surface text-text`}>
-          Override recommendation
+        <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong bg-surface text-text hover:bg-surface-raised`}>
+          Record a different decision
         </button>
         {/* NOT "Request documents": this records a state, it sends nothing. The
             label must not imply a message went out (review 5). */}
@@ -107,7 +107,7 @@ export function ReviewActions(props: {
           disabled={pending}
           onClick={() => send("request_docs")}
           title="Records that this loan is waiting on documents. It does not prepare or send a request to the borrower."
-          className="text-body text-text-secondary underline-offset-2 hover:text-text hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+          className={`${button} border-border-strong bg-surface text-text hover:bg-surface-raised`}
         >
           Hold for borrower documents
         </button>

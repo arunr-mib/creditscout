@@ -65,7 +65,7 @@ export function OverrideDialog(props: {
   const missingTag = draft.confirmedTag === "";
 
   const field =
-    "mt-1 block w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
+    "mt-1 block w-full rounded-lg border border-border-strong bg-surface px-3 py-2 text-body text-text";
   const err = "mt-1 text-label text-danger";
 
   return (
@@ -73,7 +73,7 @@ export function OverrideDialog(props: {
       ref={ref}
       onClose={onCancel}
       aria-labelledby="override-title"
-      className="m-auto w-full max-w-dialog rounded-lg border border-border bg-surface p-6 text-text-secondary shadow-raised backdrop:bg-night/60"
+      className="m-auto w-full max-w-dialog rounded-2xl border border-border bg-surface p-6 text-text-secondary shadow-raised backdrop:bg-night/60"
     >
       <form
         onSubmit={(e) => {
@@ -107,8 +107,8 @@ export function OverrideDialog(props: {
             {CORRECTED_OUTCOMES.map((o) => (
               <label
                 key={o}
-                className={`flex cursor-pointer gap-3 rounded-md border p-3 ${
-                  draft.correctedOutcome === o ? "border-model bg-model-bg" : "border-border-strong bg-surface"
+                className={`flex cursor-pointer gap-3 rounded-lg border p-3 ${
+                  draft.correctedOutcome === o ? "border-text bg-surface-raised" : "border-border-strong bg-surface"
                 }`}
               >
                 <input
@@ -198,13 +198,13 @@ export function OverrideDialog(props: {
         </p>
 
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onCancel} className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text">
             Cancel
           </button>
           <button
             type="submit"
             disabled={sending}
-            className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-transparent bg-mint px-4 py-2 text-body font-medium leading-5 text-text hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {sending ? "Recording…" : "Record decision"}
           </button>

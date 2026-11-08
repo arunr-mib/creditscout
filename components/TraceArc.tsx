@@ -13,7 +13,7 @@ export function TraceArc({ steps }: { steps: TraceStepView[] }) {
   const summary = activitySummary(steps);
   if (!summary) return null;
   return (
-    <div className="rounded-md border border-border bg-surface px-3 py-2">
+    <div className="rounded-lg border border-border bg-surface px-3 py-2">
       <p className="text-label text-text-muted">Investigation activity</p>
       <p className="mt-1 text-body text-text-secondary">{summary}</p>
       {/* Said ONCE, above the list, instead of implied by a badge on every row.

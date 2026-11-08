@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Pipeline } from "@/components/Pipeline";
 import { PipelineAutoRefresh } from "@/components/PipelineAutoRefresh";
 import { latestSteps, pipelineLanes } from "@/components/pipelineModel";
@@ -55,7 +56,7 @@ export default async function Home() {
             // A ratio, not a bare count: "3" alone never says how much of the
             // book is still untested.
             { label: "loans tested", value: `${counts.tested} of ${counts.total}` },
-            { label: "awaiting terms approval", value: counts.termsApprovalNeeded },
+            { label: "awaiting terms approval", value: counts.termsApprovalNeeded, href: counts.termsApprovalNeeded > 0 ? "/terms" : undefined },
           ]}
         />
       </header>
@@ -100,7 +101,7 @@ export default async function Home() {
 function SummaryStrip({
   items,
 }: {
-  items: { label: string; value: number | string }[];
+  items: { label: string; value: number | string; href?: string }[];
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl bg-surface-raised px-4 py-3">
@@ -111,7 +112,13 @@ function SummaryStrip({
           // screen reader and audited for contrast it can never meet.
           <div key={s.label} className={`flex items-baseline gap-2 ${i > 0 ? "border-l border-border-strong pl-6" : ""}`}>
             <span className={`text-figure-sm tabular-nums ${zero ? "text-text-muted" : "text-text"}`}>{s.value}</span>
-            <span className={`text-body ${zero ? "text-text-muted" : "text-text-secondary"}`}>{s.label}</span>
+            {s.href ? (
+              <Link href={s.href} className="text-body text-text underline decoration-border-strong hover:decoration-text">
+                {s.label}
+              </Link>
+            ) : (
+              <span className={`text-body ${zero ? "text-text-muted" : "text-text-secondary"}`}>{s.label}</span>
+            )}
           </div>
         );
       })}

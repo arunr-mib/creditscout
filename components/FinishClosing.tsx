@@ -40,7 +40,7 @@ export function FinishClosing({ casefileId }: { casefileId: string }) {
         type="button"
         disabled={pending}
         onClick={finish}
-        className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-lg border border-border-strong bg-surface px-4 py-2 text-body font-medium leading-5 text-text hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
       >
         {pending ? "Finishing…" : "Finish closing the exception"}
       </button>

@@ -34,6 +34,13 @@ const docRank = (t: string | null): number => {
   return i === -1 ? DOC_ORDER.length : i;
 };
 
+/** A numeric column as a number, or null: PostgREST may hand a `numeric` back as a string, and absent stays absent (never 0). */
+const toNum = (v: unknown): number | null => {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const must = (res: { data: unknown; error: { message: string } | null }, what: string): unknown => {
@@ -61,6 +68,7 @@ interface ExceptionRow {
   /** The figures that raised the exception. The live screen states them; it never recomputes them. */
   computed_dscr: number | null;
   required_dscr: number | null;
+  reported_dscr: number | null;
 }
 
 /**
@@ -90,7 +98,7 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
   const exception = must(
     await db
       .from("exceptions")
-      .select("id, facility_id, test_period_end, status, computed_dscr, required_dscr")
+      .select("id, facility_id, test_period_end, status, computed_dscr, required_dscr, reported_dscr")
       .eq("id", casefile.exception_id)
       .maybeSingle(),
     "select exceptions",
@@ -205,6 +213,11 @@ export default async function CasefilePage({ params }: { params: Promise<{ id: s
         suggestedTag: casefile.suggested_tag ?? null,
         termsVersion: governingTerms?.version ?? null,
         termsStatus: governingTerms?.status ?? null,
+        figures: {
+          computed: toNum(exception.computed_dscr),
+          reported: toNum(exception.reported_dscr),
+          required: toNum(exception.required_dscr),
+        },
         testPeriodEnd: exception.test_period_end ?? null,
         testBasis,
         amendments,

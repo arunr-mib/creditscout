@@ -32,13 +32,13 @@ export function CalcTable(props: {
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-surface">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface">
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-border-strong">
-            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-model-bright">Component</th>
-            <th scope="col" className="px-3 py-2 text-right text-label uppercase tracking-wide text-model-bright">Value</th>
-            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-model-bright">Source</th>
+            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-text-secondary">Component</th>
+            <th scope="col" className="px-3 py-2 text-right text-label uppercase tracking-wide text-text-secondary">Value</th>
+            <th scope="col" className="px-3 py-2 text-label uppercase tracking-wide text-text-secondary">Source</th>
           </tr>
         </thead>
         {sections.map((s) => (

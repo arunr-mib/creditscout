@@ -51,7 +51,7 @@ export function ReinvestigateButton({
         type="button"
         onClick={go}
         disabled={pending}
-        className="rounded-md border border-border-strong px-4 py-2 text-body font-medium leading-5 text-text disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-lg border border-border-strong bg-surface px-4 py-2 text-body font-medium leading-5 text-text hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
       >
         {pending ? "Starting…" : failed ? "Start the investigation again" : awaitingDocs ? "Re-run investigation after documents" : "Re-run investigation"}
       </button>

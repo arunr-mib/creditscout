@@ -6,7 +6,7 @@ import { CitationChip } from "./CitationChip";
  * shows its citation chip. A claim with NO citation is not hidden and not drawn
  * as sound: it gets the danger "no citation" chip, a danger rule and a
  * sentence saying it is unsupported (design.md 5.3, 10 rule 3; I-6). Claims are
- * the model's, so the supported ones carry the teal rule.
+ * the agent's, so the supported ones carry the agent's left edge.
  */
 export function ClaimList(props: {
   claims: ClaimView[];
@@ -26,7 +26,7 @@ export function ClaimList(props: {
       {claims.map((c, i) => {
         const key = `claim:${i}`;
         return (
-          <li key={key} className={`rounded-md border-l-2 bg-surface p-3 ${c.cited ? "border-model" : "border-danger"}`}>
+          <li key={key} className={`rounded-lg border-l-2 bg-surface p-3 ${c.cited ? "border-agent" : "border-danger"}`}>
             <p className={`text-body ${c.cited ? "text-text-secondary" : "text-text-muted"}`}>{c.text}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <CitationChip

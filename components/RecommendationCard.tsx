@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { AgentTag } from "./AgentTag";
 import type { DecisionBasis } from "./casefileModel";
 
 /**
@@ -44,6 +45,7 @@ export function RecommendationCard({
   explanation,
   overridden,
   basis,
+  basisLine,
   facts,
   outstanding,
 }: {
@@ -54,8 +56,10 @@ export function RecommendationCard({
   explanation: string | null;
   overridden: boolean;
   basis: DecisionBasis;
-  /** The three facts that frame the recommendation. Any may be absent. */
-  facts?: { testResult: string | null; termsUsed: string | null; period: string | null };
+  /** What the recommendation rests on, as one line: citations · calculations · terms vN. */
+  basisLine?: string | null;
+  /** The facts that frame the recommendation. Any may be absent. */
+  facts?: { testResult: string | null };
   /** What is still open, and where to read it. Null when nothing is. */
   outstanding?: { label: string; href: string } | null;
 }) {
@@ -63,7 +67,7 @@ export function RecommendationCard({
   const tile = TILE[outcome] ?? TILE.abstain;
 
   return (
-    <section aria-label="Agent recommendation" className="rounded-lg border border-border-strong bg-surface shadow-card">
+    <section aria-label="Agent recommendation" className="rounded-2xl bg-sky">
       {/* ONE HEADER ROW. The card was 381px in four stacked bands — a sixth of
           a laptop screen spent before the findings start. The outcome and the
           three facts share a line; nothing was dropped but the instruction to
@@ -77,30 +81,34 @@ export function RecommendationCard({
             {tile.icon}
           </span>
           <div className="min-w-0">
-            <p className="text-label font-semibold uppercase tracking-[0.12em] text-text-muted">
-              {basis.policyDirected ? "Policy-directed recommendation" : "CreditScout recommendation"}
-            </p>
-            <h2 className="text-section font-bold text-text">{headline}</h2>
+            {/* The agent tag says the CreditScout Agent proposed this. When a
+                code rule replaced the agent's answer, the agent did not, so the
+                eyebrow is plain text. */}
+            {basis.policyDirected ? (
+              <p className="text-label font-semibold uppercase tracking-[0.12em] text-text-secondary">Policy-directed recommendation</p>
+            ) : (
+              <AgentTag>CreditScout recommends</AgentTag>
+            )}
+            <h2 className="mt-1 font-brand text-section font-extrabold text-text">{headline}</h2>
+            {basisLine && <p className="mt-px text-body tabular-nums text-text-secondary">{basisLine}</p>}
           </div>
         </div>
 
-        {/* The three facts an analyst checks before reading anything else: what
-            the test said, which terms produced it, and for what period. */}
-        {(facts?.testResult || facts?.termsUsed || facts?.period) && (
+        {/* What the test said. The terms and the period are in the header's
+            identity line and in the basis line, and are not repeated here. */}
+        {facts?.testResult && (
           <dl className="flex flex-wrap items-start gap-6">
             <Fact label="Test result" value={facts.testResult} />
-            <Fact label="Terms used" value={facts.termsUsed} />
-            <Fact label="Reporting period" value={facts.period} />
           </dl>
         )}
       </div>
 
-      {summary && <p className="border-t border-border px-6 py-3 text-body text-text">{summary}</p>}
+      {summary && <p className="border-t border-border-strong px-6 py-3 text-body text-text">{summary}</p>}
 
       {/* One footer: what is still open, and the two ways in. Amber is spent
           here and nowhere else on this screen. */}
       {(outstanding || explanation) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-strong px-6 py-3">
           {outstanding ? (
             <p className="flex items-center gap-3 text-body text-text">
               <span
@@ -120,14 +128,14 @@ export function RecommendationCard({
                 type="button"
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="text-label text-text-muted underline-offset-2 hover:text-text-secondary hover:underline"
+                className="text-label text-text-secondary underline-offset-2 hover:text-text hover:underline"
               >
                 {open ? "Hide the agent’s reasoning" : overridden ? "Read the validation history" : "Read the agent’s reasoning"}{" "}
                 <span aria-hidden="true">{open ? "⌃" : "›"}</span>
               </button>
             )}
             {outstanding && (
-              <a href={outstanding.href} className="text-body text-model-bright underline-offset-2 hover:underline">
+              <a href={outstanding.href} className="text-body text-text underline decoration-border-strong underline-offset-2 hover:decoration-text">
                 Review items <span aria-hidden="true">→</span>
               </a>
             )}
@@ -136,7 +144,7 @@ export function RecommendationCard({
       )}
 
       {open && explanation && (
-        <div className="border-t border-border px-6 py-4">
+        <div className="border-t border-border-strong px-6 py-4">
           <div className="max-w-prose text-body text-text-secondary">
             {basis.policyDirected && basis.draft && (
               <p className="mb-2">
@@ -157,7 +165,7 @@ function Fact({ label, value }: { label: string; value: string | null | undefine
   if (!value) return null;
   return (
     <div>
-      <dt className="text-label text-text-muted">{label}</dt>
+      <dt className="text-label text-text-secondary">{label}</dt>
       {/* The page’s own typeface. A covenant figure set in monospace reads as a
           machine’s output, which is the opposite of what this screen claims. */}
       <dd className="text-body font-semibold text-text">{value}</dd>

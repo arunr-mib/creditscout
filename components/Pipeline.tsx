@@ -22,7 +22,7 @@ export function Pipeline({ lanes }: { lanes: Lanes }) {
             <span className="text-label tabular-nums text-text-secondary">{lane.cards.length}</span>
           </div>
           {lane.cards.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-border-strong p-3 text-label text-text-muted">{lane.empty}</p>
+            <p className="rounded-xl border border-dashed border-border-strong p-3 text-label text-text-secondary">{lane.empty}</p>
           ) : (
             <ul className="space-y-3">
               {lane.cards.map((card) => (

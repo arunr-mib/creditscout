@@ -1,6 +1,7 @@
 /**
- * Citation chip, docs/design.md §5.3. Teal because a retrieved quote is
- * model-side evidence; clicking it loads the clause beside the term.
+ * Citation chip, docs/design.md §5.3. Interactive, so it takes the
+ * forest ink rather than a status colour; clicking it loads the clause beside
+ * the term. Monospace because a citation is an identifier.
  *
  * A claim without a chip must not render as sound. When there is no citation
  * the chip says so, in words and in the danger colour, rather than vanishing:
@@ -28,8 +29,8 @@ export function CitationChip(props: {
       onClick={onSelect}
       aria-pressed={selected}
       title="Read this clause with the quote highlighted"
-      className={`inline-flex items-center gap-1 rounded-sm border px-2 py-px font-mono text-label text-model transition-colors duration-fast ease-out hover:bg-model-bg ${
-        selected ? "border-model bg-model-bg" : "border-border-strong"
+      className={`inline-flex items-center gap-1 rounded-sm border px-2 py-px font-mono text-label text-text transition-colors duration-fast ease-out hover:bg-surface-raised ${
+        selected ? "border-text bg-surface-raised" : "border-border-strong"
       }`}
     >
       {citation}
