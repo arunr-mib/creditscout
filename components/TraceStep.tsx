@@ -50,13 +50,23 @@ import {
 const DOT: Record<ActivityState, { icon: string; ring: string; ink: string }> = {
   completed: { icon: "✓", ring: "border-human bg-human-bg", ink: "text-human" },
   needs_input: { icon: "!", ring: "border-code bg-code-bg", ink: "text-code-bright" },
-  in_progress: { icon: "◌", ring: "border-agent bg-agent-bg", ink: "text-agent-ink" },
+  in_progress: { icon: "◌", ring: "border-border-strong bg-surface-raised", ink: "text-text-secondary" },
 };
 
 const STATE_CHIP: Record<ActivityState, string> = {
   completed: "border-human bg-human-bg font-medium text-human",
   needs_input: "border-code bg-code-bg font-medium text-code-bright",
-  in_progress: "border-agent bg-agent-bg font-medium text-agent-ink",
+  in_progress: "border-border-strong bg-surface-raised font-medium text-text-secondary",
+};
+
+/**
+ * In progress takes the agent's colours only on a step the agent (a specialist
+ * model) is performing. A calculator or retrieval step is code: it stays neutral
+ * while it runs, and amber stays reserved for "the calculation cannot proceed".
+ */
+const AGENT_IN_PROGRESS = {
+  dot: { icon: "◌", ring: "border-agent bg-agent-bg", ink: "text-agent-ink" },
+  chip: "border-agent bg-agent-bg font-medium text-agent-ink",
 };
 
 function clock(ts: string): string {
@@ -79,11 +89,12 @@ export function TraceStep({
   links?: readonly EvidenceLink[];
 }) {
   const time = clock(step.ts);
-  const dot = DOT[state];
-  const hits = state === "completed" ? searchCitations(step.output) : null;
-  // A specialist model's step is the agent's own work: it gets the agent tag
-  // and an agent left edge. A code step (calculator, retrieval) does not.
+  // A specialist model's step is the agent's own work (see `agentStep` below).
   const agentStep = step.kind === "model";
+  const agentRunning = agentStep && state === "in_progress";
+  const dot = agentRunning ? AGENT_IN_PROGRESS.dot : DOT[state];
+  const chip = agentRunning ? AGENT_IN_PROGRESS.chip : STATE_CHIP[state];
+  const hits = state === "completed" ? searchCitations(step.output) : null;
 
   return (
     <li className="relative pl-8">
@@ -113,7 +124,7 @@ export function TraceStep({
               every one of these calls. The identifier moves to the technical
               details below. */}
           <span className={`${step.calculator ? "text-card" : "text-body"} text-text`}>{activityTitle(step.tool)}</span>
-          <span className={`inline-flex rounded border px-2 py-px text-badge ${STATE_CHIP[state]}`}>
+          <span className={`inline-flex rounded border px-2 py-px text-badge ${chip}`}>
             {ACTIVITY_STATE_LABEL[state]}
           </span>
           {agentStep && <AgentTag>Specialist model</AgentTag>}

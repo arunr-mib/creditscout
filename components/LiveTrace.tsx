@@ -18,7 +18,6 @@ import {
   type LiveTraceView,
 } from "./traceModel";
 import { STALLED_NOTICE } from "./traceModel";
-import { AgentTag } from "./AgentTag";
 import { TraceStep } from "./TraceStep";
 
 /**
@@ -481,6 +480,11 @@ function StatusBadge({ started, running, phase }: { started: boolean; running: b
   }
   const label = started ? "Investigation in progress" : phase === "starting" ? "Starting investigation" : "Investigation in progress";
   return (
-    <AgentTag>{label}</AgentTag>
+    // A plain chip, not the agent tag: sky marks agent-produced content, and
+    // "in progress" is a status. The dot only hints who is working.
+    <span className="inline-flex items-center gap-2 rounded border border-border-strong bg-surface px-2 py-px text-label text-text-secondary">
+      <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-agent" />
+      {label}
+    </span>
   );
 }

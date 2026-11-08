@@ -127,10 +127,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             <span className="text-text-secondary">{view.borrower}</span>
           </nav>
           {/* The identity line carries the state. Green is for a verified pass,
-              so the state is words, not a coloured status object. The loan
-              reference is an identifier, hence monospace. */}
-          <p className="text-label uppercase tracking-[0.12em] text-text-muted">
-            Loan <span className="font-mono normal-case tracking-normal">{view.facilityId.slice(0, 8)}</span> · {view.period}
+              so the state is words, not a coloured status object. */}
+          <p className="text-label uppercase tracking-wider text-text-muted">
+            {view.period}
             {view.termsVersion != null && ` · Terms v${view.termsVersion}`} · {state}
           </p>
           <h1 className="font-brand text-title text-text">{view.borrower}</h1>
