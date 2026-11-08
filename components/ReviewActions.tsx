@@ -90,9 +90,9 @@ export function ReviewActions(props: {
 
       {outcome && !dialog && <OutcomeNote outcome={outcome} />}
 
-      {/* Three actions, three weights: the recommendation, the departure from
-            it, and the one that decides nothing. They were three equal
-            bordered buttons, which made overriding look like the normal path. */}
+      {/* Approving the recommendation is the one mint action. Override and
+            Request docs share a quiet outline, so departing from the
+            recommendation never looks like the normal path. */}
       <div className="flex flex-wrap items-center gap-4">
         <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-transparent bg-mint text-text hover:bg-mint-hover`}>
           {pending ? "Sending…" : approveLabel}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Pipeline } from "@/components/Pipeline";
 import { PipelineAutoRefresh } from "@/components/PipelineAutoRefresh";
-import { latestSteps, pipelineLanes } from "@/components/pipelineModel";
+import { hasRunningInvestigation, latestSteps, pipelineLanes, traceStepCount } from "@/components/pipelineModel";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
 import { loadPortfolio } from "@/lib/portfolio-data";
@@ -23,8 +23,10 @@ export default async function Home() {
   const { rows, facilities, targetPeriod, targetLabel, counts, traceByCasefile } = await loadPortfolio();
 
   const steps = new Map([...traceByCasefile].map(([id, trace]) => [id, latestSteps(trace)] as const));
-  const lanes = pipelineLanes(rows, steps);
-  const anyWorking = lanes.some((l) => l.key === "working" && l.cards.length > 0);
+  const stepCounts = new Map([...traceByCasefile].map(([id, trace]) => [id, traceStepCount(trace)] as const));
+  const lanes = pipelineLanes(rows, steps, stepCounts);
+  // Only a running investigation changes on its own; a paused one waits for a person.
+  const anyWorking = hasRunningInvestigation(lanes);
 
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 

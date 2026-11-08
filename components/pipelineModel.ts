@@ -15,7 +15,7 @@ export type LaneKey = "investigate" | "working" | "decision" | "decided";
 
 export const LANES: readonly { key: LaneKey; title: string; empty: string }[] = [
   { key: "investigate", title: "Needs investigating", empty: "Nothing waiting." },
-  { key: "working", title: "CreditScout working", empty: "Nothing running. Investigations move here live." },
+  { key: "working", title: "CreditScout working", empty: "Nothing running. An investigation runs here while its casefile is open." },
   { key: "decision", title: "Awaiting your decision", empty: "Nothing waiting for you." },
   { key: "decided", title: "Decided", empty: "Nothing decided this quarter yet." },
 ];
@@ -40,7 +40,23 @@ export interface PipelineCard {
   reopened: boolean;
   /** The agent's latest activity titles, newest last. Empty unless supplied. */
   steps: string[];
+  /** How many tool calls the casefile's trace holds so far. 0 unless supplied. */
+  stepCount: number;
+  /**
+   * The agent's recommendation in an analyst's words — only for a card that is
+   * awaiting the analyst's decision. A decided card carries none: the decision
+   * is the record, not what the agent suggested.
+   */
+  recommendationLabel: string | null;
 }
+
+/** What the agent put forward, in an analyst's words. */
+export const RECOMMENDATION_LABEL: Record<string, string> = {
+  resolve: "Resolve",
+  escalate: "Escalate",
+  request: "Request documents",
+  abstain: "No recommendation",
+};
 
 /** Where each status lands. A status absent from this map is not in the pipeline. */
 const LANE_OF: Partial<Record<PortfolioStatus, LaneKey>> = {
@@ -80,6 +96,7 @@ function actionOf(row: PortfolioRow): PipelineCard["action"] {
 export function pipelineLanes(
   rows: PortfolioRow[],
   stepsByCasefile?: Map<string, string[]>,
+  stepCountByCasefile?: Map<string, number>,
 ): { key: LaneKey; title: string; empty: string; cards: PipelineCard[] }[] {
   const lanes = LANES.map((l) => ({ ...l, cards: [] as PipelineCard[] }));
   for (const row of rows) {
@@ -101,6 +118,9 @@ export function pipelineLanes(
       action: actionOf(row),
       reopened,
       steps: (row.casefileId && stepsByCasefile?.get(row.casefileId)) || [],
+      stepCount: (row.casefileId && stepCountByCasefile?.get(row.casefileId)) || 0,
+      recommendationLabel:
+        key === "decision" && row.recommendation != null ? (RECOMMENDATION_LABEL[row.recommendation] ?? null) : null,
     });
   }
   return lanes;
@@ -119,11 +139,27 @@ export function barGeometry(ours: number | null, required: number | null): { fil
   return { fillPct, minPct: 50 };
 }
 
+/** Whether any card is genuinely running — a paused investigation does not poll. */
+export function hasRunningInvestigation(lanes: { cards: Pick<PipelineCard, "status">[] }[]): boolean {
+  return lanes.some((l) => l.cards.some((c) => c.status === "investigating"));
+}
+
+/** How many tool calls a trace holds. */
+export function traceStepCount(trace: unknown): number {
+  return toolEntries(trace).length;
+}
+
+function toolEntries(trace: unknown): { tool: string }[] {
+  if (!Array.isArray(trace)) return [];
+  return trace.filter(
+    (e): e is { tool: string } => typeof e === "object" && e !== null && typeof (e as { tool?: unknown }).tool === "string",
+  );
+}
+
 /** The titles of the last `n` tool calls in a trace, newest last. */
 export function latestSteps(trace: unknown, n = 3): string[] {
-  if (!Array.isArray(trace) || n <= 0) return [];
-  return trace
-    .filter((e): e is { tool: string } => typeof e === "object" && e !== null && typeof (e as { tool?: unknown }).tool === "string")
+  if (n <= 0) return [];
+  return toolEntries(trace)
     .slice(-n)
     .map((e) => activityTitle(e.tool));
 }

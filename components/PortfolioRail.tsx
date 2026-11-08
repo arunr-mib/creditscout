@@ -18,7 +18,7 @@ const DOT: Record<RailDot, string> = {
   breach: "bg-danger",
   pass: "bg-success",
   decided: "bg-text-muted",
-  terms: "bg-code",
+  terms: "bg-human",
   untested: "ring-1 ring-text-muted",
 };
 // On the selected (forest) item the same states need a light-on-dark treatment.
@@ -197,8 +197,8 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
               <Link
                 key={item.facilityId}
                 href={item.href}
-                title={`${item.borrower} · ${item.dscrText}`}
-                aria-label={`${item.borrower}, ${item.dscrText}`}
+                title={`${item.borrower} · ${item.dscrText} · ${item.subline}`}
+                aria-label={`${item.borrower}, ${item.dscrText}, ${item.subline}`}
                 aria-current={isSelected ? "true" : undefined}
                 className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-fast ${
                   isSelected ? "bg-brand" : "hover:bg-surface"

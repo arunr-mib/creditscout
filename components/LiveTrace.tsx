@@ -102,6 +102,12 @@ export function LiveTrace(props: LiveTraceProps) {
    */
   const [nudge, setNudge] = useState(0);
 
+  // The rail and tab counts live in the root layout, which does not re-render on
+  // client navigation; this casefile now exists and is investigating, so ask once.
+  useEffect(() => {
+    router.refresh();
+  }, [router]);
+
   // DRIVE: advance the run until the casefile is no longer `investigating`. A
   // transient fetch error is not a conclusion — it keeps polling.
   useEffect(() => {

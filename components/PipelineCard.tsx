@@ -31,7 +31,15 @@ export function PipelineCard({ card }: { card: Card }) {
       <p className="truncate text-body font-medium text-text" title={card.borrower}>
         {card.borrower}
       </p>
-      <p className={`text-figure-sm tabular-nums ${figureTone}`}>{dscr(card.ours)}</p>
+      <p className="flex flex-wrap items-baseline gap-x-2">
+        <span className={`text-figure-sm tabular-nums ${figureTone}`}>{dscr(card.ours)}</span>
+        {/* Code-provenance: only when the figure exists. Amber means code computed this. */}
+        {card.ours != null && (
+          <span className="text-label text-code">
+            <span aria-hidden="true">⟡ </span>computed
+          </span>
+        )}
+      </p>
       {bar && (
         <div
           role="img"
@@ -44,17 +52,21 @@ export function PipelineCard({ card }: { card: Card }) {
       )}
       {reference.length > 0 && <p className="text-label tabular-nums text-text-muted">{reference.join(" · ")}</p>}
       {card.note && <p className="text-label text-text-secondary">{card.note}</p>}
-      {card.recommendation && (
+      {decided && <p className="text-label text-text-muted">Decision recorded</p>}
+      {card.recommendationLabel && (
         <p className="flex flex-wrap items-center gap-2 text-label text-text-secondary">
           <AgentTag>CreditScout</AgentTag>
           <span>
-            recommends <b className="font-semibold text-text">{card.recommendation}</b>
+            recommends <b className="font-semibold text-text">{card.recommendationLabel}</b>
           </span>
         </p>
       )}
       {card.status === "investigating" && (
         <div className="space-y-1">
-          <AgentTag>Investigating</AgentTag>
+          <p className="flex flex-wrap items-center gap-2 text-label text-text-secondary">
+            <AgentTag>Investigating</AgentTag>
+            <span className="tabular-nums">{card.stepCount > 0 ? `Step ${card.stepCount}` : "Starting"}</span>
+          </p>
           {card.steps.length > 0 && (
             <ul className="space-y-1 text-label text-text-secondary">
               {card.steps.map((s, i) => (
@@ -64,15 +76,18 @@ export function PipelineCard({ card }: { card: Card }) {
               ))}
             </ul>
           )}
+          <p className="text-label text-text-muted">Runs while its casefile is open</p>
         </div>
       )}
     </div>
   );
 
+  const paused = card.status === "investigation_paused";
   const shell = "block rounded-xl border border-border bg-surface p-3";
 
   // A whole-card link when the card's only action is to open the casefile.
-  if (card.action === "open" && casefileHref) {
+  // A paused card is the exception: it needs a visible Resume, not just a link.
+  if (card.action === "open" && casefileHref && !paused) {
     return (
       <Link href={casefileHref} className={`${shell} transition-colors duration-fast hover:border-border-strong`}>
         {body}
@@ -85,6 +100,11 @@ export function PipelineCard({ card }: { card: Card }) {
       {body}
       {card.action === "investigate" && card.exceptionId && (
         <InvestigateButton exceptionId={card.exceptionId} status={card.exceptionStatus ?? "new"} hasCasefile={card.casefileId != null} />
+      )}
+      {paused && casefileHref && (
+        <Link href={casefileHref} className={ACTION_LINK}>
+          Resume
+        </Link>
       )}
       {card.action === "review" && casefileHref && (
         <Link href={casefileHref} className={ACTION_LINK}>

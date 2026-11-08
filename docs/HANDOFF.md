@@ -14,7 +14,7 @@ the evals and the data.
 
 ## 0. Current state — 2026-10-14 — START HERE
 
-### 0.00 Forest redesign — 2026-11-07 (UI only)
+### 0.A Forest redesign — 2026-11-07 (UI only)
 
 After a demo, the owner's manager said the functionality was good but the UI
 "looks like a usual vibe-coded app". The signed-in workspace was restyled and

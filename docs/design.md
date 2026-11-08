@@ -52,8 +52,9 @@ The organising idea is two layers: **land** and **sky**.
 - the CreditScout tag, on any text the agent produced.
 
 Current uses of the tag: the recommendation eyebrow, specialist trace steps,
-"Proposed by CreditScout", the seen-similar badge and the pipeline card's
-"CreditScout" tag.
+"Proposed by CreditScout", the "CreditScout Agent" tag on the covenant-setup
+ProposeTrace, the seen-similar badge, the pipeline card's "CreditScout"
+recommendation tag, and the pipeline card's "Investigating" tag.
 
 The "not a lesson chip" rule means the chips on the **Lessons page**. The
 seen-similar badge on a casefile is agent content (prior cases the agent
@@ -274,7 +275,8 @@ The dark left nav rail is gone; its items became the header tabs.
   1.35x", "Breach · decided", "Terms awaiting approval"). "+ New borrower" sits at
   the bottom. The selected loan is a solid forest row with white text.
 - Status dot, always read with its words: red is an open breach, green is a pass,
-  grey is decided, amber is terms awaiting approval, a hollow grey ring is not
+  grey is decided, **slate** (`human`) is terms awaiting approval (a person must
+  act, so not amber, which means code did something), a hollow grey ring is not
   tested. On the selected (forest) row the dots use light variants; a pass keeps
   its green.
 - **Clicking a loan** opens its current casefile; if it has none, its covenant
@@ -297,21 +299,26 @@ old queue table. Four lanes, left to right, driven by the existing
 | Lane | Holds | Card action |
 |---|---|---|
 | **Needs investigating** | `breach_investigate` (a reopened one keeps its marker) | Investigate |
-| **CreditScout working** (the **sky** lane) | `investigating`, `investigation_paused` | None. The whole card links to its casefile, where the live run is driven. Shows the latest steps and the paused notice |
+| **CreditScout working** (the **sky** lane) | `investigating`, `investigation_paused` | Running: none; the whole card links to its casefile, where the live run is driven, and shows the latest steps. Paused: the paused notice and a mint **Resume** link to the casefile |
 | **Awaiting your decision** | `in_review`; `awaiting_docs`, labelled "Held for borrower documents" | Review |
 | **Decided** | `decided` | Opens the casefile, card quieter |
 
 - A card shows the borrower, the computed DSCR large (red when under the loan's
-  own minimum), a **headroom bar** with a tick at that loan's own minimum, "min X
-  · reported Y", the CreditScout tag with a one-line recommendation when one
-  exists, and **one** next action.
+  own minimum) with a small amber "⟡ computed" mark beside it (code-provenance;
+  shown only when the figure exists), a **headroom bar** with a tick at that loan's own minimum, "min X
+  · reported Y", and **one** next action. In *Awaiting your decision* the card
+  also carries the CreditScout tag with the recommendation in plain words
+  (Resolve, Escalate, Request documents, No recommendation). A *Decided* card
+  says "Decision recorded" and shows no agent recommendation. A running card
+  shows the Investigating tag, "Step n" and "Runs while its casefile is open".
 - The bar puts the minimum at its midpoint, so a fill short of the tick is a
   breach whatever the minimum is. It is never a constant.
 - Compliant and not-tested loans are **not** in the pipeline. They live in the
   rail only.
 - An empty lane is a dashed outline and one plain sentence.
-- While any card is in the working lane the page re-reads its data every few
-  seconds, and stops when the lane empties.
+- While any card is genuinely running (`investigating`; a paused card does not
+  count) the page re-reads its data every few seconds, and stops when none is.
+  Four columns from `lg`, two at `md`, one below.
 
 ### 5.1 Recommendation badge
 
@@ -421,8 +428,10 @@ boundary and the UI should say so.
 (`components/AgentTag.tsx`.) A small chip: `agent-bg` background, `agent-ink`
 text, an `agent` dot, `radius-sm`, 11px. It marks what the CreditScout Agent (or
 a specialist it called) did or said: "CreditScout recommends", "Investigating",
-"Proposed by CreditScout", "Specialist model", the seen-similar count. It is
-never a status and never a control.
+"Proposed by CreditScout", "Specialist model", the seen-similar count.
+"Investigating" marks the agent as the actor on a running case; it is not a
+test status (the status is the lane and the dot-and-word). The tag is never a
+status and never a control.
 
 ---
 

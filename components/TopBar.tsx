@@ -47,6 +47,7 @@ export function TopBar({
   const current = activeTab(pathname);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -54,7 +55,10 @@ export function TopBar({
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
     document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
@@ -74,7 +78,7 @@ export function TopBar({
       <div className="relative flex h-full items-center gap-4 px-4 md:gap-6 md:px-6">
         <Link
           href="/"
-          aria-label="CreditScout, Bank of Stoic — go to the queue"
+          aria-label="CreditScout, Bank of Stoic — go to Exceptions"
           className={`flex shrink-0 items-baseline gap-2 rounded-md ${HEADER_RING}`}
         >
           <span className="font-brand text-wordmark text-brand-on">CreditScout</span>
@@ -118,10 +122,11 @@ export function TopBar({
 
           <div ref={menuRef} className="relative">
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              aria-haspopup="menu"
               aria-expanded={menuOpen}
+              aria-controls="account-panel"
               aria-label={`Account menu, ${user.name}`}
               className={`flex h-8 w-8 items-center justify-center rounded-full bg-mint text-label font-semibold text-text transition-colors duration-fast hover:bg-mint-hover ${HEADER_RING}`}
             >
@@ -129,8 +134,8 @@ export function TopBar({
             </button>
             {menuOpen && (
               <div
-                role="menu"
-                className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-border bg-surface p-2 shadow-raised"
+                id="account-panel"
+                className="absolute right-0 top-full z-30 mt-2 w-menu rounded-xl border border-border bg-surface p-2 shadow-raised"
               >
                 <div className="px-3 py-2">
                   <p className="truncate text-body font-semibold text-text" title={user.name}>
@@ -141,7 +146,6 @@ export function TopBar({
                 <form action={signOut} className="border-t border-border pt-1">
                   <button
                     type="submit"
-                    role="menuitem"
                     className="w-full rounded-md px-3 py-2 text-left text-body text-text-secondary transition-colors duration-fast hover:bg-surface-raised hover:text-text"
                   >
                     Sign out

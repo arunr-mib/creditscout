@@ -69,7 +69,7 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        className="flex items-center justify-between gap-2 rounded-full border border-brand-on/20 bg-brand-on/10 px-3 py-1 text-label text-brand-on-2 transition-colors duration-fast hover:bg-brand-on/20 hover:text-brand-on focus-visible:ring-mint focus-visible:ring-offset-brand md:w-48"
+        className="flex items-center justify-between gap-2 rounded-full border border-brand-on/20 bg-brand-on/10 px-3 py-1 text-label text-brand-on-2 transition-colors duration-fast hover:bg-brand-on/20 hover:text-brand-on focus-visible:ring-mint focus-visible:ring-offset-brand md:w-menu"
       >
         <span>Search…</span>
         <kbd className="hidden rounded-sm border border-brand-on/20 px-1 font-mono text-badge md:inline">⌘K</kbd>

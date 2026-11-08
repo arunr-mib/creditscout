@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { approveTerms } from "@/app/actions";
 import { ApproveBar, type ApprovalState, type OmissionCounts } from "./ApproveBar";
 import { AgentTag } from "./AgentTag";
@@ -96,6 +97,7 @@ export function CovenantSetup(props: {
   signedInAs: string | null;
 }) {
   const { facility, documents, history, clauses } = props;
+  const router = useRouter();
 
   const [phase, setPhase] = useState<Phase>(props.initial ? { kind: "proposal" } : { kind: "idle" });
   const [proposal, setProposal] = useState<Proposal | null>(props.initial);
@@ -256,6 +258,9 @@ export function CovenantSetup(props: {
       const b = body as { version: number; effective_from: string };
       setApproval({ kind: "approved", version: b.version, effectiveFrom: b.effective_from, by: approver.trim() });
       setEditing(null);
+      // The layout (rail and tab counts) does not re-render on its own; this
+      // makes "awaiting terms approval" drop without a manual reload.
+      router.refresh();
       return;
     }
     const refusal = readRefusal(res.status, body);

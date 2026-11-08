@@ -149,7 +149,7 @@ export default {
       },
       borderRadius: { sm: "4px", md: "8px", lg: "12px", xl: "14px", "2xl": "18px" },
       backgroundImage: { sky: SKY },
-      width: { rail: "260px", "rail-collapsed": "44px" },
+      width: { rail: "260px", "rail-collapsed": "44px", menu: "192px" },
       height: { header: "52px" },
       // content: design.md §4. panel: the clause drawer, §5.4. dialog: half the
       // content width, §12.12 (`max-w-content/2` is not a class).
