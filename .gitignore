@@ -37,3 +37,6 @@ data/facilities/**/*.pdf
 
 # Session screenshots dropped at the repo root (not product assets)
 /*.png
+
+# brainstorm companion scratch
+.superpowers/
