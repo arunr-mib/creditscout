@@ -37,7 +37,7 @@ The organising idea is two layers: **land** and **sky**.
 
 | Hue | Means | Never used for |
 |---|---|---|
-| **Sky** (gradient, or the blue agent tag) | The CreditScout Agent produced this, or is producing it | A status; a quoted document clause; a lesson chip |
+| **Sky** (gradient, or the blue agent tag) | The CreditScout Agent produced this, or is producing it | A status; a quoted document clause; a chip on the Lessons page |
 | **Mint** | You can act here. Primary buttons, the active tab, the avatar | A status. Not a pass, not a "done". Never text on white |
 | **Amber** | **Code did this**: a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
 | **Forest / mist / white** | The bank's facts, a human, navigation | System output |
@@ -50,6 +50,14 @@ The organising idea is two layers: **land** and **sky**.
 - behind a recommendation (the recommendation card);
 - on agent and specialist steps in the live trace;
 - the CreditScout tag, on any text the agent produced.
+
+Current uses of the tag: the recommendation eyebrow, specialist trace steps,
+"Proposed by CreditScout", the seen-similar badge and the pipeline card's
+"CreditScout" tag.
+
+The "not a lesson chip" rule means the chips on the **Lessons page**. The
+seen-similar badge on a casefile is agent content (prior cases the agent
+retrieved), so it keeps the tag.
 
 A quoted clause from a filed document is **not** sky. The agent retrieved it; it
 is the bank's evidence, so it stays on land.
@@ -143,7 +151,7 @@ recommendation card, where white reads 6.6:1 and 7.7:1.
 - Body text must hit **4.5:1** against its surface; UI elements and large text
   **3:1**. `palette.test.js` checks the pairs it knows about; re-check any new
   combination by hand.
-- Mint is a fill with forest text on it (about 11:1). It is never text on white.
+- Mint is a fill with forest text on it (about 10:1). It is never text on white.
 - **Never encode meaning in colour alone.** Every status is a dot **plus a
   word**; amber values carry `computed by code`; breaches carry the word
   *breach*; agent content carries the CreditScout tag. A colour-blind analyst

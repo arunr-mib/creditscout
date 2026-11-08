@@ -14,7 +14,7 @@ the evals and the data.
 
 ## 0. Current state — 2026-10-14 — START HERE
 
-### 0.-1 Update 2026-11-07 — the "Forest" redesign (UI only)
+### 0.00 Forest redesign — 2026-11-07 (UI only)
 
 After a demo, the owner's manager said the functionality was good but the UI
 "looks like a usual vibe-coded app". The signed-in workspace was restyled and
@@ -25,7 +25,7 @@ below (dated 2026-10-14) is still true except where it describes the look: the
 
 | What | State |
 |---|---|
-| Where it is | Built on branch `arunr-mib/creditscout`, 10 build tasks, commits `docs(redesign)` / `feat(redesign)` |
+| Where it is | Built on branch `arunr-mib/creditscout`, the build tasks in the plan, commits `docs(redesign)` / `feat(redesign)` |
 | **Production** | **Unchanged.** `https://credit-scout.vercel.app` still runs the old look. Production only changes on an explicit `vercel --prod`, and that waits for the owner to sign off the Vercel Preview walkthrough |
 | Spec | `docs/superpowers/specs/2026-11-07-forest-redesign-design.md` |
 | Plan | `docs/superpowers/plans/2026-11-07-forest-redesign.md` |
