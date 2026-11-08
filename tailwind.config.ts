@@ -144,7 +144,12 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-ui)", "system-ui", "sans-serif"],
-        brand: ["var(--font-brand)", "sans-serif"],
+        // `font-brand` now resolves to the same face as `font-sans` — kept as
+        // its own utility only so the headings and the wordmark that already
+        // use it don't need touching. One font across the app, owner's call
+        // 2026-11-08: Bricolage Grotesque is retired, not swapped for a
+        // second face.
+        brand: ["var(--font-ui)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: { sm: "4px", md: "8px", lg: "12px", xl: "14px", "2xl": "18px" },

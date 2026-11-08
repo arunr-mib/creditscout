@@ -27,8 +27,12 @@
   --c-text: 15 43 34;
   --c-text-secondary: 62 90 80;
   --c-text-muted: 86 109 97;
-  --font-ui: var(--font-brand);
-  --font-figure: var(--font-brand);
+  /* One font across the whole product, owner's call 2026-11-08 after the
+     walkthrough: the workspace briefly carried Bricolage Grotesque as a
+     second "display" face; dropped so every screen, including /welcome and
+     /login, reads as the same typeface rather than two systems. */
+  --font-ui: var(--font-inter);
+  --font-figure: var(--font-inter);
   /* html already resolved font-family against :root's --font-ui (Inter), and
      body would inherit that computed value, so restate it here. */
   font-family: var(--font-ui), system-ui, sans-serif;
@@ -44,8 +48,9 @@
      does not leave a ring behind on every button. */
   :focus-visible { @apply outline-none ring-2 ring-model ring-offset-2 ring-offset-bg; }
   .theme-forest :focus-visible { @apply ring-text ring-offset-bg; }
-  /* Figures take the brand face in the workspace. Bricolage Grotesque ships the
-     `tnum` feature (checked in the latin woff2 subset), so columns still align. */
+  /* Figures are pinned to --font-figure regardless of their container's own
+     font, so a number reads the same whether it sits in a heading or a body
+     line. Inter ships tabular figures, so columns still align. */
   .theme-forest .tabular-nums { font-family: var(--font-figure); }
 }
 

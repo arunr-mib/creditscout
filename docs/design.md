@@ -165,14 +165,19 @@ recommendation card, where white reads 6.6:1 and 7.7:1.
 
 ## 3. Typography
 
-Three faces, each with one job. A narrow scale, and nothing off it: the Tailwind
-`fontSize` scale is **replaced**, so an off-scale class does not exist.
+**Two faces, updated 2026-11-08: one for everything you read, one for
+everything you'd retype.** The Forest redesign briefly ran a third face,
+Bricolage Grotesque, for headings, the wordmark and figures inside the
+workspace — retired the same day it was reviewed, owner's call, so every
+screen (including `/welcome` and `/login`, which were never part of the
+Bricolage experiment) reads as one typeface. §9 has the dated entry. A narrow
+size scale, and nothing off it: the Tailwind `fontSize` scale is **replaced**,
+so an off-scale class does not exist.
 
 | Face | Where | Why |
 |---|---|---|
-| **Bricolage Grotesque** (`next/font`) | All UI text and display in the workspace; the wordmark (800); figures and dates | The brand face. Headings 800 with slightly negative tracking; body 400/500 |
+| **Inter** (`next/font`) | All UI text and display, everywhere — the wordmark, headings, body, figures and dates | One font, one system. Headings and the wordmark use weight 800; body 400/500 |
 | **JetBrains Mono** | Identifiers only | Things you would retype |
-| **Inter** | `/welcome` and `/login` only | Those pages were not redesigned |
 
 | Role | Token | Size / Line | Weight |
 |---|---|---|---|
@@ -189,14 +194,16 @@ Three faces, each with one job. A narrow scale, and nothing off it: the Tailwind
 | Label / caption | `text-label` | 12 / 16 | 500 |
 | Badge | `text-badge` | 11 / 16 | 500 |
 
-**The numeral rule, updated 2026-11-07:**
+**The numeral rule, updated 2026-11-08:**
 
-1. **Every financial figure and date is set in Bricolage Grotesque with
-   `tabular-nums`.** The spec asked the builder to verify that Bricolage's
-   tabular figures work; they were checked in the browser and every digit has the
-   same width, so columns align. (In the workspace, `.tabular-nums` switches the
-   font to `--font-figure`, which is Bricolage.) The fallback to Inter was not
-   needed. The 2026-10-14 rule still holds: figures are never monospace.
+1. **Every financial figure and date is set in Inter with `tabular-nums`.**
+   Inter's tabular figures were already relied on pre-Forest and are relied on
+   again now; every digit has the same width, so columns align. (In the
+   workspace, `.tabular-nums` switches the font to `--font-figure`, which is
+   Inter — the same face as everything else, so this rule exists to keep a
+   figure visually consistent regardless of what font its *container* happens
+   to set, not to switch typefaces.) The 2026-10-14 rule still holds: figures
+   are never monospace.
 2. **Monospace is reserved for things you would retype**: `calc_id`, citations
    (`CA §7.11`), rule names, field paths (`numerator.addbacks[0].cap`), tool
    names, credentials, a key cap.
@@ -260,7 +267,10 @@ The dark left nav rail is gone; its items became the header tabs.
 
 - 52px, full width, `brand` forest, with faint survey-map contour lines behind
   the content (`lib/ui/contours.ts`; decoration only, `aria-hidden`).
-- Left: the wordmark **CreditScout** (Bricolage 800) and "Bank of Stoic" small.
+- Left: the icon mark (`components/LogoMark.tsx` — a forest/mint recolouring
+  of the original `Logo.tsx`, added 2026-11-08; `Logo.tsx` itself is
+  untouched and still serves `/welcome` and `/login`), then the wordmark
+  **CreditScout** (800) and "Bank of Stoic" small.
 - Then the **section tabs**: Exceptions · Documents · Covenant terms · Lessons ·
   Governance. The active tab is a mint fill with forest text. A small count may
   sit on a tab. Below `md` the tabs scroll sideways.
@@ -339,7 +349,7 @@ red**: abstaining is correct behaviour, not a failure.
 │  DSCR   1.31  ⟡ code · calc_a3f9 │   ← amber value, badge
 └──────────────────────────────────┘
 ```
-Value in `code-bright`, Bricolage with `tabular-nums`; badge in `code` on
+Value in `code-bright`, Inter with `tabular-nums`; badge in `code` on
 `code-bg` at 11px, with the `calc_id` in monospace. The `calc_id` is clickable
 and opens the calculation log for that computation.
 
@@ -410,7 +420,7 @@ disabled-reason tooltip needs the wrapper stretched too.
 ### 5.8 Data table
 
 `surface` background, `border` row dividers. Column headers are 12px uppercase
-`text-muted` on `surface-raised`. Numeric columns **right-aligned, Bricolage,
+`text-muted` on `surface-raised`. Numeric columns **right-aligned, Inter,
 `tabular-nums`**. Hover `surface-raised`. Status via dot and word, never via row
 tint.
 
@@ -539,6 +549,34 @@ spacing / font-size / shadow scales; provenance on every figure; and
 `/welcome` and `/login`. Production is unchanged until the owner signs off the
 Vercel Preview walkthrough.
 
+**2026-11-08 — walkthrough feedback, before production sign-off.** The owner
+tested the Preview and asked for five changes:
+
+- **Bricolage Grotesque retired; Inter restored everywhere, including the
+  workspace.** The two-font system from 2026-11-07 lasted one day: shown
+  against the pre-redesign screen, the owner chose one consistent face over
+  two. `next/font` no longer loads Bricolage; `font-brand` is now an alias for
+  `font-sans` (§3) so no component needed touching.
+- **Coloured left-border accent stripes removed** from every notice/alert
+  card (`border-l-4 border-code bg-code-bg` and the like) — named as the
+  single most recognisable "generated dashboard" tell. The colour now carries
+  by text and an icon only, the same rule the dot-based status indicators
+  already followed.
+- **A logo mark was added to the header** (`components/LogoMark.tsx`), a
+  forest/mint recolouring of the existing icon; `Logo.tsx` itself is
+  untouched and still serves `/welcome` and `/login`.
+- **The casefile's decision block moved** to sit directly under the
+  recommendation card instead of after the findings panel, so accepting or
+  overriding a recommendation no longer requires scrolling past the evidence
+  — the figures, the recommendation and the decision now fit in one screen.
+- **Portfolio rail wording:** "Pass" → "In compliance".
+
+**A trap worth naming:** the logo's first attempt used `h-7 w-7`. `7` is not
+in the replaced spacing scale, so the class compiled to nothing and the SVG
+rendered at its unconstrained intrinsic size — the exact failure mode §4
+already warns about, caught only because the result was visibly broken.
+`h-6 w-6` (24px) is correct.
+
 ---
 
 ## 10. Tokenisation report
@@ -620,12 +658,14 @@ icon alone.
 only. Where a component carries a product rule, the rule is stated with it —
 those are the ones that get invented wrongly under time pressure.*
 
-> **Updated 2026-11-07.** The product rules below stand. The token names were
-> written for the teal system and are translated like this: `model` / teal for
-> *interactive* is now **forest ink or mint** (§5.3, §5.7); `model` for *the
-> agent* is now **sky and the CreditScout tag** (§5.10); and "mono" on a figure
-> now means Bricolage with `tabular-nums` (§3). Monospace stays on identifiers.
-> `model*` classes must not appear in workspace code.
+> **Updated 2026-11-07, font note revised 2026-11-08.** The product rules
+> below stand. The token names were written for the teal system and are
+> translated like this: `model` / teal for *interactive* is now **forest ink
+> or mint** (§5.3, §5.7); `model` for *the agent* is now **sky and the
+> CreditScout tag** (§5.10); and "mono" on a figure means `tabular-nums` set
+> in Inter (§3) — the same face as everything else, kept distinct only so a
+> figure's width stays fixed regardless of its container. Monospace stays on
+> identifiers. `model*` classes must not appear in workspace code.
 
 ### 12.1 `TestResultCard` — one quarterly test
 

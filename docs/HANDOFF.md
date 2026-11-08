@@ -25,8 +25,9 @@ below (dated 2026-10-14) is still true except where it describes the look: the
 
 | What | State |
 |---|---|
-| Where it is | Built on branch `arunr-mib/creditscout`, the build tasks in the plan, commits `docs(redesign)` / `feat(redesign)` |
-| **Production** | **Unchanged.** `https://credit-scout.vercel.app` still runs the old look. Production only changes on an explicit `vercel --prod`, and that waits for the owner to sign off the Vercel Preview walkthrough |
+| Where it is | Built on branch `arunr-mib/creditscout`, the build tasks in the plan, commits `docs(redesign)` / `feat(redesign)` / `fix(redesign)` |
+| **Production** | **Unchanged.** `https://credit-scout.vercel.app` still runs the old look. Production only changes on an explicit `vercel --prod`, and that waits for the owner to sign off the walkthrough below |
+| **Preview** | **Deployed and live**, all 8 of production's extra env vars copied across (4 of them Vercel "sensitive" — write-only, owner supplied the values). URL changes on every redeploy; ask if it's not at hand |
 | Spec | `docs/superpowers/specs/2026-11-07-forest-redesign-design.md` |
 | Plan | `docs/superpowers/plans/2026-11-07-forest-redesign.md` |
 | Mockups | `docs/design-mockups/2026-11-07-forest/` (open in a browser). `forest-sky-pipeline-and-case.html` is the approved direction |
@@ -34,11 +35,14 @@ below (dated 2026-10-14) is still true except where it describes the look: the
 
 **What changed for the analyst**
 
-- **Header band + tabs replace the dark left rail.** Tabs: Exceptions, Documents, Covenant terms, Lessons, Governance. Search (⌘K) and the avatar menu sit on the right.
+- **Header band + tabs replace the dark left rail.** Tabs: Exceptions, Documents, Covenant terms, Lessons, Governance. Search (⌘K) and the avatar menu sit on the right. A logo mark sits left of the wordmark, added 2026-11-08.
 - **A collapsible portfolio rail** lists every loan with a status dot, its computed DSCR and a second line. `[` toggles it (not inside text fields); the choice is remembered in `localStorage` (`cs.rail.collapsed`) and overrides the per-tab defaults. On Documents and Covenant terms a click filters to the loan.
 - **The queue table is now a four-lane deal pipeline**: Needs investigating, CreditScout working (sky), Awaiting your decision, Decided. An `investigating` card links to its casefile, because the live run is driven by that page.
 - **Land and sky.** Sky (the gradient and the blue CreditScout tag) marks only what the agent produced. Mint marks only what you can click. Neither is a status. Amber, red and green keep their old meanings.
-- **Type:** Bricolage Grotesque for the UI, figures and dates (its tabular figures were checked in the browser); JetBrains Mono for identifiers; Inter only on `/welcome` and `/login`.
+- **Type, revised 2026-11-08: one face, Inter, everywhere** — UI, headings, the wordmark, figures and dates (`tabular-nums`), on `/welcome` and `/login` too. Bricolage Grotesque was tried for one day and retired after the owner compared it against the pre-redesign screen; `font-brand` is now an alias for `font-sans`. JetBrains Mono stays for identifiers.
+- **No coloured left-border accent stripes** on notice/alert cards, removed 2026-11-08 as the most recognisable "generated dashboard" tell. Status carries by text and an icon only.
+- **The casefile's decision block sits directly under the recommendation card**, not after the findings — accepting or overriding no longer needs a scroll past the evidence.
+- **Rail wording:** "Pass" → "In compliance".
 
 **Decided during the build** (state these as settled)
 
@@ -46,11 +50,11 @@ below (dated 2026-10-14) is still true except where it describes the look: the
 - Neutrals are CSS variables (`--c-*`). `theme-forest` on the workspace `<body>` switches them; `/welcome` and `/login` keep the classic values and teal. `lib/ui/palette.test.js` keeps `palette.ts` and `globals.css` in step and checks contrast.
 - The casefile identity line shows no loan id; the schema has no short loan code.
 - `components/workspaceTokens.test.js` fails if a retired teal or dark-shell class (`model*`, `sunken`, `night*`) appears in workspace code.
+- **A trap caught live:** the logo's first cut used `h-7 w-7`. `7` is not in the replaced spacing scale, so it silently compiled to nothing and the SVG rendered unconstrained. `h-6 w-6` is correct — see CLAUDE.md's warning on this exact failure mode.
 
 **Next (owner)**
 
-- The Preview environment is missing 8 variables production has (spec §6). Copying them needs the owner's go-ahead.
-- Walk the Preview end to end: sign in, pipeline, investigate (watch it cross the sky lane), casefile, decide, documents, terms approval, onboarding, lessons, governance.
+- Continue the Preview walkthrough: sign in, pipeline, investigate (watch it cross the sky lane), casefile, decide, documents, terms approval, onboarding, lessons, governance.
 - Then, and only then, `vercel --prod`.
 - The preview shares production's database and Foundry agent, so an investigation run there also appears on the live site.
 

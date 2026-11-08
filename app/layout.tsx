@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { PortfolioRail } from "@/components/PortfolioRail";
 import { TopBar } from "@/components/TopBar";
@@ -10,13 +10,9 @@ import { LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
-// Brand face for the Forest workspace (`.theme-forest`); login and welcome keep Inter.
-const brand = Bricolage_Grotesque({
-  subsets: ["latin"],
-  variable: "--font-brand",
-  weight: ["400", "500", "600", "800"],
-  display: "swap",
-});
+// One font everywhere: the workspace carried Bricolage Grotesque as a second
+// "display" face through the Forest redesign; dropped 2026-11-08, owner's
+// call, so every screen — including /welcome and /login — reads as Inter.
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
@@ -32,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   if (bare) {
     return (
-      <html lang="en" className={`${inter.variable} ${mono.variable} ${brand.variable}`}>
+      <html lang="en" className={`${inter.variable} ${mono.variable}`}>
         <body className="min-h-screen">{children}</body>
       </html>
     );
@@ -45,7 +41,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     loadPortfolio().catch(() => null),
   ]);
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable} ${brand.variable}`}>
+    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
       <body className="theme-forest flex min-h-screen flex-col">
         <TopBar counts={counts} search={search} user={demoUser()} contourUri={contourDataUri()} />
         <div className="flex flex-1">
