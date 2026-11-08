@@ -26,7 +26,20 @@ export function InvestigateButton(props: { exceptionId: string; status: string; 
   function go() {
     setError(null);
     startTransition(async () => {
-      const result = await investigateException(exceptionId);
+      // The action call itself can throw — a function timeout, a page loaded
+      // before a redeploy (its action id no longer exists), a dropped
+      // connection. Without this catch the button silently reverts to
+      // "Investigate" and the analyst sees nothing happen.
+      let result: Awaited<ReturnType<typeof investigateException>>;
+      try {
+        result = await investigateException(exceptionId);
+      } catch (err) {
+        console.error("investigate action could not be reached", err);
+        result = {
+          ok: false,
+          error: "The request could not be sent. Reload the page, then try again.",
+        };
+      }
       if (!result.ok) {
         setError(result.error);
         return;
