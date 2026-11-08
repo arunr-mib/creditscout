@@ -3,6 +3,7 @@ import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
+import { GuardrailNotices } from "./GuardrailNotice";
 import Link from "next/link";
 
 import { longDate } from "@/lib/terms-labels";
@@ -147,6 +148,10 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           only no longer first. */}
       {mode === "history" && <Superseded currentId={view.supersededBy} />}
       {mode === "not_ready" && <NotReady status={view.status} />}
+      {/* A failed casefile is `not_ready`, so the findings panel (the only other
+          place notes render) is skipped — and the reason the run failed, which
+          lives in the notes, was never shown. NotReady promises them. */}
+      {view.status === "failed" && <GuardrailNotices notes={view.notes} />}
 
       {mode === "active" && (
         <ReviewActions
