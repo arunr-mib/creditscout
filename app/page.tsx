@@ -2,74 +2,12 @@ import Link from "next/link";
 import { PortfolioTable } from "@/components/PortfolioTable";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
-import { currentCasefiles, portfolioRows, queueCounts } from "@/components/portfolioModel";
-import { anonReader } from "@/lib/supabase/anon";
-import { quarterLabel } from "@/lib/tests/extract-financials";
+import { loadPortfolio } from "@/lib/portfolio-data";
 
 export const dynamic = "force-dynamic";
 // The investigateException / run Server Actions hosted on this route can exceed
 // Vercel's 10s default; 60s is the Hobby ceiling. Reads still return fast.
 export const maxDuration = 60;
-
-const must = (res: { data: unknown; error: { message: string } | null }, what: string): unknown => {
-  if (res.error) throw new Error(`${what}: ${res.error.message}`);
-  return res.data ?? null;
-};
-
-const num = (v: unknown): number | null => (v == null ? null : Number(v));
-
-interface FacilityRow {
-  id: string;
-  borrower_name: string;
-  industry: string | null;
-}
-interface TestRow {
-  id: string;
-  facility_id: string;
-  test_period_end: string;
-  computed_dscr: number | null;
-  reported_dscr: number | null;
-  threshold: number;
-  passed: boolean | null;
-  variance_flagged: boolean | null;
-  calc_id: string | null;
-  calc_error: string | null;
-}
-interface ExceptionRow {
-  id: string;
-  facility_id: string;
-  status: string;
-  test_period_end: string;
-  computed_dscr: number | null;
-  reported_dscr: number | null;
-  required_dscr: number | null;
-  test_id: string;
-}
-interface CasefileRow {
-  id: string;
-  exception_id: string;
-  status: string;
-  recommendation: string | null;
-  steps_count: number | null;
-  created_at: string | null;
-  /** When the run last advanced. A gap means the browser driving it went away. */
-  last_step_at: string | null;
-}
-interface TermsRow {
-  facility_id: string;
-  terms: unknown;
-  status: string;
-  version: number;
-}
-
-/** Last day of the quarter before `today` (UTC): the most recent complete test period. */
-function latestCompleteQuarterEnd(today: Date): string {
-  const q = Math.floor(today.getUTCMonth() / 3);
-  const year = q === 0 ? today.getUTCFullYear() - 1 : today.getUTCFullYear();
-  const endMonthDay = ["12-31", "03-31", "06-30", "09-30"][q];
-  return `${year}-${endMonthDay}`;
-}
-
 
 /**
  * The portfolio — the analyst's landing screen.
@@ -80,43 +18,8 @@ function latestCompleteQuarterEnd(today: Date): string {
  * on the service role.
  */
 export default async function Home() {
-  const db = anonReader();
+  const { rows, facilities, targetPeriod, targetLabel, counts } = await loadPortfolio();
 
-  const [facilitiesRes, testsRes, exceptionsRes, casefilesRes, termsRes] = await Promise.all([
-    db.from("facilities").select("id, borrower_name, industry").order("borrower_name", { ascending: true }),
-    db.from("tests").select("id, facility_id, test_period_end, computed_dscr, reported_dscr, threshold, passed, variance_flagged, calc_id, calc_error").eq("run_id", "demo"),
-    db.from("exceptions").select("id, facility_id, status, test_period_end, computed_dscr, reported_dscr, required_dscr, test_id"),
-    db.from("casefiles").select("id, exception_id, status, recommendation, steps_count, created_at, last_step_at").eq("run_id", "demo"),
-    db.from("covenant_terms").select("facility_id, terms, status, version").eq("status", "approved"),
-  ]);
-
-  const facilities = (must(facilitiesRes, "select facilities") ?? []) as FacilityRow[];
-  const tests = ((must(testsRes, "select tests") ?? []) as TestRow[]).map((t) => ({
-    ...t,
-    computed_dscr: num(t.computed_dscr),
-    reported_dscr: num(t.reported_dscr),
-    threshold: Number(t.threshold),
-  }));
-  const demoTestIds = new Set(tests.map((t) => t.id));
-  const exceptions = ((must(exceptionsRes, "select exceptions") ?? []) as ExceptionRow[]).filter((e) => demoTestIds.has(e.test_id));
-  const casefiles = (must(casefilesRes, "select casefiles") ?? []) as CasefileRow[];
-  const approvedTerms = (must(termsRes, "select covenant_terms") ?? []) as TermsRow[];
-
-  const periods = tests.map((t) => t.test_period_end).sort();
-  const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
-  const targetLabel = quarterLabel(targetPeriod);
-
-  const casefileByException = currentCasefiles(casefiles);
-  const rows = portfolioRows({
-    facilities,
-    exceptions,
-    casefileByException,
-    tests,
-    approvedTerms,
-    targetPeriod,
-  });
-
-  const counts = queueCounts(rows);
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 
   return (
