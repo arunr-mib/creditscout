@@ -24,7 +24,7 @@ const DOT: Record<RailDot, string> = {
 // On the selected (forest) item the same states need a light-on-dark treatment.
 const DOT_SELECTED: Record<RailDot, string> = {
   breach: "bg-brand-danger",
-  pass: "bg-mint",
+  pass: "bg-success ring-1 ring-brand-on",
   decided: "bg-brand-on-3",
   terms: "bg-brand-on-2",
   untested: "ring-1 ring-brand-on-3",
