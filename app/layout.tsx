@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { NavRail } from "@/components/NavRail";
 import { loadNavData } from "@/lib/nav-data";
@@ -7,6 +7,13 @@ import { LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+// Brand face for the Forest workspace (`.theme-forest`); login and welcome keep Inter.
+const brand = Bricolage_Grotesque({
+  subsets: ["latin"],
+  variable: "--font-brand",
+  weight: ["400", "500", "600", "800"],
+  display: "swap",
+});
 const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" });
 
 export const metadata: Metadata = {
@@ -22,7 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   if (bare) {
     return (
-      <html lang="en" className={`${inter.variable} ${mono.variable}`}>
+      <html lang="en" className={`${inter.variable} ${mono.variable} ${brand.variable}`}>
         <body className="min-h-screen">{children}</body>
       </html>
     );
@@ -30,8 +37,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   const { counts, search } = await loadNavData();
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
-      <body className="min-h-screen md:flex">
+    <html lang="en" className={`${inter.variable} ${mono.variable} ${brand.variable}`}>
+      <body className="theme-forest min-h-screen md:flex">
         <NavRail counts={counts} search={search} user={demoUser()} />
         <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
           <div className="mx-auto max-w-content">{children}</div>

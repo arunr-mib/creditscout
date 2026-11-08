@@ -2,6 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Neutrals as RGB triplets so Tailwind can apply alpha. :root is the classic
+   set (login, welcome); .theme-forest is the workspace. lib/ui/palette.ts is
+   the source and palette.test.js fails if these drift from it. */
+:root {
+  --c-bg: 247 249 250;
+  --c-surface: 255 255 255;
+  --c-surface-raised: 241 244 246;
+  --c-border: 199 211 218;
+  --c-border-strong: 148 166 176;
+  --c-text: 25 40 47;
+  --c-text-secondary: 82 100 109;
+  --c-text-muted: 107 124 133;
+  --font-ui: var(--font-inter);
+  --font-figure: var(--font-inter);
+}
+
+.theme-forest {
+  --c-bg: 255 255 255;
+  --c-surface: 255 255 255;
+  --c-surface-raised: 238 243 239;
+  --c-border: 220 230 223;
+  --c-border-strong: 191 208 197;
+  --c-text: 15 43 34;
+  --c-text-secondary: 62 90 80;
+  --c-text-muted: 86 109 97;
+  --font-ui: var(--font-brand);
+  --font-figure: var(--font-brand);
+  /* html already resolved font-family against :root's --font-ui (Inter), and
+     body would inherit that computed value, so restate it here. */
+  font-family: var(--font-ui), system-ui, sans-serif;
+}
+
 @layer base {
   html { color-scheme: light; }
   body { @apply bg-bg text-text-secondary antialiased; }
@@ -11,6 +43,10 @@
   /* Keyboard focus only (`:focus-visible`, never `:focus`), so a mouse click
      does not leave a ring behind on every button. */
   :focus-visible { @apply outline-none ring-2 ring-model ring-offset-2 ring-offset-bg; }
+  .theme-forest :focus-visible { @apply ring-text ring-offset-bg; }
+  /* Figures take the brand face in the workspace. Bricolage Grotesque ships the
+     `tnum` feature (checked in the latin woff2 subset), so columns still align. */
+  .theme-forest .tabular-nums { font-family: var(--font-figure); }
 }
 
 @media (prefers-reduced-motion: reduce) {

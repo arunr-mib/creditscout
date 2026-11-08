@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import { BRAND, SKY } from "./lib/ui/palette";
 
 /**
  * Tokens generated from docs/design.md. That file is the source of truth.
@@ -33,6 +34,10 @@ export default {
       num:     ["14px", { lineHeight: "20px", fontWeight: "500" }],
       quote:   ["13px", { lineHeight: "21px", fontWeight: "400" }],
       badge:   ["11px", { lineHeight: "16px", fontWeight: "500" }],
+      // Forest redesign: the big KPI figure, its compact form, and the wordmark.
+      figure:      ["34px", { lineHeight: "38px", fontWeight: "800" }],
+      "figure-sm": ["24px", { lineHeight: "28px", fontWeight: "800" }],
+      wordmark:    ["19px", { lineHeight: "24px", fontWeight: "800" }],
     },
     // design.md §4. On the old dark theme shadows read as mud and the scale was
     // replaced with `none`. On a lit page a 1px border alone reads flat, so the
@@ -56,18 +61,18 @@ export default {
         // values were tuned against #0A1628 and fail on white — the dark
         // `model` sits at 2.98:1, `code` 2.15, `success` 1.40. Each new value
         // clears 4.5:1 on both the page and a card.
-        bg: "#F7F9FA",
-        surface: "#FFFFFF",
-        "surface-raised": "#F1F4F6",
+        bg: "rgb(var(--c-bg) / <alpha-value>)",
+        surface: "rgb(var(--c-surface) / <alpha-value>)",
+        "surface-raised": "rgb(var(--c-surface-raised) / <alpha-value>)",
         // Darkened 2026-10-14. At #DCE4E8 a card edge all but vanished on
         // #F7F9FA, so panels read as floating text rather than as the
         // containers they are — the "no boxes" look the owner flagged.
-        border: "#C7D3DA",
-        "border-strong": "#94A6B0",
+        border: "rgb(var(--c-border) / <alpha-value>)",
+        "border-strong": "rgb(var(--c-border-strong) / <alpha-value>)",
 
-        text: "#19282F",
-        "text-secondary": "#52646D",
-        "text-muted": "#6B7C85",
+        text: "rgb(var(--c-text) / <alpha-value>)",
+        "text-secondary": "rgb(var(--c-text-secondary) / <alpha-value>)",
+        "text-muted": "rgb(var(--c-text-muted) / <alpha-value>)",
 
         // ------------------------------------- surfaces that stay dark, on purpose
         //
@@ -131,12 +136,21 @@ export default {
         success: "#15803D",
         "success-bg": "#E8F7EE",
         "success-strong": "#156B37",
+
+        // Forest redesign brand set (lib/ui/palette.ts). `mint` is an
+        // interactive fill with forest text on it, never a status and never
+        // text on white. `agent-*` marks the CreditScout Agent's own surfaces.
+        ...BRAND,
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-ui)", "system-ui", "sans-serif"],
+        brand: ["var(--font-brand)", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
-      borderRadius: { sm: "4px", md: "8px", lg: "12px" },
+      borderRadius: { sm: "4px", md: "8px", lg: "12px", xl: "14px", "2xl": "18px" },
+      backgroundImage: { sky: SKY },
+      width: { rail: "260px", "rail-collapsed": "44px" },
+      height: { header: "52px" },
       // content: design.md §4. panel: the clause drawer, §5.4. dialog: half the
       // content width, §12.12 (`max-w-content/2` is not a class).
       maxWidth: { content: "1280px", panel: "480px", dialog: "640px" },
