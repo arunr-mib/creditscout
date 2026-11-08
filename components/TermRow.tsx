@@ -1,3 +1,4 @@
+import { AgentTag } from "./AgentTag";
 import { CitationChip } from "./CitationChip";
 import { PROBLEM_HEADLINE, WARNING_LABEL, type RowView } from "./termsReview";
 
@@ -5,7 +6,7 @@ import { PROBLEM_HEADLINE, WARNING_LABEL, type RowView } from "./termsReview";
  * One covenant term. The row's whole job is to show, without reading, WHO made
  * the value on it and WHETHER ITS CITATION HOLDS UP:
  *
- *   teal   "model proposed"    the model produced this value
+ *   sky    "model proposed"    the CreditScout Agent produced this value
  *   slate  "analyst-corrected" a human changed it; the model's value stays beside it
  *   slate  "approved by"       a human stands behind it
  *   rose   a refusal           no citation, or a citation that does not support the value
@@ -44,7 +45,7 @@ export function TermRow(props: {
         : "border border-border bg-surface";
 
   return (
-    <li className={`rounded-md p-3 ${frame}`} aria-current={selected ? "true" : undefined}>
+    <li className={`rounded-xl p-3 ${frame}`} aria-current={selected ? "true" : undefined}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-label uppercase tracking-wide text-text-muted">
@@ -64,7 +65,7 @@ export function TermRow(props: {
                     <span className="ml-2 inline-flex flex-wrap items-baseline gap-2">
                       <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
                       <span className="text-label text-text-muted">
-                        model proposed <span className="tabular-nums text-model line-through">{original}</span>
+                        model proposed <span className="tabular-nums text-text-muted line-through">{original}</span>
                       </span>
                       {editedFields.includes(spec.field) && (
                         <button type="button" onClick={() => onUndo(spec.field)} className="text-label text-text-muted underline hover:text-text">
@@ -87,7 +88,7 @@ export function TermRow(props: {
             ) : edited ? (
               <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
             ) : (
-              entry && <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span>
+              entry && <AgentTag>model proposed</AgentTag>
             )}
           </div>
         )}
@@ -159,7 +160,7 @@ export function TermRow(props: {
         <button
           type="button"
           onClick={onEdit}
-          className="mt-3 h-8 rounded-md border border-border-strong px-3 text-label text-text hover:bg-surface-raised"
+          className="mt-3 h-8 rounded-xl border border-border-strong px-3 text-label text-text hover:bg-surface-raised"
         >
           Edit
         </button>

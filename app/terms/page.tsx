@@ -1,5 +1,7 @@
 import { TermsList, type TermsCard } from "@/components/TermsList";
+import Link from "next/link";
 import { boardingState } from "@/components/portfolioModel";
+import { loanParam } from "@/components/loanFilter";
 import { anonReader } from "@/lib/supabase/anon";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +23,15 @@ interface DocRow { facility_id: string; doc_type: string; title: string; effecti
  * as an update pending, linking to the setup screen where an analyst approves.
  *
  * Every covenant judgement is made here, on the server, and handed to the view
- * as plain data. `TermsList` is a client component only so its loan filter can
- * hold state; it derives nothing.
+ * as plain data; `TermsList` derives nothing. The portfolio rail narrows the page
+ * to one loan with `?loan=<facility id>`.
  */
-export default async function TermsPage() {
+export default async function TermsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const loan = loanParam(await searchParams);
   const db = anonReader();
   const [facilitiesRes, termsRes, documentsRes] = await Promise.all([
     db.from("facilities").select("id, borrower_name, industry").order("borrower_name"),
@@ -36,7 +43,7 @@ export default async function TermsPage() {
   const allTerms = (must(termsRes, "covenant_terms") ?? []) as TermsRow[];
   const documents = (must(documentsRes, "documents") ?? []) as DocRow[];
 
-  const cards: TermsCard[] = facilities.map((f) => {
+  const cards: TermsCard[] = (loan ? facilities.filter((f) => f.id === loan) : facilities).map((f) => {
     const versions = allTerms.filter((t) => t.facility_id === f.id);
     const approved = versions.find((t) => t.status === "approved") ?? null;
     const unboarded = documents.filter(
@@ -54,14 +61,23 @@ export default async function TermsPage() {
     };
   });
 
+  const loanName = loan ? (facilities.find((f) => f.id === loan)?.borrower_name ?? null) : null;
+
   return (
     <div className="space-y-8">
       <header className="max-w-prose space-y-1">
         <p className="text-label text-text-muted">Covenant management</p>
-        <h1 className="text-title text-text">Covenant terms</h1>
+        <h1 className="font-brand text-title text-text">Covenant terms{loanName ? ` · ${loanName}` : ""}</h1>
         <p className="pt-1 text-body text-text-secondary">
           Review covenant definitions, approve updates, and track the terms used for each reporting period.
         </p>
+        {loan && (
+          <p className="pt-1">
+            <Link href="/terms" className="text-body text-text underline decoration-border-strong hover:decoration-text">
+              Show all loans
+            </Link>
+          </p>
+        )}
       </header>
 
       <TermsList cards={cards} />

@@ -52,7 +52,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const unordered = ordered.some((c) => typeof c.metadata?.chunk_index !== "number");
 
   return (
-    <article className="max-w-[900px] space-y-4">
+    <article className="max-w-4xl space-y-4">
       <nav aria-label="Breadcrumb" className="text-label text-text-muted">
         <Link href="/documents" className="underline-offset-2 hover:text-text hover:underline">
           Documents
@@ -62,21 +62,21 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
       </nav>
 
       <header className="space-y-1">
-        <h1 className="text-title text-text">{doc.title}</h1>
+        <h1 className="font-brand text-title text-text">{doc.title}</h1>
         <p className="text-body text-text-secondary">
           {facility?.borrower_name ?? "Unknown borrower"}
           {doc.effective_date ? ` · ${dateLabel(doc.doc_type)} ${longDate(doc.effective_date)}` : ""}
         </p>
       </header>
 
-      <p className="max-w-prose rounded-md border border-border bg-surface-raised px-4 py-3 text-body text-text-secondary">
+      <p className="max-w-prose rounded-xl border border-border bg-surface-raised px-4 py-3 text-body text-text-secondary">
         These are the indexed sections — the text CreditScout read and the text every citation resolves to. The
         uploaded file itself is not retained.
         {unordered && " Some sections were indexed before document order was recorded and may appear out of sequence."}
       </p>
 
       {ordered.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface p-6 text-body text-text-muted shadow-card">
+        <p className="rounded-xl border border-border bg-surface p-6 text-body text-text-muted shadow-card">
           No indexed sections for this document.
         </p>
       ) : (
@@ -88,7 +88,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
               <li
                 key={i}
                 id={section ? `section-${section.replace(/\s+/g, "-")}` : undefined}
-                className="scroll-mt-6 rounded-lg border border-border bg-surface p-4 shadow-card"
+                className="scroll-mt-6 rounded-xl border border-border bg-surface p-4 shadow-card"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h2 className="text-card text-text">{heading ?? section ?? `Section ${i + 1}`}</h2>

@@ -52,22 +52,26 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
   }, [rows, borrower, docType, query]);
 
   const filtered = shown.length !== rows.length;
-  const field = "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text";
+  const field = "rounded-xl border border-border-strong bg-surface px-3 py-2 text-body text-text";
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <label className="flex items-center gap-2">
-          <span className="sr-only">Filter by borrower</span>
-          <select value={borrower} onChange={(e) => setBorrower(e.target.value)} className={field}>
-            <option value="all">All borrowers</option>
-            {borrowers.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* The rail already narrows the page to one loan; a borrower menu of
+            one entry would only repeat it. */}
+        {borrowers.length > 1 && (
+          <label className="flex items-center gap-2">
+            <span className="sr-only">Filter by borrower</span>
+            <select value={borrower} onChange={(e) => setBorrower(e.target.value)} className={field}>
+              <option value="all">All borrowers</option>
+              {borrowers.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex items-center gap-2">
           <span className="sr-only">Filter by document type</span>
           <select value={docType} onChange={(e) => setDocType(e.target.value)} className={field}>
@@ -110,7 +114,7 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
         )}
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
         <table className="w-full border-collapse text-left">
           <thead className="bg-surface-raised">
             <tr className="border-b border-border">
@@ -137,7 +141,7 @@ export function DocumentLibrary({ rows }: { rows: DocumentRowView[] }) {
                   {/* The title is the way in. A document row that could not be
                       opened made the library a list of things the analyst had
                       to take on trust. */}
-                  <Link href={`/documents/${r.id}`} className="text-text underline-offset-2 hover:text-model hover:underline">
+                  <Link href={`/documents/${r.id}`} className="text-text underline decoration-border-strong underline-offset-2 hover:decoration-text">
                     {r.title}
                   </Link>
                   {/* A waiver REQUEST is not a granted waiver. The title alone

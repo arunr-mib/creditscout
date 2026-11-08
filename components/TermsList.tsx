@@ -1,6 +1,3 @@
-"use client";
-
-import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Fragment } from "react";
 
@@ -25,52 +22,32 @@ export interface TermsCard {
 }
 
 /**
- * One card per loan: what governs today, what is waiting, and the version
+ * One row per loan: what governs today, what is waiting, and the version
  * history behind both.
  *
- * A client component only so the loan filter works. Every figure is computed on
- * the server and passed in; nothing here derives covenant state.
+ * The page hands in the cards already narrowed to the loan the portfolio rail
+ * selected. Every figure is computed on the server and passed in; nothing here
+ * derives covenant state.
  */
 export function TermsList({ cards }: { cards: TermsCard[] }) {
-  const [loan, setLoan] = useState("all");
-
-  const shown = useMemo(() => (loan === "all" ? cards : cards.filter((c) => c.facilityId === loan)), [cards, loan]);
   const pending = countPendingUpdates(cards);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <label className="sr-only" htmlFor="loan-filter">
-          Filter by loan
-        </label>
-        <select
-          id="loan-filter"
-          value={loan}
-          onChange={(e) => setLoan(e.target.value)}
-          className="rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text"
-        >
-          <option value="all">All loans</option>
-          {cards.map((c) => (
-            <option key={c.facilityId} value={c.facilityId}>
-              {c.borrower}
-            </option>
-          ))}
-        </select>
-        {pending > 0 && (
-          <span className="inline-flex items-center gap-2 text-body text-text-secondary">
-            <span aria-hidden="true" className="text-code-bright">
-              ●
-            </span>
-            Updates pending · {pending}
+      {pending > 0 && (
+        <p className="inline-flex items-center gap-2 text-body text-text-secondary">
+          <span aria-hidden="true" className="text-code-bright">
+            ●
           </span>
-        )}
-      </div>
+          Updates pending · {pending}
+        </p>
+      )}
 
       {/* ONE TABLE, one row per loan. Repeated cards — each with a header, a
           pending banner and its own version table — gave a six-loan book six
           screens of chrome to say what fits on six lines. The detail is one
           click away, per row, rather than always expanded for everyone. */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface shadow-card">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-card">
         <table className="w-full border-collapse text-left">
           <thead className="bg-surface-raised">
             <tr className="text-label uppercase tracking-wide text-text-muted">
@@ -82,12 +59,13 @@ export function TermsList({ cards }: { cards: TermsCard[] }) {
             </tr>
           </thead>
           <tbody>
-            {shown.map((c) => (
+            {cards.map((c) => (
               <TermsRow key={c.facilityId} card={c} />
             ))}
           </tbody>
         </table>
       </div>
+      {cards.length === 0 && <p className="text-body text-text-muted">No loan matches that selection.</p>}
     </div>
   );
 }
@@ -125,7 +103,11 @@ function TermsRow({ card }: { card: TermsCard }) {
         <td className="px-4 py-3 text-right">
           <Link
             href={setupHref}
-            className="rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised"
+            className={`rounded-xl px-3 py-1 text-body font-medium leading-5 text-text ${
+              proposed || card.unboarded.length > 0
+                ? "bg-mint hover:bg-mint-hover"
+                : "border border-border-strong bg-surface hover:bg-surface-raised"
+            }`}
           >
             {proposed || card.unboarded.length > 0 ? "Review update" : "View terms"}
           </Link>
@@ -134,7 +116,7 @@ function TermsRow({ card }: { card: TermsCard }) {
       <tr className="border-t border-border">
         <td colSpan={5} className="px-4 pb-3">
           <details>
-            <summary className="cursor-pointer list-none text-label text-model underline-offset-2 hover:underline marker:content-['']">
+            <summary className="cursor-pointer list-none text-label text-text underline decoration-border-strong underline-offset-2 hover:decoration-text marker:content-['']">
               Version history and terms
             </summary>
             <div className="mt-2">
@@ -152,7 +134,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
   const hasTerms = card.versions.length > 0;
 
   return (
-    <article className={bare ? "" : "overflow-hidden rounded-lg border border-border bg-surface shadow-card"}>
+    <article className={bare ? "" : "overflow-hidden rounded-xl border border-border bg-surface shadow-card"}>
       <header className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
         <div className="flex flex-wrap items-baseline gap-3">
           <h2 className="text-card text-text">{card.borrower}</h2>
@@ -175,7 +157,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
       {card.unboarded.length > 0 && (
         <div
           role="note"
-          className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border-l-2 border-l-code bg-surface-raised px-4 py-3"
+          className="mx-4 mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border-l-2 border-l-code bg-surface-raised px-4 py-3"
         >
           <div>
             <p className="text-body text-text">
@@ -185,7 +167,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
           </div>
           <Link
             href={setupHref}
-            className="shrink-0 rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised"
+            className="shrink-0 rounded-xl bg-mint px-3 py-1 text-body font-medium leading-5 text-text hover:bg-mint-hover"
           >
             Review update
           </Link>
@@ -195,7 +177,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
       {hasTerms ? (
         <div className="px-4 pb-4">
           <h3 className="mb-2 text-label text-text-muted">Terms history</h3>
-          <div className="overflow-x-auto rounded-md border border-border">
+          <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full border-collapse text-left">
               <thead className="bg-surface-raised">
                 <tr className="text-label uppercase tracking-wide text-text-muted">
@@ -227,7 +209,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
                         <tr className="border-t border-border">
                           <td colSpan={3} className="px-3 pb-3">
                             <details>
-                              <summary className="cursor-pointer list-none text-label text-model underline-offset-2 hover:underline marker:content-['']">
+                              <summary className="cursor-pointer list-none text-label text-text underline decoration-border-strong underline-offset-2 hover:decoration-text marker:content-['']">
                                 View the terms in v{v.version}
                               </summary>
                               <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-[max-content_1fr]">
@@ -259,7 +241,7 @@ function Card({ card, bare = false }: { card: TermsCard; bare?: boolean }) {
           <p className="text-body text-text-muted">No approved terms</p>
           <Link
             href={setupHref}
-            className="rounded-md border border-border-strong px-3 py-1 text-body text-text hover:bg-surface-raised"
+            className="rounded-xl border border-border-strong px-3 py-1 text-body text-text hover:bg-surface-raised"
           >
             View terms
           </Link>

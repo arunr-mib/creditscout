@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { boardingState, type BoardingState } from "@/components/portfolioModel";
 import { DocumentLibrary, type DocumentRowView } from "@/components/DocumentLibrary";
+import { filterByLoan, loanParam } from "@/components/loanFilter";
 import { anonReader } from "@/lib/supabase/anon";
 import { NOT_BOARDED_TOOLTIP, TERMS_INCLUDED, TERMS_PENDING, longDate } from "@/lib/terms-labels";
 
@@ -28,8 +29,15 @@ const DOC_TYPE_LABEL: Record<string, string> = {
  * that need a human: an amendment on file that the approved terms do not yet
  * carry is a "Terms review required" — the covenant-boarding lag the agent is
  * built to catch, surfaced as an action rather than buried in a borrower card.
+ *
+ * The portfolio rail narrows it to one loan with `?loan=<facility id>`.
  */
-export default async function DocumentsPage() {
+export default async function DocumentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const loan = loanParam(await searchParams);
   const db = anonReader();
   const [facilitiesRes, documentsRes, termsRes] = await Promise.all([
     db.from("facilities").select("id, borrower_name").order("borrower_name"),
@@ -38,9 +46,10 @@ export default async function DocumentsPage() {
   ]);
 
   const facilities = (must(facilitiesRes, "facilities") ?? []) as FacilityRow[];
-  const documents = (must(documentsRes, "documents") ?? []) as DocRow[];
+  const documents = filterByLoan((must(documentsRes, "documents") ?? []) as DocRow[], loan);
   const terms = (must(termsRes, "covenant_terms") ?? []) as TermsRow[];
   const nameOf = new Map(facilities.map((f) => [f.id, f.borrower_name]));
+  const loanName = loan ? (nameOf.get(loan) ?? null) : null;
   const approvedFor = (fid: string) => terms.find((t) => t.facility_id === fid) ?? null;
 
   const rows = documents.map((d) => ({
@@ -65,10 +74,17 @@ export default async function DocumentsPage() {
     <div className="space-y-12">
       <header className="max-w-prose space-y-1">
         <p className="text-label text-text-muted">Loan documentation</p>
-        <h1 className="text-title text-text">Documents</h1>
+        <h1 className="font-brand text-title text-text">Documents{loanName ? ` · ${loanName}` : ""}</h1>
         <p className="pt-1 text-body text-text-secondary">
           Access borrower documents and identify amendments that need to be reflected in approved covenant terms.
         </p>
+        {loan && (
+          <p className="pt-1">
+            <Link href="/documents" className="text-body text-text underline decoration-border-strong hover:decoration-text">
+              Show all loans
+            </Link>
+          </p>
+        )}
       </header>
 
       {needsReview.length > 0 && (
@@ -79,7 +95,7 @@ export default async function DocumentsPage() {
           </p>
           <ul className="space-y-2">
             {needsReview.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border border-l-2 border-l-code bg-surface px-4 py-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border border-l-2 border-l-code bg-surface px-4 py-3">
                 {/* The BORROWER leads: an analyst scanning this list is looking
                     for a loan, not for a document called "Amendment No. 2" —
                     which is what most of them are called. */}
@@ -92,7 +108,7 @@ export default async function DocumentsPage() {
                     Not incorporated into approved terms
                   </p>
                 </div>
-                <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-md border border-border-strong bg-surface px-3 py-1 text-body font-medium leading-5 text-text shadow-card hover:bg-surface-raised">
+                <Link href={`/facilities/${r.facility_id}/covenant-setup`} className="rounded-xl bg-mint px-3 py-1 text-body font-medium leading-5 text-text hover:bg-mint-hover">
                   Review impact
                 </Link>
               </li>
