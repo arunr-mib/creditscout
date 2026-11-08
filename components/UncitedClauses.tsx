@@ -98,11 +98,11 @@ export function UncitedClauses(props: {
                       onClick={() => onOpen(c)}
                       aria-pressed={selectedKey === key}
                       className={`block w-full rounded-md border p-3 text-left transition-colors duration-fast ease-out hover:bg-surface-raised ${
-                        selectedKey === key ? "border-model bg-surface-raised" : "border-border bg-surface"
+                        selectedKey === key ? "border-text bg-surface-raised" : "border-border bg-surface"
                       }`}
                     >
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-label text-model">{c.citation} ↗</span>
+                        <span className="font-mono text-label text-text">{c.citation} ↗</span>
                         {c.shown === false && (
                           <span className="rounded-sm bg-code-bg px-1 py-px font-mono text-badge text-code">
                             <span aria-hidden="true">⟡ </span>the model was not shown this clause

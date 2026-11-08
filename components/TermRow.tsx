@@ -6,7 +6,7 @@ import { PROBLEM_HEADLINE, WARNING_LABEL, type RowView } from "./termsReview";
  * One covenant term. The row's whole job is to show, without reading, WHO made
  * the value on it and WHETHER ITS CITATION HOLDS UP:
  *
- *   sky    "model proposed"    the CreditScout Agent produced this value
+ *   sky    "Proposed by CreditScout"    the CreditScout Agent produced this value
  *   slate  "analyst-corrected" a human changed it; the model's value stays beside it
  *   slate  "approved by"       a human stands behind it
  *   rose   a refusal           no citation, or a citation that does not support the value
@@ -65,7 +65,7 @@ export function TermRow(props: {
                     <span className="ml-2 inline-flex flex-wrap items-baseline gap-2">
                       <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
                       <span className="text-label text-text-muted">
-                        model proposed <span className="tabular-nums text-text-muted line-through">{original}</span>
+                        Proposed by CreditScout <span className="tabular-nums text-text-muted line-through">{original}</span>
                       </span>
                       {editedFields.includes(spec.field) && (
                         <button type="button" onClick={() => onUndo(spec.field)} className="text-label text-text-muted underline hover:text-text">
@@ -88,7 +88,7 @@ export function TermRow(props: {
             ) : edited ? (
               <span className="rounded-sm bg-human-bg px-1 py-px text-badge text-human">analyst-corrected</span>
             ) : (
-              entry && <AgentTag>model proposed</AgentTag>
+              entry && <AgentTag>Proposed by CreditScout</AgentTag>
             )}
           </div>
         )}

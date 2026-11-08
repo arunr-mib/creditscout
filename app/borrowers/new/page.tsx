@@ -21,7 +21,7 @@ export default function NewBorrowerPage() {
           paperwork before the work. The upload area appears here as soon as the
           borrower exists — the record has to exist before a document can hang
           off it, so creation stays the first action rather than a separate page. */}
-      <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <section className="rounded-xl border border-border bg-surface p-4 shadow-card">
         <NewBorrowerForm />
       </section>
     </div>

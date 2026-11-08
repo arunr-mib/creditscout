@@ -42,7 +42,7 @@ export function TermsDiffTable(props: {
   const proposedHead = proposedVersion ? `Proposed v${proposedVersion}` : "Proposed";
 
   return (
-    <section aria-label="What this proposal changes" className="rounded-lg border border-border bg-surface shadow-card">
+    <section aria-label="What this proposal changes" className="rounded-xl border border-border bg-surface shadow-card">
       <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-3">
         <h2 className="text-section text-text">What this proposal changes</h2>
         <p className="text-label text-text-secondary">{changeSummary(approved?.terms ?? null, rows)}</p>
@@ -121,7 +121,7 @@ function Table({
                   <button
                     type="button"
                     onClick={() => onOpenTerm(r.citeField as string)}
-                    className="text-label text-model-bright underline-offset-2 hover:underline"
+                    className="text-label text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
                   >
                     Open source
                   </button>

@@ -104,7 +104,7 @@ export function ClausePanel(props: {
               {inside ? (
                 <>
                   {para.slice(0, inside.s)}
-                  <mark className="border-l-2 border-model bg-model-bg py-px pl-1 text-text">{para.slice(inside.s, inside.e)}</mark>
+                  <mark className="border-l-2 border-text bg-agent-bg py-px pl-1 text-text">{para.slice(inside.s, inside.e)}</mark>
                   {para.slice(inside.e)}
                 </>
               ) : (
@@ -124,7 +124,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       aria-label="Source clause"
       // Leaves room for the pinned approve bar; a height that depends on the viewport has no token.
       style={{ maxHeight: "calc(100vh - 240px)" }}
-      className="sticky top-4 overflow-auto rounded-lg border border-border-strong bg-surface-raised p-4"
+      className="sticky top-4 overflow-auto rounded-2xl border border-border-strong bg-surface-raised p-4 shadow-raised"
     >
       {children}
     </aside>

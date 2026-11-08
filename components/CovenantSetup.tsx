@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { approveTerms } from "@/app/actions";
 import { ApproveBar, type ApprovalState, type OmissionCounts } from "./ApproveBar";
+import { AgentTag } from "./AgentTag";
 import { ClausePanel } from "./ClausePanel";
 import { ProposeTrace } from "./ProposeTrace";
 import { ReviewNotices } from "./ReviewNotices";
@@ -349,7 +350,7 @@ export function CovenantSetup(props: {
           <h2 className="text-card text-text">Documents on file</h2>
           <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
             <thead>
-              <tr className="text-label uppercase tracking-wide text-model-bright">
+              <tr className="text-label uppercase tracking-wide text-text-secondary">
                 <th className="pb-1 font-medium">Title</th>
                 <th className="pb-1 font-medium">Type</th>
                 <th className="pb-1 font-medium">Effective</th>
@@ -388,7 +389,7 @@ export function CovenantSetup(props: {
           ) : (
             <div className="mt-2 overflow-x-auto"><table className="w-full text-left text-body">
               <thead>
-                <tr className="text-label uppercase tracking-wide text-model-bright">
+                <tr className="text-label uppercase tracking-wide text-text-secondary">
                   <th className="pb-1 font-medium">Version</th>
                   <th className="pb-1 font-medium">Status</th>
                   <th className="pb-1 font-medium">Effective from</th>
@@ -457,7 +458,7 @@ export function CovenantSetup(props: {
             className={
               proposal
                 ? "h-8 rounded-md border border-border-strong px-4 text-body text-text hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
-                : "h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
+                : "h-8 rounded-md bg-mint px-4 text-body font-medium text-text hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
             }
           >
             {proposal || phase.kind === "not_found" || proposeError ? "Re-extract terms" : "Extract covenant terms"}
@@ -494,7 +495,7 @@ export function CovenantSetup(props: {
               The agent did not find a definition of the Debt Service Coverage Ratio, or a minimum, in the documents on
               file. Its reason:
             </p>
-            <p className="mt-2 border-l-2 border-model pl-3 text-body text-text">{phase.reason}</p>
+            <p className="mt-2 border-l-2 border-text pl-3 text-body text-text">{phase.reason}</p>
             <p className="mt-3 text-body text-text-secondary">
               No terms were created, and none are suggested: a value offered here could be accepted without being read.
               Resolve this manually. Check whether the agreement or an amendment is missing from the file, and read the
@@ -537,8 +538,8 @@ export function CovenantSetup(props: {
               </p>
             ) : (
               <p className="mt-1 text-body text-text-secondary">
-                <span className="rounded-sm bg-model-bg px-1 py-px text-badge text-model">model proposed</span> Extracted
-                by the agent from loan documents. Effective if you approve.
+                <AgentTag>Proposed by CreditScout</AgentTag> Extracted
+                by the CreditScout Agent from loan documents. Effective if you approve.
               </p>
             )}
           </div>

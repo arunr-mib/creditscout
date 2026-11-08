@@ -111,7 +111,7 @@ export function ApproveBar(props: {
       )}
 
       {confirming && (
-        <div role="dialog" aria-label="Confirm approval" className="mb-4 rounded-md border-2 border-model bg-surface p-4">
+        <div role="dialog" aria-label="Confirm approval" className="mb-4 rounded-md border-2 border-text bg-surface p-4">
           <p className="text-card text-text">
             Record {identity}
             {effective}?
@@ -135,7 +135,7 @@ export function ApproveBar(props: {
                 setConfirming(false);
                 onApprove();
               }}
-              className="h-8 rounded-md bg-model px-4 text-body font-medium text-bg"
+              className="h-8 rounded-md bg-mint px-4 text-body font-medium text-text hover:bg-mint-hover"
             >
               Confirm approval
             </button>
@@ -163,7 +163,7 @@ export function ApproveBar(props: {
               <button
                 type="button"
                 onClick={() => onApprover(props.signedInAs as string)}
-                className="text-label text-model-bright underline-offset-2 hover:underline"
+                className="text-label text-text underline decoration-border-strong underline-offset-2 hover:decoration-text"
               >
                 Use my name ({props.signedInAs})
               </button>
@@ -217,7 +217,7 @@ export function ApproveBar(props: {
             type="button"
             onClick={() => setConfirming(true)}
             disabled={disabled}
-            className="h-8 rounded-md bg-model px-4 text-body font-medium text-bg disabled:cursor-not-allowed disabled:opacity-40"
+            className="h-8 rounded-md bg-mint px-4 text-body font-medium text-text hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
           >
             {sending ? "Sending…" : uncheckedLists.length > 0 ? "Approve without a completeness check" : "Approve terms"}
           </button>

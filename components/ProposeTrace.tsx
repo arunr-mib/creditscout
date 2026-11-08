@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { AgentTag } from "@/components/AgentTag";
+
 /**
  * Live status while the definition agent reads. The house idiom is the step
  * trace (docs/design.md §5.5), whose rule is that it shows real steps arriving
@@ -24,9 +26,10 @@ export function ProposeTrace(props: { borrower: string; documents: string[] }) {
     <section aria-label="Proposing terms" aria-live="polite" className="rounded-md border border-border-strong bg-surface p-4">
       <h2 className="text-card text-text">The CreditScout Agent is extracting the covenant terms from your loan agreement</h2>
       <ol className="mt-3 space-y-3">
-        <li className="border-l-2 border-model pl-3">
+        <li className="border-l-2 border-agent pl-3">
           <p className="flex items-baseline gap-3">
-            <span className="text-body text-model-bright">definition_agent</span>
+            <span className="font-mono text-body text-text">definition_agent</span>
+            <AgentTag>CreditScout Agent</AgentTag>
             <span className="text-label tabular-nums text-text-muted">running · {seconds}s</span>
           </p>
           <p className="text-body text-text-secondary">

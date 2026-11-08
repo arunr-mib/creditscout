@@ -57,7 +57,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
         </header>
         <CovenantSetup {...props} />
         {step === "done" && (
-          <Link href="/" className="inline-flex rounded-md border border-border-strong px-4 py-2 text-body text-text transition-colors hover:border-model">View it in the portfolio</Link>
+          <Link href="/" className="inline-flex rounded-md border border-border-strong px-4 py-2 text-body text-text transition-colors hover:border-text">View it in the portfolio</Link>
         )}
       </div>
     );
@@ -103,7 +103,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
             {uploaded.map((d, i) => (
               <li key={`${d.title}-${i}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
                 <span className="text-body text-text">{d.title}</span>
-                <span className={`text-label ${d.doc_type === "agreement" ? "text-model-bright" : "text-text-muted"}`}>
+                <span className={`text-label ${d.doc_type === "agreement" ? "text-text" : "text-text-muted"}`}>
                   {DOC_TYPE_LABEL[d.doc_type ?? ""] ?? d.doc_type}
                 </span>
               </li>
@@ -113,7 +113,7 @@ export default async function OnboardingPage({ params, searchParams }: { params:
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-model bg-model text-bg hover:bg-model-bright"}`}>
+        <Link href={`/borrowers/${id}/onboarding?step=terms`} aria-disabled={derived === "documents"} className={`rounded-md border px-4 py-2 text-body font-medium leading-5 transition duration-fast ${derived === "documents" ? "pointer-events-none border-border text-text-muted opacity-40" : "border-mint bg-mint text-text hover:bg-mint-hover"}`}>
           Continue to terms review
         </Link>
         {derived === "documents" && (

@@ -54,7 +54,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   return (
     <article className="max-w-4xl space-y-4">
       <nav aria-label="Breadcrumb" className="text-label text-text-muted">
-        <Link href="/documents" className="underline-offset-2 hover:text-text hover:underline">
+        <Link href={`/documents?loan=${doc.facility_id}`} className="underline-offset-2 hover:text-text hover:underline">
           Documents
         </Link>
         <span aria-hidden="true" className="mx-2">/</span>

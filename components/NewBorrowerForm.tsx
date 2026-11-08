@@ -27,7 +27,7 @@ export function NewBorrowerForm() {
   const [created, setCreated] = useState<string | null>(null);
 
   const field =
-    "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text outline-none focus:border-model";
+    "rounded-md border border-border-strong bg-surface px-3 py-2 text-body text-text outline-none focus:border-text";
 
   return (
     <div className="space-y-6">
@@ -88,7 +88,7 @@ export function NewBorrowerForm() {
         <div className="flex flex-wrap items-center gap-4 border-t border-border pt-4">
           <Link
             href={`/borrowers/${created}/onboarding?step=terms`}
-            className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast hover:bg-model-bright"
+            className="rounded-md border border-mint bg-mint px-4 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast hover:bg-mint-hover"
           >
             Continue to terms review
           </Link>
