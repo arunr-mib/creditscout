@@ -64,8 +64,11 @@ function actionOf(row: PortfolioRow): PipelineCard["action"] {
     case "in_review":
     case "awaiting_docs":
       return "review";
+    case "investigating":
     case "investigation_paused":
-      return "open";
+      // The live run is driven by the casefile page, so a running or paused
+      // card must lead back to it. The card itself is the link; no button.
+      return row.casefileId ? "open" : null;
     case "decided":
       // Opening a decision needs a casefile to open.
       return row.casefileId ? "open" : null;

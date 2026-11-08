@@ -48,10 +48,10 @@ test("lane mapping: breach_investigate -> investigate / investigate", () => {
   assert.equal(card.note, null);
 });
 
-test("lane mapping: investigating -> working, no action", () => {
+test("lane mapping: investigating -> working, opens the casefile", () => {
   const { key, card } = laneOf({ status: "investigating", casefileId: "c1", exceptionStatus: "investigating" });
   assert.equal(key, "working");
-  assert.equal(card.action, null);
+  assert.equal(card.action, "open");
   assert.equal(card.note, null);
 });
 
