@@ -38,7 +38,7 @@ function dotAndSubline(row: PortfolioRow): { dot: RailDot; subline: string } {
   const withMin = (word: string): string => (min ? `${word} · min ${min}` : word);
   if (OPEN_BREACH.has(row.status)) return { dot: "breach", subline: withMin("Breach") };
   if (row.status === "decided") return { dot: "decided", subline: "Breach · decided" };
-  if (row.status === "compliant") return { dot: "pass", subline: withMin("Pass") };
+  if (row.status === "compliant") return { dot: "pass", subline: withMin("In compliance") };
   if (!row.hasApprovedTerms) return { dot: "terms", subline: "Terms awaiting approval" };
   return { dot: "untested", subline: withMin("Not tested") };
 }

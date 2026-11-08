@@ -271,8 +271,8 @@ The dark left nav rail is gone; its items became the header tabs.
 
 - About 260px, `surface-raised` mist. Heading "Portfolio · Q2 2026 · N loans",
   then every loan: status dot, borrower, computed DSCR (red when under that
-  loan's own minimum) and a second line ("Breach · min 1.25x", "Pass · min
-  1.35x", "Breach · decided", "Terms awaiting approval"). "+ New borrower" sits at
+  loan's own minimum) and a second line ("Breach · min 1.25x", "In compliance ·
+  min 1.35x", "Breach · decided", "Terms awaiting approval"). "+ New borrower" sits at
   the bottom. The selected loan is a solid forest row with white text.
 - Status dot, always read with its words: red is an open breach, green is a pass,
   grey is decided, **slate** (`human`) is terms awaiting approval (a person must

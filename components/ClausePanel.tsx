@@ -97,7 +97,7 @@ export function ClausePanel(props: {
           const inside = span && span.start < p.end && span.end > p.start ? { s: Math.max(span.start, p.start) - p.start, e: Math.min(span.end, p.end) - p.start } : null;
           const unrested = judged && !p.heading && !p.rested;
           return (
-            <div key={i} className={`whitespace-pre-wrap ${unrested ? "my-2 border-l-4 border-code bg-code-bg p-2" : "my-1"}`}>
+            <div key={i} className={`whitespace-pre-wrap ${unrested ? "my-2 rounded-sm border border-border-strong bg-surface p-2" : "my-1"}`}>
               {unrested && (
                 <span className="mb-1 block text-badge text-code-bright">Not linked to any proposed term</span>
               )}

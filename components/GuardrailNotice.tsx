@@ -1,8 +1,12 @@
 import { NOTICE_WEIGHT_LABEL, groupNotices, noticeHeading, noticesOf, type Notice } from "./casefileModel";
 
 /**
- * design.md 5.6 / 12.13. Amber, because a guardrail is code. A 3px left border
- * on the code background, one per note. Always visible and never collapsible:
+ * design.md 5.6 / 12.13. Amber, because a guardrail is code — carried by the
+ * heading text and the rule name, not by a coloured stripe or a tinted
+ * background (a left-accent bar reads as decorative, generated-dashboard
+ * styling; status here is a word, same rule as everywhere else in the app).
+ * One note per card. Always visible and never collapsible: these are the
+ * moments the system polices itself, and hiding them would hide
  * these are the moments the system polices itself, and hiding them would hide
  * the best evidence the product has. There is deliberately no disclosure and no
  * dismiss. No notes renders nothing, not an empty box.
@@ -32,7 +36,7 @@ export function GuardrailNotices({ notes }: { notes: unknown }) {
 
 export function GuardrailNotice({ notice }: { notice: Notice }) {
   return (
-    <div role="note" className="rounded-md border-l-4 border-code bg-code-bg p-3">
+    <div role="note" className="rounded-md border border-border-strong bg-surface p-3">
       <p className="text-body text-text-secondary">
         <strong className="font-semibold text-code-bright">
           <span aria-hidden="true">⟡ </span>

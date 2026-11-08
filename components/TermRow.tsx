@@ -119,7 +119,7 @@ export function TermRow(props: {
           {entry && problems.some((p) => p.kind !== "no_citation") && (
             <div>
               <p className="text-label text-text-muted">The quote it cites ({entry.citation}):</p>
-              <p className="mt-1 whitespace-pre-wrap border-l-2 border-danger pl-2 text-quote text-text-secondary">{entry.quote}</p>
+              <p className="mt-1 whitespace-pre-wrap border-l-2 border-border-strong pl-2 text-quote text-text-secondary">{entry.quote}</p>
             </div>
           )}
         </div>
@@ -133,7 +133,7 @@ export function TermRow(props: {
             </p>
           )}
           {notes.map((w, i) => (
-            <div key={`${w.code}-${i}`} className="rounded-sm border-l-4 border-code bg-code-bg p-2">
+            <div key={`${w.code}-${i}`} className="rounded-sm border border-border-strong bg-surface p-2">
               <p className="text-label uppercase tracking-wide text-code">
                 <span aria-hidden="true">⟡ </span>
                 {WARNING_LABEL[w.code] ?? (w.code === "definition_not_located" ? "Completeness not checked" : w.code)} · by code

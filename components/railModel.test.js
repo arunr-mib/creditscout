@@ -54,7 +54,7 @@ test("railItems: decided is its own dot and says so", () => {
 test("railItems: compliant is a pass, not below minimum", () => {
   const it = one({ status: "compliant", ours: 1.59, required: 1.35 });
   assert.equal(it.dot, "pass");
-  assert.equal(it.subline, "Pass · min 1.35x");
+  assert.equal(it.subline, "In compliance · min 1.35x");
   assert.equal(it.dscrText, "1.59x");
   assert.equal(it.belowMinimum, false);
 });

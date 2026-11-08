@@ -167,6 +167,35 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         />
       )}
 
+      {/* ------------------------------------------------- the decision block */}
+      {/* Directly under the recommendation, not after the findings: the point
+          of this screen is a decision, and an analyst should never have to
+          scroll past the evidence to reach it. The evidence is still one
+          scroll away for whoever wants it before deciding — it is not hidden,
+          only no longer first. */}
+      {mode === "history" && <Superseded currentId={view.supersededBy} />}
+      {mode === "not_ready" && <NotReady status={view.status} />}
+
+      {mode === "active" && (
+        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} borrower={view.borrower} period={view.period} />
+      )}
+      {mode === "read_only" && (
+        <Decided
+          casefileId={view.casefileId}
+          status={view.status}
+          review={view.review}
+          exceptionStatus={view.exceptionStatus}
+        />
+      )}
+      {SUPERSEDABLE_STATUSES.includes(view.status) && (
+        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
+      )}
+      {/* A failed investigation has no action bar and never held the live slot,
+          so without this the only way to retry was from another casefile. */}
+      {view.status === "failed" && (
+        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={false} failed />
+      )}
+
       {/* ---------------------------------- findings, evidence and attention */}
       {/* `missingEvidence` lives in this panel, so a `request` casefile with no
           steps, no amendments and no notes said NOTHING about what it was
@@ -189,29 +218,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           amendmentEffect={basis.amendmentEffect}
           documents={view.documents}
         />
-      )}
-
-      {mode === "history" && <Superseded currentId={view.supersededBy} />}
-      {mode === "not_ready" && <NotReady status={view.status} />}
-
-      {mode === "active" && (
-        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} borrower={view.borrower} period={view.period} />
-      )}
-      {mode === "read_only" && (
-        <Decided
-          casefileId={view.casefileId}
-          status={view.status}
-          review={view.review}
-          exceptionStatus={view.exceptionStatus}
-        />
-      )}
-      {SUPERSEDABLE_STATUSES.includes(view.status) && (
-        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
-      )}
-      {/* A failed investigation has no action bar and never held the live slot,
-          so without this the only way to retry was from another casefile. */}
-      {view.status === "failed" && (
-        <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={false} failed />
       )}
     </article>
   );

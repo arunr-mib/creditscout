@@ -120,7 +120,7 @@ export function UncitedClauses(props: {
                       )}
                     </button>
                     {flagged.map((w, i) => (
-                      <p key={i} className="mt-1 rounded-sm border-l-4 border-code bg-code-bg p-2 text-body text-text-secondary">
+                      <p key={i} className="mt-1 rounded-sm border border-border-strong bg-surface p-2 text-body text-text-secondary">
                         <span className="text-label text-code">
                           <span aria-hidden="true">⟡ </span>flagged by an automated check ·{" "}
                         </span>

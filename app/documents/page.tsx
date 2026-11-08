@@ -95,7 +95,7 @@ export default async function DocumentsPage({
           </p>
           <ul className="space-y-2">
             {needsReview.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border border-l-2 border-l-code bg-surface px-4 py-3">
+              <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong bg-surface px-4 py-3">
                 {/* The BORROWER leads: an analyst scanning this list is looking
                     for a loan, not for a document called "Amendment No. 2" —
                     which is what most of them are called. */}

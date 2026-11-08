@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CommandPalette } from "./CommandPalette";
+import { LogoMark } from "./LogoMark";
 import { TABS, activeTab } from "./railModel";
 import type { SearchItem } from "./searchModel";
 import { signOut } from "@/app/login/actions";
@@ -79,10 +80,13 @@ export function TopBar({
         <Link
           href="/"
           aria-label="CreditScout, Bank of Stoic — go to Exceptions"
-          className={`flex shrink-0 items-baseline gap-2 rounded-md ${HEADER_RING}`}
+          className={`flex shrink-0 items-center gap-2 rounded-md ${HEADER_RING}`}
         >
-          <span className="font-brand text-wordmark text-brand-on">CreditScout</span>
-          <span className="hidden text-label text-brand-on-2 sm:inline">Bank of Stoic</span>
+          <LogoMark className="h-6 w-6 shrink-0" />
+          <span className="flex items-baseline gap-2">
+            <span className="font-brand text-wordmark text-brand-on">CreditScout</span>
+            <span className="hidden text-label text-brand-on-2 sm:inline">Bank of Stoic</span>
+          </span>
         </Link>
 
         <nav aria-label="Sections" className="min-w-0 flex-1 overflow-x-auto">
