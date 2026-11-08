@@ -1,7 +1,7 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14, with a 2026-11-07 redesign entry at the top
 **Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
@@ -13,6 +13,48 @@ the evals and the data.
 ---
 
 ## 0. Current state — 2026-10-14 — START HERE
+
+### 0.-1 Update 2026-11-07 — the "Forest" redesign (UI only)
+
+After a demo, the owner's manager said the functionality was good but the UI
+"looks like a usual vibe-coded app". The signed-in workspace was restyled and
+re-laid-out. **Nothing about the agent, the calculator, the guardrails, the
+schema, the API routes, the eval harness or the oracle changed.** The rest of §0
+below (dated 2026-10-14) is still true except where it describes the look: the
+"Palette", "Typography" and "Queue" rows of §0.0 are superseded by this entry.
+
+| What | State |
+|---|---|
+| Where it is | Built on branch `arunr-mib/creditscout`, 10 build tasks, commits `docs(redesign)` / `feat(redesign)` |
+| **Production** | **Unchanged.** `https://credit-scout.vercel.app` still runs the old look. Production only changes on an explicit `vercel --prod`, and that waits for the owner to sign off the Vercel Preview walkthrough |
+| Spec | `docs/superpowers/specs/2026-11-07-forest-redesign-design.md` |
+| Plan | `docs/superpowers/plans/2026-11-07-forest-redesign.md` |
+| Mockups | `docs/design-mockups/2026-11-07-forest/` (open in a browser). `forest-sky-pipeline-and-case.html` is the approved direction |
+| Design system | `docs/design.md` rewritten (§1–§5, change log in §9) |
+
+**What changed for the analyst**
+
+- **Header band + tabs replace the dark left rail.** Tabs: Exceptions, Documents, Covenant terms, Lessons, Governance. Search (⌘K) and the avatar menu sit on the right.
+- **A collapsible portfolio rail** lists every loan with a status dot, its computed DSCR and a second line. `[` toggles it (not inside text fields); the choice is remembered in `localStorage` (`cs.rail.collapsed`) and overrides the per-tab defaults. On Documents and Covenant terms a click filters to the loan.
+- **The queue table is now a four-lane deal pipeline**: Needs investigating, CreditScout working (sky), Awaiting your decision, Decided. An `investigating` card links to its casefile, because the live run is driven by that page.
+- **Land and sky.** Sky (the gradient and the blue CreditScout tag) marks only what the agent produced. Mint marks only what you can click. Neither is a status. Amber, red and green keep their old meanings.
+- **Type:** Bricolage Grotesque for the UI, figures and dates (its tabular figures were checked in the browser); JetBrains Mono for identifiers; Inter only on `/welcome` and `/login`.
+
+**Decided during the build** (state these as settled)
+
+- Muted text is `#566D61`. The mockups' `#6E8679` fails WCAG AA (3.93:1).
+- Neutrals are CSS variables (`--c-*`). `theme-forest` on the workspace `<body>` switches them; `/welcome` and `/login` keep the classic values and teal. `lib/ui/palette.test.js` keeps `palette.ts` and `globals.css` in step and checks contrast.
+- The casefile identity line shows no loan id; the schema has no short loan code.
+- `components/workspaceTokens.test.js` fails if a retired teal or dark-shell class (`model*`, `sunken`, `night*`) appears in workspace code.
+
+**Next (owner)**
+
+- The Preview environment is missing 8 variables production has (spec §6). Copying them needs the owner's go-ahead.
+- Walk the Preview end to end: sign in, pipeline, investigate (watch it cross the sky lane), casefile, decide, documents, terms approval, onboarding, lessons, governance.
+- Then, and only then, `vercel --prod`.
+- The preview shares production's database and Foundry agent, so an investigation run there also appears on the live site.
+
+---
 
 ### 0.0 What changed since 2026-10-08
 

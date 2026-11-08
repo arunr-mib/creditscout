@@ -384,14 +384,16 @@ outcome accuracy + the memory effect.
 | Screen | Route | What it is for |
 |---|---|---|
 | Landing | `/welcome` | The one-line thesis; shared-credential demo gate |
-| **Credit Analysis Queue** | `/` | One table of every loan, 64px rows, **exactly one next action per row**; summary strip; filter tabs; search; the uploader below |
+| **Exceptions (pipeline)** | `/` | Four lanes: Needs investigating, CreditScout working, Awaiting your decision, Decided. **Exactly one next action per card**; counts summary; Run covenant tests; the document drop zone. Compliant and untested loans appear only in the portfolio rail |
 | **Onboarding** | `/borrowers/new`, `/borrowers/[id]/onboarding` | Flow A. **Step 1 carries the borrower's details AND the documents** — one primary action creates the borrower and uploads in a single gesture |
 | Covenant terms review | `/facilities/[id]/covenant-setup` | *What this proposal changes* (approved vN vs proposed vN+1, with sources), the review checklist, the terms beside their clauses, the approval bar |
 | **Casefile** | `/casefiles/[id]` | Recommendation card → findings (2/3) + evidence and outstanding items (1/3) → *Record your decision*. While an investigation runs, the same URL shows the live screen instead |
 | **Document** | `/documents/[id]` | The document as the agent read it — its indexed sections in order. The original file is not retained, and the page says so |
 | Governance | `/governance` | The Risk Officer's policy (human review locked) + the eval scoreboard |
 | Documents / Terms / Lessons | `/documents`, `/terms`, `/lessons` | Browse what is on file, every terms version, every lesson |
-| Global search | left rail | Borrowers, casefiles, documents, terms, lessons, pages |
+| Header tabs | every signed-in screen | Exceptions, Documents, Covenant terms, Lessons, Governance (replaces the old left NavRail) |
+| Portfolio rail | every signed-in screen, left | Every loan with status dot, computed DSCR and one line of state; collapsible (`[`); filters Documents and Covenant terms by loan |
+| Global search | header (⌘K) | Borrowers, casefiles, documents, terms, lessons, pages |
 
 ---
 

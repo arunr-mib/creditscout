@@ -13,7 +13,7 @@ A decision-support agent for commercial credit analysts investigating DSCR coven
 | File-by-file blueprint (LLD, features F0–F11) | `docs/engineering/implementation-specs.md` |
 | Product docs | `docs/prd.md`, `docs/prd-onepager.md`, `docs/mental-model.md` (flows, storyboard, screen inventory) |
 | Everything deferred, with reasons | `docs/parking-lot.md` |
-| Design tokens (light workspace, graphite shell, one teal accent) | `docs/design.md` |
+| Design tokens (forest header, portfolio rail, sky for the agent) | `docs/design.md` |
 | Diagrams — user flow + architecture | `docs/diagrams/` — **generated**; edit `generate.py` and re-run, never the SVG |
 | Eval harness + signed oracle | `evals/run.mjs`, `evals/grade.mjs`, `data/expected-values-template.csv` |
 | Original plan 1 (stale: six facilities, n8n, CommonJS) | `docs/superpowers/plans/2026-10-02-creditscout-deterministic-core.md` |
@@ -48,7 +48,8 @@ Azure AI Foundry Agent Service runs one orchestrator — the **CreditScout Agent
 - **The live eval is billable** (`npm run eval -- --live`): confirm with the owner before running; needs a local `npm run dev` for the agent's tool self-calls. Deterministic `npm run eval` is free.
 - **`.env` is gitignored.** Never commit it. `.env.example` lists what's needed.
 - **A route added to `AGENT_API_PATHS` must enforce `requireToolKey`.** That list is the only thing exempt from the session gate, and `lib/auth/gate.test.js` fails if the two drift apart. Everything else under `/api/*` is browser-facing and sits behind the cookie.
-- **Figures and dates are Inter with `tabular-nums`; monospace is for identifiers** (`calc_id`, citations, field paths, tool names). A verbatim clause is prose, not code. `docs/design.md` §3.
+- **Figures and dates are Bricolage Grotesque with `tabular-nums` (its tabular figures were verified); monospace is for identifiers** (`calc_id`, citations, field paths, tool names). Inter remains only on `/welcome` and `/login`. A verbatim clause is prose, not code. `docs/design.md` §3.
+- **Sky means the CreditScout Agent; mint means interactive; neither is a status.** Teal and the dark shell (`model*`, `sunken`, `night*`) are retired from the workspace. `docs/design.md` §1.
 - **Green means a verified pass or a recorded resolution** — never a screen state. On the live investigation screen **amber means exactly one thing**: the calculation cannot proceed.
 - **Tailwind's `spacing`, `fontSize` and `boxShadow` scales are REPLACED, not extended.** `h-10`, `mt-10` and `gap-10` do not exist and fail silently at render — the most common mistake made in this codebase.
 

@@ -4,11 +4,18 @@
 any screen. Never work from memory, and never invent a colour, spacing value or
 radius that isn't here.
 
-**Date:** 2026-10-14 · **Stack:** Next.js + Tailwind CSS
+**Date:** 2026-11-07 · **Stack:** Next.js + Tailwind CSS
 
-> **Rewritten 2026-10-13/14.** The workspace went from dark-native to a lit,
-> graphite-and-teal surface, and figures moved off monospace. Sections 2, 3 and
-> 4 below are the current truth; §9 records what changed and why.
+> **Rewritten 2026-11-07 for the "Forest" redesign.** Sections 1–5 are the
+> current truth. The analyst workspace moved from a graphite rail and one teal
+> accent to a forest header, a portfolio rail and a sky colour for the agent.
+> §9 records what changed and why. The spec is
+> `docs/superpowers/specs/2026-11-07-forest-redesign-design.md`; the mockups are
+> in `docs/design-mockups/2026-11-07-forest/`.
+>
+> **`/welcome` and `/login` were not redesigned.** They keep the classic
+> neutrals, the teal and the `night-*` tokens, and render exactly as before.
+> Everything below describes the signed-in workspace.
 
 ---
 
@@ -16,21 +23,41 @@ radius that isn't here.
 
 > **Hue carries meaning. It is never decoration.**
 
-CreditScout's entire claim is that a reasoning layer decides and a calculation
-layer computes. An analyst has to be able to see which is which **without
+CreditScout's claim is that a reasoning layer decides, a calculation layer
+computes and a human approves. An analyst has to see which is which **without
 reading a word**. That is what the colour system is for.
+
+The organising idea is two layers: **land** and **sky**.
+
+- **Land** is the bank's facts. Computed figures, approved terms, decisions and
+  navigation. Forest green, white and mist surfaces, mint for things you can
+  click, red for a breach.
+- **Sky** is the CreditScout Agent's work. A soft blue-to-aqua gradient and a
+  blue "CreditScout" tag with a dot.
 
 | Hue | Means | Never used for |
 |---|---|---|
-| **Teal** | A model did this — an agent step, a retrieved quote, a judgment. Also the product's one interaction colour | Anything deterministic; anything that means *compliant* |
-| **Amber** | **Code did this** — a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
-| **Slate / white** | A human did this, or must | System output |
+| **Sky** (gradient, or the blue agent tag) | The CreditScout Agent produced this, or is producing it | A status; a quoted document clause; a lesson chip |
+| **Mint** | You can act here. Primary buttons, the active tab, the avatar | A status. Not a pass, not a "done". Never text on white |
+| **Amber** | **Code did this**: a calculation, a guardrail, a policy decision | Decoration, warnings, "highlights" |
+| **Forest / mist / white** | The bank's facts, a human, navigation | System output |
 | **Red** | A breach, a failure, an escalation | General emphasis |
-| **Green** | Compliant, passing | Success toasts (use slate) |
+| **Green** | A verified pass or a recorded resolution | Branding, success toasts, a screen state |
+
+**Sky appears in exactly four places:**
+
+- the "CreditScout working" lane on the pipeline;
+- behind a recommendation (the recommendation card);
+- on agent and specialist steps in the live trace;
+- the CreditScout tag, on any text the agent produced.
+
+A quoted clause from a filed document is **not** sky. The agent retrieved it; it
+is the bank's evidence, so it stays on land.
 
 If you catch yourself reaching for amber because a number "feels important",
 stop. Amber means *a deterministic function produced this value and it is logged
-under a `calc_id`*. Diluting it breaks the product's core affordance.
+under a `calc_id`*. If you reach for mint to say "good", stop: mint is
+"clickable", and green is the only "good".
 
 **Every calculated figure in the UI carries its provenance**, e.g.
 `1.31 ⟡ computed by code · calc_a3f9`. A figure without provenance is a bug, not
@@ -40,51 +67,52 @@ a style choice.
 
 ## 2. Colour tokens
 
-**The analyst workspace is LIGHT.** It was dark-native through 2026-10-12; the
-rooms commercial credit analysts work in are lit, and the dark build read as a
-developer tool. The marketing pages and the nav rail stay dark on purpose and
-carry their own `night-*` set — they are light-on-dark surfaces and cannot
-borrow the tokens below.
+**The sources are `lib/ui/palette.ts` and `app/globals.css`.** `palette.ts`
+holds the values as plain data; `tailwind.config.ts` reads the brand set from it,
+and `globals.css` mirrors the neutrals as CSS variables. `lib/ui/palette.test.js`
+fails if the two drift apart, and it checks contrast. If this page and
+`palette.ts` ever disagree, `palette.ts` wins and this page is stale.
 
-### Surfaces — the workspace
+### Neutrals are CSS variables
 
-| Token | Hex | Use |
-|---|---|---|
-| `bg` | `#F7F9FA` | Page background |
-| `surface` | `#FFFFFF` | Cards, panels, table bodies |
-| `surface-raised` | `#F1F4F6` | Table headers, hovered rows, inset blocks |
-| `border` | `#C7D3DA` | Hairlines inside a panel |
-| `border-strong` | `#94A6B0` | A panel's own edge, and dividers that must read |
+The eight neutrals are `--c-*` variables. `:root` holds the **classic** values
+(used by `/welcome` and `/login`); the `theme-forest` class on the workspace
+`<body>` switches them to the forest values. A component writes `bg-surface`
+or `text-text-muted` and gets the right one for its page.
 
-Borders were two steps lighter until 2026-10-14. At `#DCE4E8` on `#F7F9FA` a
-card edge all but vanished and panels read as floating text.
-
-### Surfaces — the dark shell
-
-| Token | Hex | Use |
-|---|---|---|
-| `sunken` | `#182126` | The nav rail |
-| `night` | `#141C21` | Landing and login background |
-| `night-raised` | `#26373D` | Chips and counts on the rail |
-| `night-hover` | `#223136` | Hovered rail rows |
-| `night-text` / `night-secondary` / `night-muted` | `#F8FAFC` / `#CBD5E1` / `#9AAAB2` | Foregrounds on dark |
-| `night-border` / `night-border-strong` | `#2C3B41` / `#3E4F56` | Edges on dark |
-
-### Text
-
-| Token | Hex | Use | On white |
+| Token | Forest (workspace) | Classic (`/welcome`, `/login`) | Use |
 |---|---|---|---|
-| `text` | `#19282F` | Headings, primary values | 15.2:1 |
-| `text-secondary` | `#52646D` | Body copy | 7.0:1 |
-| `text-muted` | `#6B7C85` | Labels, captions, metadata (12px floor) | 4.7:1 |
+| `bg` | `#FFFFFF` | `#F7F9FA` | Page background |
+| `surface` | `#FFFFFF` | `#FFFFFF` | Cards, panels, table bodies |
+| `surface-raised` | `#EEF3EF` (mist) | `#F1F4F6` | Portfolio rail, pipeline lanes, table headers, quiet panels |
+| `border` | `#DCE6DF` | `#C7D3DA` | Hairlines |
+| `border-strong` | `#BFD0C5` | `#94A6B0` | A panel's own edge; dividers that must read |
+| `text` | `#0F2B22` (forest) | `#19282F` | Headings, primary values |
+| `text-secondary` | `#3E5A50` | `#52646D` | Body copy |
+| `text-muted` | `#566D61` | `#6B7C85` | Labels, captions, metadata (12px floor) |
 
-### Semantic
+**Muted text is `#566D61`, not the mockups' `#6E8679`.** The mockup value
+measured 3.93:1 on white and fails WCAG AA. `#566D61` clears 4.5:1. This was
+decided during the build.
+
+### Brand set (the forest header, mint, the agent)
+
+| Token | Hex | Use, and only this |
+|---|---|---|
+| `brand` | `#0F2B22` | The header band; the selected loan in the rail; the active stepper dot |
+| `brand-on` | `#FFFFFF` | Text on `brand` |
+| `brand-on-2` / `brand-on-3` | `#CFE3D6` / `#A9C7B5` | Secondary and tertiary text on `brand` |
+| `brand-danger` | `#FFB4A8` | A breach figure on `brand` (the selected rail row) |
+| `mint` | `#9BE7A9` | A **fill** for interactive things, with forest `text` on it. Hover `mint-hover` `#86DC97` |
+| `agent` | `#3D7FD6` | The dot on the agent tag; the left rule on an agent trace step |
+| `agent-ink` | `#123A6B` | Text on the agent tag, and agent purpose lines in the trace |
+| `agent-bg` | `#DCEBFF` | The agent tag's background |
+| `bg-sky` | `linear-gradient(160deg,#D6E8FF 0%,#C9ECEB 55%,#E4F6EE 100%)` | The agent surfaces in §1, nowhere else |
+
+### Semantic (unchanged by the redesign)
 
 | Token | Hex | Bg pair | Meaning |
 |---|---|---|---|
-| `model` | `#146C67` | `model-bg` `#E8F2F1` | Agent / model step — **and every interactive affordance** |
-| `model-bright` | `#105A56` | — | Model text on a light surface, links |
-| `model-night` | `#5EC2BA` | `model-night-bg` `#10302E` | The accent ON the dark shell |
 | `code` | `#B45309` | `code-bg` `#FFFBEB` | **Deterministic computation**, and the one unresolved review item |
 | `code-bright` | `#92400E` | — | Calculation headings, `calc_id` badges |
 | `human` | `#334155` | `human-bg` `#F1F5F9` | Approval, review, analyst action |
@@ -93,100 +121,189 @@ card edge all but vanished and panels read as floating text.
 | `success` | `#15803D` | `success-bg` `#E8F7EE` | Compliant, passing |
 | `success-strong` | `#156B37` | — | **Solid fill** of the resolve mark |
 
-Every value is re-derived for a light page, not inverted. The old dark `model`
-reads 2.98:1 on white, `code` 2.15, `success` 1.40 — all three would have
-failed.
+The `-bg` tints are contrast-bound, not taste: `success` on `success-bg` is badge
+text with about 0.3 of headroom over 4.5:1, and darkening the tints for looks
+took the success badge to 4.10 and the danger badge to 4.29. The `-strong` pair
+exists for the one element that carries no small text, the outcome mark on the
+recommendation card, where white reads 6.6:1 and 7.7:1.
 
-**The `-bg` tints are contrast-bound, not taste.** `success` on `success-bg` is
-badge text with about 0.3 of headroom over 4.5:1; darkening those tints for
-looks took the success badge to 4.10 and the danger badge to 4.29. They sit as
-deep as AA allows. The `-strong` pair exists for the one element that carries no
-small text — the outcome mark on the recommendation card — where white reads
-6.6:1 and 7.7:1.
+### Retired in the workspace
 
-**Teal is interaction AND model.** Green is reserved for a verified pass or a
-recorded resolution; a screen state such as "ready for analyst decision" is
-neutral, never green, or it reads as *compliant*.
+- **Teal (`model`, `model-bright`, `model-bg`, `model-night`, `model-night-bg`)
+  is retired.** Its two meanings split: *interactive* became **mint**, *the
+  agent did this* became **sky**.
+- **The dark shell (`sunken`, `night-*`) is retired from the workspace.** The
+  tokens still exist in `tailwind.config.ts` for `/welcome`, `/login` and
+  `components/Logo.tsx`, and nowhere else.
+- `components/workspaceTokens.test.js` fails if a retired class (`model*`,
+  `sunken`, `night*`) appears in workspace code.
 
 ### Accessibility
 
 - Body text must hit **4.5:1** against its surface; UI elements and large text
-  **3:1**. The pairs above clear it, but re-check any new combination.
-- **Never encode meaning in colour alone.** Every semantic colour is paired with
-  an icon or a text label — teal steps carry an agent name, amber values carry
-  `computed by code`, breaches carry the word *breach*. A colour-blind analyst
+  **3:1**. `palette.test.js` checks the pairs it knows about; re-check any new
+  combination by hand.
+- Mint is a fill with forest text on it (about 11:1). It is never text on white.
+- **Never encode meaning in colour alone.** Every status is a dot **plus a
+  word**; amber values carry `computed by code`; breaches carry the word
+  *breach*; agent content carries the CreditScout tag. A colour-blind analyst
   must read the same information.
-- Focus ring: `2px solid` `model` (`#146C67`), `offset 2px`, and on the dark
-  shell `model-night` (`#5EC2BA`). Visible on every interactive
-  element. Do not remove it.
+- Focus ring: `2px` ring, offset `2px`. In the workspace it is forest (`text`).
+  On the forest header band it is mint, with a forest offset. Visible on every
+  interactive element. Do not remove it.
 
 ---
 
 ## 3. Typography
 
-One family, Inter, across the product. A narrow scale, and nothing off it — the
-Tailwind `fontSize` scale is **replaced**, so an off-scale class does not exist.
+Three faces, each with one job. A narrow scale, and nothing off it: the Tailwind
+`fontSize` scale is **replaced**, so an off-scale class does not exist.
+
+| Face | Where | Why |
+|---|---|---|
+| **Bricolage Grotesque** (`next/font`) | All UI text and display in the workspace; the wordmark (800); figures and dates | The brand face. Headings 800 with slightly negative tracking; body 400/500 |
+| **JetBrains Mono** | Identifiers only | Things you would retype |
+| **Inter** | `/welcome` and `/login` only | Those pages were not redesigned |
 
 | Role | Token | Size / Line | Weight |
 |---|---|---|---|
 | Display (landing hero **only**) | `text-display` | 56 / 58 | 600 |
+| Big figure (DSCR on a casefile) | `text-figure` | 34 / 38 | 800 |
+| Compact figure (DSCR on a card) | `text-figure-sm` | 24 / 28 | 800 |
 | Page title | `text-title` | 28 / 34 | 700 |
 | Section heading | `text-section` | 20 / 28 | 600 |
 | Card title | `text-card` | 16 / 24 | 600 |
+| Wordmark | `text-wordmark` | 19 / 24 | 800 |
 | Body | `text-body` | 14 / 22 | 400 |
 | Numeric value | `text-num` | 14 / 20 | 500 |
 | Quoted clause | `text-quote` | 13 / 21 | 400 |
 | Label / caption | `text-label` | 12 / 16 | 500 |
 | Badge | `text-badge` | 11 / 16 | 500 |
 
-**The numeral rule, rewritten 2026-10-14:**
+**The numeral rule, updated 2026-11-07:**
 
-1. **Every financial figure and date is set in Inter with `tabular-nums`.**
-   Columns still align — that is what tabular numerals are for — without the
-   product looking like a terminal. A covenant figure in monospace reads as a
-   machine's output, which is the opposite of what this screen claims.
+1. **Every financial figure and date is set in Bricolage Grotesque with
+   `tabular-nums`.** The spec asked the builder to verify that Bricolage's
+   tabular figures work; they were checked in the browser and every digit has the
+   same width, so columns align. (In the workspace, `.tabular-nums` switches the
+   font to `--font-figure`, which is Bricolage.) The fallback to Inter was not
+   needed. The 2026-10-14 rule still holds: figures are never monospace.
 2. **Monospace is reserved for things you would retype**: `calc_id`, citations
    (`CA §7.11`), rule names, field paths (`numerator.addbacks[0].cap`), tool
    names, credentials, a key cap.
-3. **A verbatim clause quote is NOT monospace.** It is prose — `text-quote`,
-   with the cited span highlighted. Setting a covenant in the same face as a
-   stack trace made the one artifact an analyst must actually read look like a
-   log.
-
-Before this pass the app ran 90 `font-mono` usages against 14 `tabular-nums`,
-split by screen: queue DSCRs monospace, casefile DSCRs proportional.
+3. **A verbatim clause quote is NOT monospace.** It is prose, `text-quote`, with
+   the cited span highlighted.
 
 ## 4. Spacing, radius, elevation
 
 **4px base scale.** The Tailwind `spacing` scale is **replaced**, so only these
 exist: `0, px, 1 (4px), 2 (8px), 3 (12px), 4 (16px), 6 (24px), 8 (32px),
-12 (48px), 16 (64px)`. `h-10`, `mt-10` and `gap-10` are not classes — they fail
+12 (48px), 16 (64px)`. `h-10`, `mt-10` and `gap-10` are not classes. They fail
 silently at render, which is the single most common mistake made in this
 codebase.
 
+### Shapes
+
 | Radius | Value | Use |
 |---|---|---|
-| `sm` | 4px | Badges, chips |
-| `md` | 8px | Cards, inputs, buttons |
-| `lg` | 12px | Modals, side panels |
+| `sm` | 4px | Badges, chips, the headroom bar |
+| `md` | 8px | Inputs, small buttons |
+| `lg` | 12px | Buttons, modals, side panels |
+| `xl` | 14px | Cards, selected rail rows |
+| `2xl` | 18px | Pipeline lanes, the recommendation card, dialogs |
 
-**Elevation is a border first, a hairline shadow second.** On the old dark page
-shadows read as mud and the scale was `none`. On a lit page a 1px border alone
-reads flat, so the scale came back — deliberately small, two steps:
+- **No pill tags for status.** Status is a coloured **dot plus a word**.
+  (The header tabs and avatar are fully round because they are controls.)
+- **Depth comes from tone** (mist against white) and hairlines, not shadows.
+
+### Elevation
 
 | Token | Use |
 |---|---|
-| `shadow-card` | Every panel. `0 1px 2px / 0 1px 3px` at 4–6% |
-| `shadow-raised` | Modals and popovers only |
+| `shadow-card` | A panel that needs to lift off the page. `0 1px 2px / 0 1px 3px` at 4–6% |
+| `shadow-raised` | Menus, the command palette, modals and popovers only |
 
-A big diffuse shadow is the other half of the generated-template look. There is
-no third step and there will not be one.
+The scale is two steps. A big diffuse shadow is half of the generated-template
+look. There is no third step and there will not be one.
 
-Layout: 1280px max content width, 24px page gutter, 16px grid gap.
+Layout: 1280px max content width (`max-w-content`), 24–32px page gutter, 16px
+grid gap. Fixed sizes added to the config: `w-rail` 260px, `w-rail-collapsed`
+44px, `h-header` 52px.
 
 ---
 
-## 5. Components
+## 5. The shell and its components
+
+### 5.0 The shell (every signed-in screen)
+
+```
+┌──────── forest header: wordmark · tabs · search · avatar ────────┐
+├────────────┬─────────────────────────────────────────────────────┤
+│ Portfolio  │                                                     │
+│ rail       │  page content                                       │
+│ (collapses)│                                                     │
+└────────────┴─────────────────────────────────────────────────────┘
+```
+
+The dark left nav rail is gone; its items became the header tabs.
+
+**Header** (`components/TopBar.tsx`)
+
+- 52px, full width, `brand` forest, with faint survey-map contour lines behind
+  the content (`lib/ui/contours.ts`; decoration only, `aria-hidden`).
+- Left: the wordmark **CreditScout** (Bricolage 800) and "Bank of Stoic" small.
+- Then the **section tabs**: Exceptions · Documents · Covenant terms · Lessons ·
+  Governance. The active tab is a mint fill with forest text. A small count may
+  sit on a tab. Below `md` the tabs scroll sideways.
+- Right: the search field (opens the command palette, ⌘K) and the avatar (a mint
+  circle with the analyst's initials, which opens the account menu).
+
+**Portfolio rail** (`components/PortfolioRail.tsx`, `components/railModel.ts`)
+
+- About 260px, `surface-raised` mist. Heading "Portfolio · Q2 2026 · N loans",
+  then every loan: status dot, borrower, computed DSCR (red when under that
+  loan's own minimum) and a second line ("Breach · min 1.25x", "Pass · min
+  1.35x", "Breach · decided", "Terms awaiting approval"). "+ New borrower" sits at
+  the bottom. The selected loan is a solid forest row with white text.
+- Status dot, always read with its words: red is an open breach, green is a pass,
+  grey is decided, amber is terms awaiting approval, a hollow grey ring is not
+  tested. On the selected (forest) row the dots use light variants; a pass keeps
+  its green.
+- **Clicking a loan** opens its current casefile; if it has none, its covenant
+  setup. On **Documents** and **Covenant terms** it instead filters that page to
+  the loan (`?loan=`), and "All loans" at the top clears the filter.
+- **Collapse rules.** A control collapses the rail to a 44px strip with one dot
+  per loan (hover shows name and DSCR). The **`[` key** toggles it, except while
+  typing in a text field. The analyst's choice is remembered in `localStorage`
+  (`cs.rail.collapsed`) and, once set, **overrides the per-tab defaults**.
+  Defaults: open on Exceptions, Documents, Covenant terms, casefiles, onboarding
+  and covenant setup; collapsed on Lessons and Governance. Below `md` the rail is
+  always the strip.
+
+### 5.0.1 The pipeline (Exceptions, `/`)
+
+(`components/Pipeline.tsx`, `PipelineCard.tsx`, `pipelineModel.ts`.) Replaces the
+old queue table. Four lanes, left to right, driven by the existing
+`portfolioModel` statuses:
+
+| Lane | Holds | Card action |
+|---|---|---|
+| **Needs investigating** | `breach_investigate` (a reopened one keeps its marker) | Investigate |
+| **CreditScout working** (the **sky** lane) | `investigating`, `investigation_paused` | None. The whole card links to its casefile, where the live run is driven. Shows the latest steps and the paused notice |
+| **Awaiting your decision** | `in_review`; `awaiting_docs`, labelled "Held for borrower documents" | Review |
+| **Decided** | `decided` | Opens the casefile, card quieter |
+
+- A card shows the borrower, the computed DSCR large (red when under the loan's
+  own minimum), a **headroom bar** with a tick at that loan's own minimum, "min X
+  · reported Y", the CreditScout tag with a one-line recommendation when one
+  exists, and **one** next action.
+- The bar puts the minimum at its midpoint, so a fill short of the tick is a
+  breach whatever the minimum is. It is never a constant.
+- Compliant and not-tested loans are **not** in the pipeline. They live in the
+  rail only.
+- An empty lane is a dashed outline and one plain sentence.
+- While any card is in the working lane the page re-reads its data every few
+  seconds, and stops when the lane empties.
 
 ### 5.1 Recommendation badge
 
@@ -197,93 +314,90 @@ Layout: 1280px max content width, 24px page gutter, 16px grid gap.
 | `escalate` | `danger` | ↑ |
 | `abstain` | `text-muted` | — |
 
-Pill, `radius-sm`, 12px uppercase, letter-spacing 0.5px. **`abstain` is
-deliberately grey, not red** — abstaining is correct behaviour, not a failure,
-and colouring it as an error would train analysts to see caution as malfunction.
+12px uppercase, letter-spacing 0.5px. **`abstain` is deliberately grey, not
+red**: abstaining is correct behaviour, not a failure.
 
 ### 5.2 Calculated value
 
 ```
 ┌──────────────────────────────────┐
-│  DSCR   1.31  ⟡ code · calc_a3f9 │   ← amber value, mono, badge
+│  DSCR   1.31  ⟡ code · calc_a3f9 │   ← amber value, badge
 └──────────────────────────────────┘
 ```
-Value in `code-bright`, Inter with `tabular-nums`; badge in `code` on `code-bg` at 11px. The
-`calc_id` is clickable and opens the calculation log for that computation.
+Value in `code-bright`, Bricolage with `tabular-nums`; badge in `code` on
+`code-bg` at 11px, with the `calc_id` in monospace. The `calc_id` is clickable
+and opens the calculation log for that computation.
 
 ### 5.3 Citation chip
 
-Inline, `model` on `model-bg`, `radius-sm`, 12px, **monospace** — a citation is
-an identifier: `CA §7.11 ↗`. Clicking opens the clause panel. **A claim without a chip must not render** —
-if the data lacks a citation that is a guardrail failure and should surface as
-one, not render silently.
+Inline, `radius-sm`, 12px, **monospace** (a citation is an identifier): `CA §7.11
+↗`. It is interactive, so it takes forest ink on a strong hairline border; when
+selected it fills `surface-raised`. Clicking opens the clause panel. **A claim
+without a chip must not render**; a missing citation shows a red `no citation`
+chip instead.
 
 ### 5.4 Clause panel
 
-Right-hand drawer, 480px, `surface-raised`, `radius-lg`. Document title and
-section as header; full chunk text in **Inter** (`text-quote`) — a covenant is
-prose, not code; **the quoted span highlighted with `model-bg` and a 2px `model`
-left border**. The analyst's job here
-is a two-second verification — the highlight is the whole point.
+Right-hand drawer, 480px (`max-w-panel`), `surface-raised`, `radius-lg`.
+Document title and section as header; full chunk text in `text-quote` (prose, not
+code); the quoted span highlighted. The analyst's job here is a two-second
+verification, so the highlight is the whole point. The clause is the bank's
+evidence, so it is **not** sky.
 
 ### 5.5 Step trace
 
 Vertical timeline, one row per step, polled every 1s.
 
 ```
- ①  definition_agent        teal        2.3s
+ ①  definition_agent        sky       2.3s
  │   mapped DSCR terms from CA §1.01
  ②  dscr_calculator         AMBER     0.1s
  │   1.12 — below 1.25 threshold
- ③  research_agent          teal        4.1s
+ ③  research_agent          sky       4.1s
  │   found Amendment No. 2 §3(a)
  ④  dscr_calculator         AMBER     0.1s
      1.31 — passes
 ```
 
-Agent steps teal, calculator steps amber. **The alternation is the product
-demo** — it shows reasoning and computation interleaving, which is the thesis
-made visible. Active step pulses `model-bright`; completed steps settle to
-`text-secondary`.
+Agent and specialist steps take the sky treatment: a left rule in `agent`, the
+CreditScout tag, purpose lines in `agent-ink`. Calculator steps are amber.
+**The alternation is the product demo.** It shows reasoning and computation
+interleaving. Completed steps settle to `text-secondary`. Amber on the live
+investigation screen still means exactly one thing: the calculation cannot
+proceed.
 
 ### 5.6 Guardrail notice
 
-`code`-bordered callout with a 3px left border on `#3B2A0A`:
+An amber callout with a 4px left border (`border-code` on `code-bg`):
 
 > **⟡ Guardrail · forced abstain** — "1.47" appears in the explanation but
 > matches no calculation in this casefile and no quoted figure.
 
 Amber because **a guardrail is code**. Always visible, never collapsed by
-default. These are the moments that prove the system polices itself — hiding
-them would be hiding the best evidence the product has.
+default.
 
 ### 5.7 Buttons
 
 | Variant | Fill | Text | Use |
 |---|---|---|---|
-| Primary | `model` `#146C67` | `bg` | Approve, Investigate, Run test |
+| Primary | `mint` (hover `mint-hover`) | forest `text` | Approve, Investigate, Run test |
 | Secondary | transparent, `border-strong` | `text` | Override, Request docs |
 | Danger | transparent, `danger` border | `danger` | Escalate |
 
-Height 36px, padding 16px, `radius-md`, 14px/500. Disabled: 40% opacity,
+`radius-lg`, 14px/500, 8px × 12–16px padding. Disabled: 40% opacity,
 `cursor: not-allowed`.
 
-**Two button colours in a row of actions, and they mean something.** Teal
-(`model`) is reserved for *doing work* — Run test, Investigate. Beige
-(`human`) is for *opening something* — Review, View decision, Review terms. A
-third colour in the same column would make the distinction decorative. Where a
-table column holds one action per row, give the cell a fixed width and stretch
-every child to fill it: actions of different widths read as different weights.
-Note that a button wrapped for a disabled-reason tooltip needs the wrapper
-stretched too, not just the `<button>`.
+**Mint is "you can click this", never "this is good".** There is one primary
+button per next action. Where a table column holds one action per row, give the
+cell a fixed width and stretch every child to fill it. A button wrapped for a
+disabled-reason tooltip needs the wrapper stretched too.
 
 ### 5.8 Data table
 
-`surface` background, `border` row dividers, 40px rows. Column headers are
-12px in `model-bright` on a `model-bg/50` wash — the header row is the one
-element that repeats on every screen, so it is where the brand accent earns its
-keep. Numeric columns **right-aligned, Inter, `tabular-nums`**. Hover
-`surface-raised`. Status via badge, never via row tint.
+`surface` background, `border` row dividers. Column headers are 12px uppercase
+`text-muted` on `surface-raised`. Numeric columns **right-aligned, Bricolage,
+`tabular-nums`**. Hover `surface-raised`. Status via dot and word, never via row
+tint.
 
 ### 5.9 Locked policy value
 
@@ -291,8 +405,16 @@ keep. Numeric columns **right-aligned, Inter, `tabular-nums`**. Hover
 require_human_review   true   🔒 locked
 ```
 `text-muted` with a lock glyph and `cursor: not-allowed`. **Renders as
-structurally impossible to change, not merely disabled** — this is a regulatory
+structurally impossible to change, not merely disabled**: this is a regulatory
 boundary and the UI should say so.
+
+### 5.10 The CreditScout tag
+
+(`components/AgentTag.tsx`.) A small chip: `agent-bg` background, `agent-ink`
+text, an `agent` dot, `radius-sm`, 11px. It marks what the CreditScout Agent (or
+a specialist it called) did or said: "CreditScout recommends", "Investigating",
+"Proposed by CreditScout", "Specialist model", the seen-similar count. It is
+never a status and never a control.
 
 ---
 
@@ -315,15 +437,18 @@ Respect `prefers-reduced-motion`: drop transforms, keep opacity.
 
 ## 7. Screen layouts
 
+Every screen sits in the shell of §5.0. The rail is open by default except on Lessons and Governance.
+
 | Screen | Layout |
 |---|---|
-| **Credit Analysis Queue** | Period line → title + two actions → summary strip → filter tabs + search → one table, 64px rows. Columns: borrower (+ industry, terms version), computed DSCR, reported DSCR, minimum, covenant test result, review status, **next action** (exactly one button). The uploader sits below the table |
-| **Live investigation** | Breadcrumb + *Back to queue* → title + ONE status badge → "Original test result" strip (calculated / minimum / shortfall / terms version) → amber notice naming the single blocking issue → 65/35 split: investigation timeline left, pending recommendation + evidence right |
-| **Casefile review** | Breadcrumb → title + one neutral status pill → **recommendation card in four bands** (eyebrow + mark + headline + one sentence; three facts; one outstanding line; the agent's reasoning) → 2/3 findings + 1/3 evidence and outstanding items → *Record your decision* |
+| **Exceptions** (`/`) | The shell (§5.0) → period line, **Run covenant tests**, the counts summary and the document drop zone → the four-lane **pipeline** (§5.0.1). Each card carries exactly one next action |
+| **Live investigation** | Breadcrumb *← Pipeline* → title + ONE status badge → "Original test result" strip (calculated / minimum / shortfall / terms version) → amber notice naming the single blocking issue → 65/35 split: investigation timeline left, pending recommendation + evidence right |
+| **Casefile review** | Breadcrumb *← Pipeline* → identity line (period · terms version · state; **no loan id**, the schema has no short loan code) → borrower → **recommendation card on the sky** with the CreditScout tag (eyebrow + mark + headline + one sentence; three facts; one outstanding line; the agent's reasoning) → 2/3 findings + 1/3 evidence and outstanding items → *Record your decision* |
 | **Covenant terms review** | Header names the decision and the version → *What this proposal changes* (Term / Approved vN / Proposed vN+1 / Source) → review checklist grouped by consequence → proposed terms left, source clause right → compact approval bar |
 | **Documents** | Search → borrower and type filters → *Upload documents*. Table: document, borrower, type, **relevant date** (named for the type), terms review state. A title opens the indexed document |
 | **Onboarding** | Stepper (Borrower & documents → Review terms → Complete). Step 1 carries the name fields **and** the uploader, with one primary action that creates the borrower and uploads in a single gesture |
-| **Governance** | Investigation limits + enforcement rules + eval scoreboard (cold vs warm, with the run's date and n) |
+| **Lessons** | Rail collapsed by default |
+| **Governance** | Rail collapsed by default. Investigation limits + enforcement rules + eval scoreboard (cold vs warm, with the run's date and n) |
 
 ## 8. Writing style in the UI
 
@@ -354,13 +479,48 @@ Respect `prefers-reduced-motion`: drop transforms, keep opacity.
   resolution; "ready for analyst decision" is neutral.
 - Don't use a spacing or type class that is not in §3/§4 — the scales are
   replaced, so it will silently not exist.
+- Don't use sky for a status, a quoted document clause or a lesson chip. Sky is
+  the CreditScout Agent's own content (§1).
+- Don't use mint as a status or as text on white. It means "you can click this".
+- Don't bring teal (`model*`) or the dark shell (`sunken`, `night*`) back into
+  the workspace. `components/workspaceTokens.test.js` will fail.
+- Don't hard-code a neutral hex. Use the token, so the page's theme applies.
 
 ### Superseded 2026-10-13
 
 > *"Don't add a light theme. There is no light theme in the MVP."*
 
-The workspace IS the light theme now. The dark tokens survive as the `night-*`
-set for the nav rail and the marketing pages, and nothing else.
+The workspace IS the light theme now. *(Updated 2026-11-07: the `night-*` set no
+longer serves a nav rail. It survives for `/welcome`, `/login` and the logo.)*
+
+### Change log
+
+**2026-11-07 — the "Forest" redesign.** What changed:
+
+- **Teal retired.** "Teal = a model did this, and = interactive" split in two:
+  interactive became **mint**, the agent became **sky** (the land / sky rule, §1).
+- **The dark graphite nav rail is gone.** A forest header band with section tabs,
+  plus a collapsible portfolio rail, replaced it (§5.0).
+- **The queue table is now a four-lane pipeline** (§5.0.1).
+- **Type moved to Bricolage Grotesque**, including figures and dates (checked: its
+  tabular figures align). Inter stays only on `/welcome` and `/login`. JetBrains
+  Mono stays for identifiers (§3).
+- **Neutrals became CSS variables** so the workspace and the two public pages
+  can differ. `lib/ui/palette.ts` is the source; `palette.test.js` keeps it and
+  `globals.css` in step.
+- **Muted text darkened to `#566D61`** (the mockup's `#6E8679` was 3.93:1).
+- **Shapes** gained 14px and 18px radii; status is a dot and a word, not a pill.
+
+**Why:** after a demo, the owner's manager said the functionality was good but the
+UI "looks like a usual vibe-coded app". The old look (dark left rail, one teal
+accent, Inter, rounded white cards, pill badges) is the default of most AI-built
+dashboards. The redesign had to look designed for a bank while keeping every
+behaviour and every traceability rule.
+
+**What did not change:** the amber, red and green meanings; the replaced
+spacing / font-size / shadow scales; provenance on every figure; and
+`/welcome` and `/login`. Production is unchanged until the owner signs off the
+Vercel Preview walkthrough.
 
 ---
 
@@ -374,14 +534,16 @@ must therefore be enforced by `/design-system` at review time.*
 
 | Rule | How |
 |---|---|
-| Colour palette | All 18 colours are named tokens. A raw hex in a component is a review failure. |
-| Type scale | `fontSize` is **replaced**, not extended: `title`, `section`, `card`, `body`, `label`, `num`, `quote`, `badge` — each with its line height and weight baked in. |
+| Colour palette | Every colour is a named token. Neutrals are `--c-*` CSS variables switched by `theme-forest`; the brand set comes from `lib/ui/palette.ts`. A raw hex in a component is a review failure. |
+| Type scale | `fontSize` is **replaced**, not extended: `title`, `section`, `card`, `body`, `label`, `num`, `quote`, `badge`, plus `figure`, `figure-sm` and `wordmark` — each with its line height and weight baked in. |
 | Spacing scale | `spacing` is **replaced** with only `4,8,12,16,24,32,48,64` (plus `0`/`px`). An off-scale value fails to compile a class. |
-| No shadows | `boxShadow` is replaced with `{ none }`. `shadow-lg` no longer exists. |
-| Radii | `sm`/`md`/`lg` = 4/8/12px. |
+| Shadows | `boxShadow` is replaced with `none`, `card` and `raised`. `shadow-lg` does not exist. |
+| Radii | `sm`/`md`/`lg`/`xl`/`2xl` = 4/8/12/14/18px. |
 | Motion durations | `fast`/`panel`/`step` = 120/200/240ms, plus the panel easing curve. |
-| Monospace tabular figures | `.font-mono` sets `font-variant-numeric: tabular-nums` in `globals.css`. |
-| Focus rings | Global `:focus-visible` rule; cannot be dropped per-component without overriding it visibly. |
+| Tabular figures | `.font-mono` sets `font-variant-numeric: tabular-nums` in `globals.css`; in the workspace `.tabular-nums` also switches to the figure face. |
+| Focus rings | Global `:focus-visible` rule (forest in the workspace, mint on the header); cannot be dropped per-component without overriding it visibly. |
+| Retired tokens | `components/workspaceTokens.test.js` fails on `model*`, `sunken` or `night*` in workspace code. |
+| Palette and contrast | `lib/ui/palette.test.js` keeps `palette.ts` and `globals.css` in step and checks contrast. |
 | Reduced motion | Global `@media (prefers-reduced-motion)` block. |
 
 ### NOT expressible as tokens — must be caught at review
@@ -441,6 +603,13 @@ icon alone.
 only. Where a component carries a product rule, the rule is stated with it —
 those are the ones that get invented wrongly under time pressure.*
 
+> **Updated 2026-11-07.** The product rules below stand. The token names were
+> written for the teal system and are translated like this: `model` / teal for
+> *interactive* is now **forest ink or mint** (§5.3, §5.7); `model` for *the
+> agent* is now **sky and the CreditScout tag** (§5.10); and "mono" on a figure
+> now means Bricolage with `tabular-nums` (§3). Monospace stays on identifiers.
+> `model*` classes must not appear in workspace code.
+
 ### 12.1 `TestResultCard` — one quarterly test
 
 `surface` card, `rounded-md`, `border-border`. The spine of the portfolio screen.
@@ -453,8 +622,8 @@ OUR DSCR  1.12 ⟡ computed by code · calc_7b2     THEIRS  1.12     Δ 0.00
 
 | Element | Token | Rule |
 |---|---|---|
-| **Our** DSCR | `text-code-bright` mono + provenance badge | Always first, always left of theirs. **Ours decides; theirs is evidence.** |
-| Their DSCR | `text-text-secondary` mono | Never amber — a borrower is not our calculation |
+| **Our** DSCR | `text-code-bright` tabular + provenance badge | Always first, always left of theirs. **Ours decides; theirs is evidence.** |
+| Their DSCR | `text-text-secondary` tabular | Never amber — a borrower is not our calculation |
 | Verdict · compliant | `text-success` | |
 | Verdict · variance | `text-text` + `VarianceBadge` | Not an alarm. The conclusion stands. |
 | Verdict · breach | `text-danger`, `border-danger` left edge 3px | |
@@ -464,7 +633,7 @@ OUR DSCR  1.12 ⟡ computed by code · calc_7b2     THEIRS  1.12     Δ 0.00
 
 ### 12.2 `VarianceBadge`
 
-Inline pill, `rounded-sm`, `text-badge` mono. Shows the **signed** delta.
+Inline pill, `rounded-sm`, `text-badge` tabular. Shows the **signed** delta.
 
 | State | Token | Shows |
 |---|---|---|
@@ -476,7 +645,7 @@ Inline pill, `rounded-sm`, `text-badge` mono. Shows the **signed** delta.
 
 ### 12.3 `SeenSimilarBadge`
 
-Teal pill: `text-model` on `bg-model-bg`, `rounded-sm`, `text-badge`. Reads `seen similar · 2 prior cases`.
+The CreditScout tag (§5.10): `rounded-sm`, `text-badge`. The lessons come from analyst reviews the agent was shown, so it is agent content. Reads `seen similar · 2 prior cases`.
 
 **Rule:** renders only when at least one lesson matched. **Never renders empty or as "0 prior cases"** — an empty memory badge implies the feature is broken rather than new.
 
@@ -487,7 +656,7 @@ Dropzone, `border-strong` dashed, `rounded-md`, `p-6`.
 | State | Visual |
 |---|---|
 | Idle | `text-text-muted`, "Drop the quarterly package" |
-| Dragover | border → `border-model`, bg → `bg-model-bg` |
+| Dragover | border → `border-text`, bg → `bg-surface-raised` |
 | Uploading | step-duration progress, no shimmer |
 | Success | slate toast, `12 sections indexed` — **not green**; green means *compliant* |
 | Rejected | `text-danger` with the reason, e.g. "scanned PDF — text-based only" |
@@ -500,7 +669,7 @@ Table: title · type · effective date · boarded?
 
 ### 12.6 `TermRow`
 
-One executable covenant term. Label `text-label text-text-muted` · value `font-mono text-num text-text` · `CitationChip`.
+One executable covenant term. Label `text-label text-text-muted` · value `text-num tabular-nums text-text` · `CitationChip`.
 
 | State | Visual |
 |---|---|
@@ -512,7 +681,7 @@ One executable covenant term. Label `text-label text-text-muted` · value `font-
 
 ### 12.7 `TermsReview` · 12.8 `CovenantSetup`
 
-Split pane: terms left (60%), `ClausePanel` right (40%). Clicking a `CitationChip` highlights the quote in the right pane, `bg-model-bg` with a 2px `border-model` left edge. `CovenantSetup` is the page wrapper: `DocumentList` → `TermsReview` → `ApproveBar`.
+Split pane: terms left (60%), `ClausePanel` right (40%). Clicking a `CitationChip` highlights the quote in the right pane, `bg-surface-raised` with a 2px `border-text` left edge. `CovenantSetup` is the page wrapper: `DocumentList` → `TermsReview` → `ApproveBar`.
 
 ### 12.9 `ApproveBar`
 
@@ -522,7 +691,7 @@ Pinned footer, `bg-surface-raised`, `border-t border-border-strong`.
 
 ### 12.10 `RunTestButton`
 
-Primary (`bg-model`, `text-bg`). Disabled when the facility has no approved terms, with the reason inline: `approve covenant terms first`.
+Primary (`bg-mint`, forest `text-text`). Disabled when the facility has no approved terms, with the reason inline: `approve covenant terms first`.
 
 **Rule:** never silently disabled. A dead button with no explanation is how an analyst concludes the product is broken.
 
@@ -544,13 +713,13 @@ Vertical stack: `RecommendationBadge` → explanation (`text-body`) → `CalcTab
 
 ### 12.14 `CalcTable`
 
-Rows of calculation components. Numeric column right-aligned, `font-mono`, `tabular-nums`.
+Rows of calculation components. Numeric column right-aligned, `tabular-nums`.
 
 | Column | Token |
 |---|---|
 | Component name | `text-text-secondary` |
-| Value · computed by code | `text-code-bright` mono |
-| Value · quoted from a document | `text-text` mono — **never amber** |
+| Value · computed by code | `text-code-bright` tabular |
+| Value · quoted from a document | `text-text` tabular — **never amber** |
 | Source | `CitationChip` (quoted figure) or `calc_id` badge (computed) |
 
 **Rule:** every row shows whether the figure was **quoted** or **computed**, and
@@ -570,12 +739,12 @@ One row of the step trace. Number · tool name · duration · one-line summary.
 
 | Step type | Token |
 |---|---|
-| Agent / specialist | `text-model`, teal left rule |
+| Agent / specialist | Sky: `border-agent` left rule, the CreditScout tag, `text-agent-ink` purpose line |
 | **Calculator** | `text-code`, amber left rule |
-| Active | `text-model-bright`, subtle pulse |
+| Active | Agent step stays sky; subtle pulse |
 | Complete | settles to `text-text-secondary` |
 
-**Rule:** the teal/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
+**Rule:** the sky/amber alternation **is** the demo. It must come from the step's actual type, never be styled by hand.
 
 ### 12.16 `Scoreboard`
 
@@ -585,7 +754,7 @@ Metric rows: name · target · actual. Actual `text-success` when met, `text-dan
 
 ### 12.17 `GovernancePanel`
 
-Read-only policy table. `text-label` keys, `font-mono` values.
+Read-only policy table. `text-label` keys, `tabular-nums` values.
 
 ### 12.18 `LockedPolicyValue`
 
