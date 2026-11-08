@@ -72,7 +72,7 @@ export function RecommendationCard({
           a laptop screen spent before the findings start. The outcome and the
           three facts share a line; nothing was dropped but the instruction to
           read the findings, which the decision block below already gives. */}
-      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-3">
         <div className="flex min-w-0 items-center gap-4">
           <span
             aria-hidden="true"
@@ -103,12 +103,12 @@ export function RecommendationCard({
         )}
       </div>
 
-      {summary && <p className="border-t border-border-strong px-6 py-3 text-body text-text">{summary}</p>}
+      {summary && <p className="border-t border-border-strong px-6 py-2 text-body text-text">{summary}</p>}
 
       {/* One footer: what is still open, and the two ways in. Amber is spent
           here and nowhere else on this screen. */}
       {(outstanding || explanation) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-strong px-6 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-strong px-6 py-2">
           {outstanding ? (
             <p className="flex items-center gap-3 text-body text-text">
               <span

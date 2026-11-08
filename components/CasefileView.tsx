@@ -113,10 +113,10 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
     .join(" · ");
 
   return (
-    <article className="space-y-4">
+    <article className="space-y-3">
       {/* ------------------------------------------------------------ header */}
-      <header className="space-y-4">
-        <div className="space-y-2">
+      <header className="space-y-3">
+        <div className="space-y-1">
           {/* A way back to the pipeline: the casefile is reached FROM a
               board of loans, and an analyst needs the way back. */}
           <nav aria-label="Breadcrumb" className="text-label text-text-muted">

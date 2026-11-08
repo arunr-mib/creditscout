@@ -77,11 +77,11 @@ export function ReviewActions(props: {
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
-    <section aria-label="Review the recommendation" className="rounded-xl border border-border-strong bg-surface p-6 shadow-card">
+    <section aria-label="Review the recommendation" className="rounded-xl border border-border-strong bg-surface p-4 shadow-card">
       {/* The raw policy key was leaking into the analyst's view. The fact it
           states still holds — `humanReviewNotice` reads the ACTUAL policy
           value, never a hard-coded "mandatory" — it is just said in words. */}
-      <div className="mb-4 space-y-1">
+      <div className="mb-3 space-y-1">
         <h2 className="font-brand text-section font-extrabold text-text">Record your decision</h2>
         {/* One line, not three. The instruction to read the findings first is
             said once, on the recommendation card. */}
@@ -113,7 +113,7 @@ export function ReviewActions(props: {
         </button>
       </div>
 
-      <p className="mt-4 text-label text-text-muted">{notice.text}</p>
+      <p className="mt-3 text-label text-text-muted">{notice.text}</p>
 
       <OverrideDialog
         open={dialog}
