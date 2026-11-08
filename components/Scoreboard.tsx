@@ -27,7 +27,7 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
       {!bare && <h2 className="text-section text-text">Eval scoreboard</h2>}
 
       {state === "awaiting" ? (
-        <div className="space-y-2 rounded-lg border border-border bg-surface shadow-card p-6">
+        <div className="space-y-2 rounded-xl border border-border bg-surface shadow-card p-6">
           <p className="text-body text-text-secondary">Not measured yet.</p>
           <p className="max-w-prose text-label text-text-muted">
             The harness runs every labelled case twice — once with memory cleared (cold) and once with prior analyst
@@ -46,7 +46,7 @@ export function Scoreboard({ runs, bare = false }: { runs: EvalRunLike[]; bare?:
 
 function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: MetricCell[] | null }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-card">
       <table className="w-full border-collapse">
         <thead className="bg-surface-raised">
           <tr className="border-b border-border">
@@ -62,7 +62,7 @@ function ScoreboardTable({ cold, warm }: { cold: MetricCell[] | null; warm: Metr
           {METRICS.map((spec, i) => (
             <tr key={spec.key} className="h-12 border-b border-border last:border-b-0 hover:bg-surface-raised">
               <td className="px-4 align-middle text-label text-text">{spec.label}</td>
-              <td className="px-4 py-2 text-right align-middle text-num tabular-nums text-model-bright/80">
+              <td className="px-4 py-2 text-right align-middle text-num tabular-nums text-text-secondary">
                 {spec.target}
               </td>
               <Actual cell={cold ? cold[i] : null} />

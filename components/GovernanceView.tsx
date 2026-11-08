@@ -41,7 +41,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
     steps.cold?.value != null && steps.warm?.value != null && steps.warm.value >= steps.cold.value;
 
   const tabBtn = (active: boolean) =>
-    `px-4 py-2 text-body transition-colors ${active ? "border-b-2 border-model text-text" : "text-text-muted hover:text-text-secondary"}`;
+    `px-4 py-2 text-body transition-colors ${active ? "border-b-2 border-text text-text" : "text-text-muted hover:text-text-secondary"}`;
 
   return (
     <div className="space-y-6">
@@ -59,7 +59,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 
       {tab === "overview" ? (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-strong border-l-2 border-l-model bg-surface px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-strong border-l-2 border-l-text bg-surface px-4 py-3">
             <p className="flex items-center gap-3 text-card text-text">
               Human approval is required for every recommendation.
             </p>
@@ -70,7 +70,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
               Evaluation used to sit BELOW the full-width enforcement list, which
               left a column of empty space beside the limits card. */}
           <div className="grid items-start gap-6 lg:grid-cols-[55fr_45fr]">
-            <section aria-label="Investigation controls" className="rounded-lg border border-border bg-surface shadow-card">
+            <section aria-label="Investigation controls" className="rounded-xl border border-border bg-surface shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-text">Investigation limits</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">Read-only</span>
@@ -83,7 +83,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
               </div>
             </section>
 
-            <section aria-label="Evaluation results" className="rounded-lg border border-border bg-surface shadow-card">
+            <section aria-label="Evaluation results" className="rounded-xl border border-border bg-surface shadow-card">
               <div className="border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-text">Evaluation results</h2>
                 <p className="mt-1 text-body text-text-secondary">
@@ -131,7 +131,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
                 Officer's and can be changed; these cannot be changed by anyone
                 without a code change, and they are what the product's claim
                 actually rests on. */}
-            <section aria-label="Enforcement rules" className="rounded-lg border border-border bg-surface shadow-card">
+            <section aria-label="Enforcement rules" className="rounded-xl border border-border bg-surface shadow-card">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-strong px-4 py-3">
                 <h2 className="text-section text-text">Enforcement rules (always applied)</h2>
                 <span className="rounded-md border border-border-strong px-3 py-px text-label text-text-muted">
@@ -174,7 +174,7 @@ export function GovernanceView({ policy, runs }: { policy: PolicyTableRow[]; run
 
       {/* Shown, not withheld: at n=6 the sample size is the first thing an
           honest reader wants, and both facts are in the row the harness wrote. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface shadow-card px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface shadow-card px-4 py-3">
         <p className="text-label text-text-muted">
           <span aria-hidden="true">ⓘ </span>
           Evaluation results describe the recorded test runs, not a guarantee of future performance.
@@ -207,7 +207,7 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
   const unscored = rows.filter((r) => !r.counted);
 
   if (rows.length === 0) {
-    return <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">No evaluation run recorded yet.</p>;
+    return <p className="rounded-xl border border-border bg-surface shadow-card p-6 text-body text-text-muted">No evaluation run recorded yet.</p>;
   }
 
   // The Result must describe BOTH conditions. Showing only the warm verdict
@@ -243,13 +243,13 @@ function EvaluationDetails({ runs }: { runs: EvalRunLike[] }) {
   return (
     <div className="space-y-4">
       {summary && (
-        <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+        <section className="rounded-xl border border-border bg-surface p-4 shadow-card">
           <h2 className="text-card text-text">{summary.headline}</h2>
           <p className="mt-1 max-w-prose text-body text-text-secondary">{summary.detail}</p>
         </section>
       )}
 
-      <section className="rounded-lg border border-border bg-surface shadow-card">
+      <section className="rounded-xl border border-border bg-surface shadow-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <h2 className="text-card text-text">Case comparison</h2>
           <span className="text-label text-text-muted">
@@ -323,7 +323,7 @@ const DIAGRAMS: { id: string; file: string; title: string; detail: string }[] = 
 function Knowledge() {
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-border bg-surface p-4 shadow-card">
+      <section className="rounded-xl border border-border bg-surface p-4 shadow-card">
         <h2 className="text-section font-bold text-text">How CreditScout works</h2>
         <p className="mt-1 max-w-prose text-body text-text-secondary">
           The same two diagrams the engineering documents use. A reasoning layer decides what evidence to inspect; a
@@ -332,7 +332,7 @@ function Knowledge() {
       </section>
 
       {DIAGRAMS.map((d) => (
-        <section key={d.id} className="rounded-lg border border-border-strong bg-surface shadow-card">
+        <section key={d.id} className="rounded-xl border border-border-strong bg-surface shadow-card">
           <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <h3 className="text-card font-bold text-text">{d.title}</h3>
@@ -342,7 +342,7 @@ function Knowledge() {
               href={d.file}
               target="_blank"
               rel="noreferrer"
-              className="shrink-0 text-body text-model-bright underline-offset-2 hover:underline"
+              className="shrink-0 text-body text-text underline decoration-border-strong hover:decoration-text underline-offset-2"
             >
               Open full size <span aria-hidden="true">→</span>
             </a>

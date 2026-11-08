@@ -89,7 +89,7 @@ export default async function LessonsPage() {
       </header>
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-border bg-surface shadow-card p-8 text-center">
+        <div className="rounded-xl border border-border bg-surface shadow-card p-8 text-center">
           <p className="text-body text-text-secondary">No prior cases yet.</p>
           <p className="mt-1 text-label text-text-muted">
             Approve or override a casefile and its record is kept here, ready to inform a similar future case.

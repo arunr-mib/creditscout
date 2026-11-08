@@ -120,17 +120,17 @@ export function LessonList({ rows }: { rows: LessonRow[] }) {
       </p>
 
       {groups.length === 0 ? (
-        <p className="rounded-lg border border-border bg-surface shadow-card p-6 text-body text-text-muted">
+        <p className="rounded-xl border border-border bg-surface shadow-card p-6 text-body text-text-muted">
           No prior cases match those filters.
         </p>
       ) : (
         <ul className="space-y-3">
           {groups.map((g) => (
-            <li key={g.key} className="rounded-lg border border-border bg-surface shadow-card shadow-card">
+            <li key={g.key} className="rounded-xl border border-border bg-surface shadow-card">
               <Record row={g.records[0]} borrower={g.borrower} period={g.period} />
               {g.records.length > 1 && (
                 <details className="border-t border-border-strong">
-                  <summary className="cursor-pointer list-none px-4 py-3 text-label text-model-bright marker:content-['']">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-label text-text marker:content-['']">
                     Related records · {g.records.length - 1} more for this borrower and quarter
                   </summary>
                   <ul className="divide-y divide-border border-t border-border">
@@ -174,7 +174,7 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
 
       <div className={`flex flex-wrap items-center gap-2 ${nested ? "" : "mt-2"}`}>
         {pattern && (
-          <span className="rounded-md border border-model bg-model-bg px-3 py-px text-label text-model-bright">{pattern}</span>
+          <span className="rounded-md border border-text bg-surface-raised px-3 py-px text-label text-text">{pattern}</span>
         )}
         <span className={`rounded-md border px-3 py-px text-label ${SOURCE_TONE[row.source]}`}>
           {SOURCE_LABEL[row.source]}
@@ -187,7 +187,7 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
           title={RECORD_KIND_NOTE[recordKind(row.source, row.analystReasoning)]}
           className={`rounded-md border px-3 py-px text-label ${
             isReusablePrecedent(recordKind(row.source, row.analystReasoning))
-              ? "border-model bg-model-bg text-model"
+              ? "border-text bg-surface-raised text-text"
               : "border-border-strong text-text-muted"
           }`}
         >
@@ -227,7 +227,7 @@ function Record({ row, borrower, period, nested }: { row: LessonRow; borrower: s
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-4">
-        <Link href={`/casefiles/${row.casefileId}`} className="text-label text-model-bright underline-offset-2 hover:underline">
+        <Link href={`/casefiles/${row.casefileId}`} className="text-label text-text underline decoration-border-strong hover:decoration-text underline-offset-2">
           Open casefile <span aria-hidden="true">›</span>
         </Link>
         {(row.storedText || row.patternTag) && (

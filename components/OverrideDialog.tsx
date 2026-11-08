@@ -73,7 +73,7 @@ export function OverrideDialog(props: {
       ref={ref}
       onClose={onCancel}
       aria-labelledby="override-title"
-      className="m-auto w-full max-w-dialog rounded-2xl border border-border bg-surface p-6 text-text-secondary shadow-raised backdrop:bg-night/60"
+      className="m-auto w-full max-w-dialog rounded-2xl border border-border bg-surface p-6 text-text-secondary shadow-raised backdrop:bg-brand/60"
     >
       <form
         onSubmit={(e) => {

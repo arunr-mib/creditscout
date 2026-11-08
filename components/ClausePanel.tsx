@@ -104,7 +104,7 @@ export function ClausePanel(props: {
               {inside ? (
                 <>
                   {para.slice(0, inside.s)}
-                  <mark className="border-l-2 border-text bg-agent-bg py-px pl-1 text-text">{para.slice(inside.s, inside.e)}</mark>
+                  <mark className="border-l-2 border-text bg-surface-raised py-px pl-1 text-text">{para.slice(inside.s, inside.e)}</mark>
                   {para.slice(inside.e)}
                 </>
               ) : (
