@@ -1,8 +1,15 @@
 import { boardingState } from "@/components/portfolioModel";
-import type { NavCounts } from "@/components/NavRail";
 import type { SearchItem } from "@/components/searchModel";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
+
+/** The badge counts on the section tabs. A tab with nothing waiting shows no badge rather than a zero. */
+export interface NavCounts {
+  queue: number;
+  documents: number;
+  terms: number;
+  lessons: number;
+}
 
 /**
  * The data the primary nav needs: the badge counts and the global-search index

@@ -126,6 +126,16 @@ test("selectedFacility: from the casefile, the setup path, or the loan param", (
   assert.equal(selectedFacility("/", null, rows), null);
 });
 
+test("selectedFacility: a malformed escape in the path returns null instead of throwing", () => {
+  const rows = [row({ facilityId: "F3", casefileId: "c3" })];
+  assert.equal(selectedFacility("/facilities/%E0%A4%A/covenant-setup", null, rows), null);
+});
+
+test("selectedFacility: the loan param selects on /terms too", () => {
+  const rows = [row({ facilityId: "F5", casefileId: "c5" })];
+  assert.equal(selectedFacility("/terms", "F5", rows), "F5");
+});
+
 // -------------------------------------------------------------- collapse
 
 test("railDefaultCollapsed: only the reading tabs start collapsed", () => {

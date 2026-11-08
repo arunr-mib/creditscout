@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Inter, JetBrains_Mono } from "next/font/google";
 import { headers } from "next/headers";
-import { NavRail } from "@/components/NavRail";
+import { PortfolioRail } from "@/components/PortfolioRail";
+import { TopBar } from "@/components/TopBar";
 import { loadNavData } from "@/lib/nav-data";
+import { loadPortfolio } from "@/lib/portfolio-data";
+import { contourDataUri } from "@/lib/ui/contours";
 import { LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
 import "./globals.css";
 
@@ -35,14 +38,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  const { counts, search } = await loadNavData();
+  // The rail degrades to empty on a read failure, as the tab counts do, rather
+  // than taking every page down with it.
+  const [{ counts, search }, portfolio] = await Promise.all([
+    loadNavData(),
+    loadPortfolio().catch(() => null),
+  ]);
   return (
     <html lang="en" className={`${inter.variable} ${mono.variable} ${brand.variable}`}>
-      <body className="theme-forest min-h-screen md:flex">
-        <NavRail counts={counts} search={search} user={demoUser()} />
-        <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
-          <div className="mx-auto max-w-content">{children}</div>
-        </main>
+      <body className="theme-forest flex min-h-screen flex-col">
+        <TopBar counts={counts} search={search} user={demoUser()} contourUri={contourDataUri()} />
+        <div className="flex flex-1">
+          <PortfolioRail rows={portfolio?.rows ?? []} periodLabel={portfolio?.targetLabel ?? ""} />
+          <main className="min-w-0 flex-1 px-6 py-8 md:px-8">
+            <div className="mx-auto max-w-content">{children}</div>
+          </main>
+        </div>
       </body>
     </html>
   );

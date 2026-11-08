@@ -68,17 +68,18 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex w-full items-center justify-between gap-2 rounded-md border border-night-border-strong bg-night-raised px-3 py-2 text-label text-night-muted transition-colors hover:bg-night-hover hover:text-night-text"
+        aria-label="Search"
+        className="flex items-center justify-between gap-2 rounded-full border border-brand-on/20 bg-brand-on/10 px-3 py-1 text-label text-brand-on-2 transition-colors duration-fast hover:bg-brand-on/20 hover:text-brand-on focus-visible:ring-mint focus-visible:ring-offset-brand md:w-48"
       >
         <span>Search…</span>
-        <kbd className="rounded-sm border border-night-border-strong bg-night-hover px-1 font-mono text-badge">⌘K</kbd>
+        <kbd className="hidden rounded-sm border border-brand-on/20 px-1 font-mono text-badge md:inline">⌘K</kbd>
       </button>
 
       <dialog
         ref={dialogRef}
         onClose={() => setOpen(false)}
         aria-label="Search"
-        className="m-auto mt-16 w-full max-w-dialog rounded-lg border border-border-strong bg-surface-raised p-0 text-text-secondary backdrop:bg-bg/80"
+        className="m-auto mt-16 w-full max-w-dialog rounded-2xl border border-border-strong bg-surface p-0 text-text-secondary backdrop:bg-brand/60"
       >
         <input
           ref={inputRef}
@@ -87,7 +88,7 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
           onKeyDown={onInputKey}
           placeholder="Search borrowers, cases, documents, terms, lessons…"
           aria-label="Search query"
-          className="w-full rounded-t-lg border-b border-border bg-transparent px-4 py-3 text-body text-text placeholder:text-text-muted focus-visible:outline-none"
+          className="w-full rounded-t-2xl border-b border-border bg-transparent px-4 py-3 text-body text-text placeholder:text-text-muted focus-visible:outline-none"
         />
         <ul className="max-h-[320px] overflow-y-auto p-2">
           {results.length === 0 ? (
@@ -99,8 +100,8 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
                   type="button"
                   onMouseEnter={() => setActive(i)}
                   onClick={() => go(item)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left transition-colors ${
-                    i === active ? "bg-surface" : ""
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
+                    i === active ? "bg-surface-raised" : ""
                   }`}
                 >
                   <span className="min-w-0">

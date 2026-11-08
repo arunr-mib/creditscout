@@ -92,7 +92,13 @@ export function selectedFacility(pathname: string, loanParam: string | null, row
   const casefile = /^\/casefiles\/([^/]+)/.exec(pathname);
   if (casefile) return rows.find((r) => r.casefileId === casefile[1])?.facilityId ?? null;
   const setup = /^\/facilities\/([^/]+)/.exec(pathname);
-  if (setup) return decodeURIComponent(setup[1]);
+  if (setup) {
+    try {
+      return decodeURIComponent(setup[1]);
+    } catch {
+      return null; // a malformed escape in the URL must not take the layout down
+    }
+  }
   if (under(pathname, "/documents") || under(pathname, "/terms")) return loanParam || null;
   return null;
 }
