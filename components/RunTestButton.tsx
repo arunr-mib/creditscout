@@ -61,8 +61,8 @@ export function RunTestButton(props: {
         aria-describedby={disabled ? reasonId : undefined}
         className={
           compact
-            ? "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-model bg-surface px-3 py-2 text-body font-medium leading-5 text-model transition-colors duration-fast ease-out hover:bg-model-bg disabled:cursor-not-allowed disabled:opacity-40"
-            : "inline-flex items-center justify-center gap-2 rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast ease-out hover:bg-model-bright disabled:cursor-not-allowed disabled:opacity-40"
+            ? "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-text bg-surface px-3 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast ease-out hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+            : "inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-mint px-4 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast ease-out hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
         }
       >
         {/* The mark says this one RUNS something, which is the distinction the

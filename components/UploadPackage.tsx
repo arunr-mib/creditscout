@@ -235,7 +235,7 @@ export function UploadPackage({
         onDragLeave={() => setDragover(false)}
         onDrop={onDrop}
         className={`mt-3 flex w-full items-center justify-center rounded-md border border-dashed p-6 text-body transition-colors duration-fast ease-out ${
-          dragover ? "border-model bg-model-bg text-text" : "border-border-strong text-text-muted"
+          dragover ? "border-text bg-surface-raised text-text" : "border-border-strong text-text-muted"
         }`}
       >
         {state.kind === "uploading" ? "Indexing…" : "Drop documents, or click to choose files"}
@@ -319,7 +319,7 @@ export function UploadPackage({
                 <button
                   type="button"
                   onClick={() => void upload(f.key)}
-                  className="text-label text-model-bright underline-offset-2 hover:underline"
+                  className="text-label text-text underline decoration-border-strong hover:decoration-text"
                 >
                   Retry
                 </button>
@@ -353,7 +353,7 @@ export function UploadPackage({
               type="button"
               onClick={() => void upload()}
               disabled={state.kind === "uploading" || (pending === 0 && !resolveFacility)}
-              className="rounded-md border border-model bg-model px-4 py-2 text-body font-medium leading-5 text-bg disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg border border-transparent bg-mint px-4 py-2 text-body font-medium leading-5 text-text hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
             >
               {state.kind === "uploading"
                 ? "Working…"
@@ -388,7 +388,7 @@ function StatusChip({ status, sections }: { status: UploadStatus; sections?: num
     status === "failed"
       ? "border-danger bg-danger-bg text-danger"
       : status === "uploading"
-        ? "border-model bg-model-bg text-model-bright"
+        ? "border-text bg-surface-raised text-text"
         : status === "ready"
           ? "border-border-strong bg-surface-raised text-text"
           : "border-border-strong text-text-muted";

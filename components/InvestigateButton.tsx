@@ -51,7 +51,7 @@ export function InvestigateButton(props: { exceptionId: string; status: string; 
         type="button"
         onClick={go}
         disabled={pending}
-        className="inline-flex items-center justify-center whitespace-nowrap rounded-md border border-model bg-model px-3 py-2 text-body font-medium leading-5 text-bg transition-colors duration-fast ease-out hover:bg-model-bright disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex items-center justify-center whitespace-nowrap rounded-lg border border-transparent bg-mint px-3 py-2 text-body font-medium leading-5 text-text transition-colors duration-fast ease-out hover:bg-mint-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {pending ? "Starting…" : reopened ? "Resume investigation" : "Investigate"}
       </button>
