@@ -49,7 +49,7 @@ Sky appears **only** in: the "CreditScout working" pipeline lane, behind a recom
 | Role | Value | Use — and only this |
 |---|---|---|
 | Forest | `#0F2B22` | Header band; selected loan in the portfolio list; headings/ink |
-| Forest ink 2 / 3 | `#3E5A50` / `#6E8679` | Body copy / labels and captions |
+| Forest ink 2 / 3 | `#3E5A50` / `#566D61` (the mockups' `#6E8679` fails AA at 3.93:1) | Body copy / labels and captions |
 | Mist | `#EEF3EF` | Portfolio rail background, pipeline lanes, quiet panels |
 | Line | `#DCE6DF` (hairline), `#BFD0C5` (strong) | Borders |
 | Mint | `#9BE7A9` on forest text | **Interactive only**: primary buttons, the active top tab, the avatar. Never a status. |
