@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PortfolioRow } from "./portfolioModel";
+import { BreachIcon, ComplianceIcon, DecidedIcon, TermsIcon } from "./queueIcons";
 import {
   RAIL_PREF_KEY,
   isRailToggleKey,
@@ -28,6 +29,27 @@ const DOT_SELECTED: Record<RailDot, string> = {
   decided: "bg-brand-on-3",
   terms: "bg-brand-on-2",
   untested: "ring-1 ring-brand-on-3",
+};
+
+// Collapsed-strip glyph for each state: a tinted square carrying a
+// meaning-bearing icon, never a bare colour dot — a colourblind or
+// quick-glance user cannot otherwise tell a breach square from a decided
+// one. `untested` has no dedicated glyph; it keeps the ring-only "nothing to
+// show" treatment below.
+const STRIP_ICON: Partial<Record<RailDot, (props: { className?: string }) => React.JSX.Element>> = {
+  breach: BreachIcon,
+  pass: ComplianceIcon,
+  decided: DecidedIcon,
+  terms: TermsIcon,
+};
+// Tint per the Global Constraints token table: danger-bg/success-bg/human-bg
+// plus the neutral surface-raised for "decided". `terms` is slate/human, not
+// amber — amber is reserved for code/calculation states.
+const STRIP_TINT: Partial<Record<RailDot, string>> = {
+  breach: "bg-danger-bg text-danger",
+  pass: "bg-success-bg text-success",
+  decided: "border border-border-strong bg-surface-raised text-text-muted",
+  terms: "bg-human-bg text-human",
 };
 
 const FILTER_TAB = /^\/(documents|terms)(\/|$)/;
@@ -188,11 +210,12 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
           </div>
         </div>
 
-        {/* Collapsed strip: dots only. Shown whenever collapsed, and always below md. */}
+        {/* Collapsed strip: meaning-bearing status icons, not colour dots. Shown whenever collapsed, and always below md. */}
         <div className={collapsed ? "flex flex-col items-center gap-1 py-2" : "flex flex-col items-center gap-1 py-2 md:hidden"}>
           {toggleButton}
           {items.map((item) => {
             const isSelected = item.facilityId === selected;
+            const Icon = STRIP_ICON[item.dot];
             return (
               <Link
                 key={item.facilityId}
@@ -204,10 +227,16 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
                   isSelected ? "bg-brand" : "hover:bg-surface"
                 }`}
               >
-                <span
-                  aria-hidden="true"
-                  className={`h-2 w-2 rounded-full ${(isSelected ? DOT_SELECTED : DOT)[item.dot]}`}
-                />
+                {Icon ? (
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-6 w-6 items-center justify-center rounded-md ${STRIP_TINT[item.dot]}`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                ) : (
+                  <span aria-hidden="true" className="h-6 w-6 rounded-full ring-1 ring-text-muted" />
+                )}
               </Link>
             );
           })}
