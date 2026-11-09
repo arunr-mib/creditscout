@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { Pipeline } from "@/components/Pipeline";
-import { PipelineAutoRefresh } from "@/components/PipelineAutoRefresh";
-import { hasRunningInvestigation, latestSteps, pipelineLanes, traceStepCount } from "@/components/pipelineModel";
+import { ExceptionsQueue } from "@/components/ExceptionsQueue";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
 import { loadPortfolio } from "@/lib/portfolio-data";
@@ -14,19 +12,13 @@ export const maxDuration = 60;
 /**
  * The portfolio — the analyst's landing screen.
  *
- * A four-lane pipeline of the loans that need a person or the agent, with at
- * most one action per card. Reads only, with the anon key under
- * the RLS read policy; every write goes through a route handler or Server Action
- * on the service role.
+ * The Exceptions queue: a dense, risk-sorted table of every loan by default,
+ * with a kanban lens as a secondary toggle for the same rows. Reads only,
+ * with the anon key under the RLS read policy; every write goes through a
+ * route handler or Server Action on the service role.
  */
 export default async function Home() {
-  const { rows, facilities, targetPeriod, targetLabel, counts, traceByCasefile } = await loadPortfolio();
-
-  const steps = new Map([...traceByCasefile].map(([id, trace]) => [id, latestSteps(trace)] as const));
-  const stepCounts = new Map([...traceByCasefile].map(([id, trace]) => [id, traceStepCount(trace)] as const));
-  const lanes = pipelineLanes(rows, steps, stepCounts);
-  // Only a running investigation changes on its own; a paused one waits for a person.
-  const anyWorking = hasRunningInvestigation(lanes);
+  const { rows, facilities, targetPeriod, targetLabel, counts, traceByCasefile, drift } = await loadPortfolio();
 
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
 
@@ -63,15 +55,12 @@ export default async function Home() {
         />
       </header>
 
-      {/* ---------------------------------------------------------------- pipeline */}
+      {/* ---------------------------------------------------------------- queue */}
       <section aria-label="Loans" className="space-y-2">
         {facilities.length === 0 ? (
           <p className="text-body text-text-secondary">No loans on file. Board a covenant to add one.</p>
         ) : (
-          <>
-            <Pipeline lanes={lanes} />
-            <PipelineAutoRefresh active={anyWorking} />
-          </>
+          <ExceptionsQueue rows={rows} drift={drift} targetPeriod={targetPeriod} targetLabel={targetLabel} traceByCasefile={traceByCasefile} />
         )}
       </section>
 
