@@ -94,7 +94,7 @@ export function QueueTable({
             <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Computed</th>
             <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Reported</th>
             <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Minimum</th>
-            <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Headroom</th>
+            <th className="whitespace-nowrap px-3 py-2 text-right font-medium">Variance</th>
             <th className="whitespace-nowrap px-3 py-2 font-medium">Result</th>
             <th className="whitespace-nowrap px-3 py-2 font-medium">Status</th>
             <th className="whitespace-nowrap px-3 py-2 font-medium">Next action</th>
