@@ -1,0 +1,200 @@
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  .app { font-family:'Inter',sans-serif; font-variant-numeric:tabular-nums; background:#fff; color:#0F2B22; border:1px solid #DCE6DF; border-radius:14px; overflow:hidden; }
+
+  .topbar { height:52px; background:#0F2B22; display:flex; align-items:center; gap:16px; padding:0 20px; position:relative; overflow:hidden; }
+  .topbar::before { content:''; position:absolute; inset:0; opacity:.14; background-image: repeating-linear-gradient(100deg, transparent 0 18px, #9BE7A9 18px 19px); }
+  .wm { position:relative; display:flex; align-items:center; gap:8px; font-weight:800; font-size:16px; color:#fff; }
+  .wm .mark { width:22px; height:22px; border:1.5px solid #9BE7A9; border-radius:6px; }
+  .wm small { font-weight:500; font-size:11px; color:#CFE3D6; margin-left:4px; }
+  .tabs { position:relative; display:flex; gap:4px; }
+  .tabs span { font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:999px; color:#CFE3D6; }
+  .tabs span.on { background:#9BE7A9; color:#0F2B22; }
+  .right { position:relative; margin-left:auto; display:flex; align-items:center; gap:10px; }
+  .search2 { font-size:11.5px; color:#CFE3D6; border:1px solid rgba(255,255,255,.25); border-radius:999px; padding:5px 10px; }
+  .avatar { width:26px; height:26px; border-radius:50%; background:#9BE7A9; color:#0F2B22; font-size:10px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+
+  .shell { display:flex; }
+  .rail { width:44px; background:#EEF3EF; border-right:1px solid #DCE6DF; display:flex; flex-direction:column; align-items:center; padding:12px 0; gap:8px; flex-shrink:0; }
+  .rail .r-icn { width:22px; height:22px; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .rail .r-icn svg { width:13px; height:13px; }
+  .body { flex:1; min-width:0; padding:18px 20px; }
+
+  .toolbar { display:flex; align-items:center; justify-content:space-between; padding:0 0 12px; flex-wrap:wrap; gap:10px; border-bottom:1px solid #DCE6DF; }
+  .eyebrow { font-size:11.5px; color:#566D61; margin-bottom:2px; }
+  .h1 { font-size:20px; font-weight:800; margin:0 0 10px; }
+  .pills { display:flex; gap:6px; flex-wrap:wrap; }
+  .pill { display:inline-flex; align-items:center; gap:6px; border:1px solid #DCE6DF; border-radius:999px; padding:6px 12px; font-size:12.5px; font-weight:600; color:#3E5A50; background:#fff; }
+  .pill.on { background:#9BE7A9; color:#0F2B22; border-color:#9BE7A9; }
+  .pill .n { opacity:.7; font-weight:500; }
+  .pill svg { width:13px; height:13px; }
+  .lens { display:flex; border:1px solid #DCE6DF; border-radius:999px; padding:2px; gap:2px; }
+  .lens button { border:0; background:transparent; font:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; color:#566D61; }
+  .lens button.on { background:#0F2B22; color:#fff; }
+
+  table.q { width:100%; border-collapse:collapse; margin-top:4px; }
+  table.q th { font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#8A968E; text-align:right; padding:10px 12px; border-bottom:1px solid #DCE6DF; font-weight:700; white-space:nowrap; }
+  table.q th:first-child { text-align:left; }
+  table.q td { padding:11px 12px; border-bottom:1px solid #EEF3EF; text-align:right; vertical-align:middle; }
+  table.q td:first-child { text-align:left; }
+  tr.row { cursor:pointer; }
+  tr.row:hover td { background:#F7F9F7; }
+  tr.sel td { background:#EEF3EF; }
+  .loan { font-weight:700; font-size:13.5px; color:#0F2B22; }
+  .sub2 { font-size:11px; color:#566D61; }
+  .num { font-size:13.5px; font-weight:600; }
+  .num.dim { color:#566D61; font-weight:500; }
+  .hr { font-weight:700; font-size:12.5px; }
+  .hr.neg { color:#C81E1E; } .hr.pos { color:#15803D; }
+  .chip { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:4px 8px; border-radius:999px; white-space:nowrap; }
+  .chip.breach { background:#FBEAE8; color:#C81E1E; }
+  .chip.ok { background:#E8F3EC; color:#15803D; }
+  .status1 { font-size:12px; font-weight:600; color:#0F2B22; }
+  .status2 { font-size:10.5px; font-weight:600; margin-top:2px; }
+  .status2.esc { color:#C81E1E; }
+  .act { font:inherit; font-size:11.5px; font-weight:700; padding:6px 12px; border-radius:8px; border:1px solid #DCE6DF; background:#fff; color:#0F2B22; white-space:nowrap; }
+  .act.primary { background:#9BE7A9; border-color:#9BE7A9; }
+  .drift { display:inline-flex; align-items:center; gap:3px; font-size:9.5px; color:#566D61; margin-left:6px; }
+
+  /* ---- panel, rebuilt to match the REAL recommendation card structure ---- */
+  .panel { border-top:3px solid #0F2B22; background:#F7F9F7; display:grid; grid-template-columns:1.2fr .8fr; margin:0 -20px -18px; }
+  .panel-main { padding:20px 24px; border-right:1px solid #DCE6DF; }
+  .panel-side { padding:20px 24px; }
+  .crumb { font-size:11px; color:#566D61; margin-bottom:10px; }
+
+  .rec-card { border-radius:16px; overflow:hidden; background:linear-gradient(160deg,#D6E8FF 0%,#C9ECEB 55%,#E4F6EE 100%); }
+  .rec-top { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 18px; flex-wrap:wrap; }
+  .rec-left { display:flex; align-items:center; gap:14px; min-width:0; }
+  .rec-badge { width:30px; height:30px; border-radius:8px; border:2px solid #A31A1A; background:#A31A1A; color:#fff; font-weight:800; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .rec-tag { display:inline-flex; align-items:center; gap:5px; background:#DCEBFF; color:#123A6B; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:6px; }
+  .rec-tag::before { content:''; width:6px; height:6px; border-radius:50%; background:#3D7FD6; }
+  .rec-h { font-weight:800; font-size:19px; margin:4px 0 2px; letter-spacing:-.01em; }
+  .rec-basis { font-size:12px; color:#3E5A50; }
+  .rec-fact span { display:block; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#3E5A50; opacity:.75; font-weight:700; }
+  .rec-fact b { font-size:13.5px; font-weight:700; }
+  .rec-summary { border-top:1px solid rgba(15,43,34,.12); padding:12px 18px; font-size:12.5px; color:#0F2B22; }
+
+  .triple { display:flex; gap:10px; margin:0 0 14px; }
+  .triple div { flex:1; background:#fff; border:1px solid #DCE6DF; border-radius:10px; padding:10px 14px; }
+  .triple span { display:block; font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:#8A968E; font-weight:700; }
+  .triple b { font-size:19px; font-weight:800; }
+
+  .actions2 { display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .act2 { font:inherit; font-size:12.5px; font-weight:700; padding:9px 15px; border-radius:9px; border:1px solid #DCE6DF; background:#fff; color:#0F2B22; }
+  .act2.primary { background:#9BE7A9; border-color:#9BE7A9; }
+  .panel-side h4 { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#8A968E; margin:0 0 6px; }
+  .panel-side p { font-size:12px; color:#3E5A50; line-height:1.5; margin:0 0 16px; }
+</style>
+
+<h2>Fixed: real icons on the rail, the gradient as it actually looks</h2>
+<p class="subtitle">Three fixes from your feedback: (1) the collapsed rail shows the same meaning-bearing glyphs as the filter pills, not dots. (2) The recommendation card below the table now matches the real card's structure — the gradient fills the whole card (badge, headline, the test-result fact, the summary line), not one small box. (3) On "why is this down here at all" — explanation below the mockup, and a straight question for you.</p>
+
+<div class="app">
+  <div class="topbar">
+    <div class="wm"><span class="mark"></span>CreditScout<small>Bank of Stoic</small></div>
+    <div class="tabs">
+      <span class="on">Exceptions</span><span>Documents</span><span>Covenant terms</span><span>Lessons</span><span>Governance</span>
+    </div>
+    <div class="right"><span class="search2">Search… ⌘K</span><span class="avatar">AR</span></div>
+  </div>
+
+  <div class="shell">
+    <div class="rail">
+      <span class="r-icn" style="background:#FBEAE8"><svg viewBox="0 0 24 24" fill="none" stroke="#C81E1E" stroke-width="2.3"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+      <span class="r-icn" style="background:#FBEAE8"><svg viewBox="0 0 24 24" fill="none" stroke="#C81E1E" stroke-width="2.3"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg></span>
+      <span class="r-icn" style="background:#EEF3EF"><svg viewBox="0 0 24 24" fill="none" stroke="#566D61" stroke-width="2.3"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <span class="r-icn" style="background:#E8F3EC"><svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.3"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <span class="r-icn" style="background:#E8F3EC"><svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.3"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <span class="r-icn" style="background:#E8F3EC"><svg viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.3"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <span class="r-icn" style="background:#FFF4E8"><svg viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2.3"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg></span>
+    </div>
+
+    <div class="body">
+      <div class="toolbar">
+        <div>
+          <div class="eyebrow">Covenant monitoring · Q2 2026 · 6 of 7 tested</div>
+          <div class="h1">Exceptions</div>
+        </div>
+      </div>
+      <div class="toolbar" style="border-bottom:0; padding-top:12px">
+        <div class="pills">
+          <span class="pill on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>All loans <span class="n">· 7</span></span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>Needs review <span class="n">· 1</span></span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/></svg>Breaches <span class="n">· 2</span></span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20 6L9 17l-5-5"/></svg>In compliance <span class="n">· 3</span></span>
+          <span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6"/></svg>Terms approval <span class="n">· 1</span></span>
+        </div>
+        <div class="lens"><button class="on">Table</button><button>Kanban lens</button></div>
+      </div>
+
+      <table class="q">
+        <thead><tr><th>Borrower</th><th>Computed</th><th>Reported</th><th>Minimum</th><th>Headroom</th><th>Result</th><th style="text-align:left">Status</th><th>Next action</th></tr></thead>
+        <tbody>
+          <tr class="row"><td><div class="loan">Northgate Foods</div><div class="sub2">Food distribution · Terms v1</div></td>
+            <td><span class="num">1.08x</span></td><td><span class="num dim">1.31x</span></td><td><span class="num dim">1.25x</span></td>
+            <td><span class="hr neg">-0.17x</span></td><td><span class="chip breach">▼ Breach</span></td>
+            <td style="text-align:left"><div class="status1">Decision recorded</div></td>
+            <td><button class="act">View decision</button></td></tr>
+
+          <tr class="row"><td><div class="loan">Coastal Marine</div><div class="sub2">Marine services · Terms v1</div></td>
+            <td><span class="num">1.12x</span></td><td><span class="num dim">1.30x</span></td><td><span class="num dim">1.25x</span></td>
+            <td><span class="hr neg">-0.13x</span><span class="drift">↓ 3-qtr decline</span></td><td><span class="chip breach">▼ Breach</span></td>
+            <td style="text-align:left"><div class="status1">Awaiting investigation</div></td>
+            <td><button class="act primary">Investigate</button></td></tr>
+
+          <tr class="row sel"><td><div class="loan">Harbor Logistics</div><div class="sub2">Freight and logistics · Terms v1</div></td>
+            <td><span class="num">1.12x</span></td><td><span class="num dim">1.12x</span></td><td><span class="num dim">1.25x</span></td>
+            <td><span class="hr neg">-0.13x</span></td><td><span class="chip breach">▼ Breach</span></td>
+            <td style="text-align:left"><div class="status1">Ready for analyst review</div><div class="status2 esc">Recommendation: Escalate</div></td>
+            <td><button class="act primary">Review</button></td></tr>
+
+          <tr class="row"><td><div class="loan">Peat's Coffee Company</div><div class="sub2">Coffee roasting and retail · Terms v1</div></td>
+            <td><span class="num">1.19x</span></td><td><span class="num dim">1.19x</span></td><td><span class="num dim">1.10x</span></td>
+            <td><span class="hr pos">+0.09x</span></td><td><span class="chip ok">✓ In compliance</span></td>
+            <td style="text-align:left"><div class="status1">No exception identified</div></td>
+            <td><button class="act">Re-run Q2</button></td></tr>
+        </tbody>
+      </table>
+
+      <div class="panel">
+        <div class="panel-main">
+          <div class="crumb">Selected from the queue above — closing this returns to the same filter and scroll position</div>
+
+          <div class="triple">
+            <div><span>Computed</span><b style="color:#C81E1E">1.12x</b></div>
+            <div><span>Reported</span><b>1.12x</b></div>
+            <div><span>Minimum</span><b>1.25x</b></div>
+          </div>
+
+          <div class="rec-card">
+            <div class="rec-top">
+              <div class="rec-left">
+                <span class="rec-badge">↗</span>
+                <div>
+                  <span class="rec-tag">CreditScout recommends</span>
+                  <div class="rec-h">Escalate for credit review</div>
+                  <div class="rec-basis">4 citations · 3 calculations · terms v1</div>
+                </div>
+              </div>
+              <div class="rec-fact"><span>Test result</span><b>Outside covenant limit</b></div>
+            </div>
+            <div class="rec-summary">Computed 1.12x is 0.13x below the 1.25x minimum — reported 1.12x differs by 0.00x. With no reported-vs-computed gap, the breach is agreed by both calculations.</div>
+          </div>
+
+          <div class="actions2">
+            <button class="act2 primary">Approve exception resolution</button>
+            <button class="act2">Record a different decision</button>
+            <button class="act2">Hold for borrower documents</button>
+          </div>
+        </div>
+        <div class="panel-side">
+          <h4>Supporting evidence</h4>
+          <p>4 citations · 3 calculations · terms v1 — the same evidence list the full casefile shows, collapsed here to one line until opened.</p>
+          <h4>Decision record</h4>
+          <p>Nothing recorded yet. Once decided: actor, timestamp, reason, before/after DSCR — same place this already lives today.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
