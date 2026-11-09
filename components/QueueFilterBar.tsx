@@ -102,7 +102,7 @@ export function QueueFilterBar({
             onClick={() => onLens(l.key)}
             aria-pressed={lens === l.key}
             className={`rounded-full px-3 py-1 text-body transition-colors duration-fast ${
-              lens === l.key ? "bg-brand text-brand-on" : "text-text-secondary hover:text-text"
+              lens === l.key ? "bg-mint text-text" : "text-text-secondary hover:text-text"
             }`}
           >
             {l.label}
