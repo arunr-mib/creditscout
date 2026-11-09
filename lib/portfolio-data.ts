@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { currentCasefiles, portfolioRows, queueCounts, type PortfolioRow } from "@/components/portfolioModel";
+import { driftByFacility } from "@/components/driftModel";
 import { anonReader } from "@/lib/supabase/anon";
 import { quarterLabel } from "@/lib/tests/extract-financials";
 
@@ -70,6 +71,8 @@ export interface PortfolioData {
   counts: ReturnType<typeof queueCounts>;
   /** `trace` for the casefiles that are investigating right now; every other casefile is absent. */
   traceByCasefile: Map<string, unknown>;
+  /** Per facility: the computed DSCR has fallen across the quarterly test history. */
+  drift: Map<string, boolean>;
 }
 
 /**
@@ -105,6 +108,7 @@ export const loadPortfolio = cache(async (): Promise<PortfolioData> => {
   const periods = tests.map((t) => t.test_period_end).sort();
   const targetPeriod = periods[periods.length - 1] ?? latestCompleteQuarterEnd(new Date());
   const targetLabel = quarterLabel(targetPeriod);
+  const drift = driftByFacility(tests);
 
   const casefileByException = currentCasefiles(casefiles);
   const rows = portfolioRows({
@@ -123,5 +127,6 @@ export const loadPortfolio = cache(async (): Promise<PortfolioData> => {
     targetLabel,
     counts: queueCounts(rows),
     traceByCasefile: new Map(traces.map((c) => [c.id, c.trace])),
+    drift,
   };
 });
