@@ -277,15 +277,18 @@ outcome handling, and `humanReviewNotice` are reused as-is.
   shipping.
 - Whether the fifth kanban lane (§4.5) needs its own test coverage beyond
   `pipelineModel.test.js`'s existing shape.
-- **Resolved 2026-11-09, architect's call:** on Exceptions, the rail is
-  **always** the collapsed icon strip (§4.2's four glyphs — breach/decided/
-  compliant/terms) — not a default that `[` can expand. Expanding it would
-  only show the same five filters the pills above the table already show,
-  so there is nothing a wider state would add here. Simplest correct
-  change: `railDefaultCollapsed(pathname)` already returns `true` for this
-  route the same way it does for Lessons/Governance — on Exceptions
-  specifically, also suppress the expand control / `[` so the state has
-  nothing to toggle to, rather than leave a control that does nothing
-  visible. Documents and Covenant terms are unaffected — the rail still
-  expands fully there, same as built, because it is picking one loan,
-  not a category.
+- **Corrected 2026-11-09, researching this plan — the earlier "always
+  collapsed on Exceptions" resolution above was wrong and is replaced by
+  this one.** It assumed expanding the rail would show the same five
+  category filters as the pills. It would not: `railItems()` has always
+  rendered one row **per loan** (name, figure, a jump link to that loan's
+  own casefile or setup page), never per category — that is a different,
+  genuinely useful feature from the pills (which filter the table), not a
+  duplicate of them. **No special-case change to the rail's behaviour on
+  Exceptions is needed at all.** `railDefaultCollapsed(pathname)` today
+  does not include `/`, so the rail already defaults to expanded there,
+  exactly as on Documents and Covenant terms, and that is correct —
+  leave it. The only rail change this document makes anywhere is §4.2's
+  icon fix to the **collapsed strip's** glyphs, which already applies
+  uniformly on every route through the one shared `PortfolioRail`
+  component; nothing route-specific is required.
