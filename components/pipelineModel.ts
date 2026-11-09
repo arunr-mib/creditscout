@@ -2,22 +2,23 @@
  * The home page's deal pipeline, as pure functions. No React, no I/O: the page
  * only draws what this decides.
  *
- * Four lanes sort the loans that need a person or the agent. Compliant and
- * untested loans are not in the pipeline at all — they are the portfolio rail's
- * business, not a lane's. The headroom bar is the loan's own minimum, never a
- * constant: it always sits at the bar's midpoint.
+ * Four lanes sort the loans that need a person or the agent. A fifth, "Also in
+ * the book", holds the compliant and untested loans so the board never hides
+ * one. The headroom bar is the loan's own minimum, never a constant: it always
+ * sits at the bar's midpoint.
  */
 
 import { isReopened, type PortfolioRow, type PortfolioStatus } from "./portfolioModel.ts";
 import { activityTitle } from "./traceModel.ts";
 
-export type LaneKey = "investigate" | "working" | "decision" | "decided";
+export type LaneKey = "investigate" | "working" | "decision" | "decided" | "also";
 
 export const LANES: readonly { key: LaneKey; title: string; empty: string }[] = [
   { key: "investigate", title: "Needs investigating", empty: "Nothing waiting." },
   { key: "working", title: "CreditScout working", empty: "Nothing running. An investigation runs here while its casefile is open." },
   { key: "decision", title: "Awaiting your decision", empty: "Nothing waiting for you." },
   { key: "decided", title: "Decided", empty: "Nothing decided this quarter yet." },
+  { key: "also", title: "Also in the book", empty: "Nothing else on the book." },
 ];
 
 /** How often the pipeline re-reads while an investigation may be running. */
@@ -66,6 +67,8 @@ const LANE_OF: Partial<Record<PortfolioStatus, LaneKey>> = {
   in_review: "decision",
   awaiting_docs: "decision",
   decided: "decided",
+  compliant: "also",
+  not_tested: "also",
 };
 
 const NOTE_OF: Partial<Record<PortfolioStatus, string>> = {

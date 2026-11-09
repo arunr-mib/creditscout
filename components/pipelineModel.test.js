@@ -37,7 +37,7 @@ const laneOf = (over, steps) => {
   return { key: hit[0].key, card: hit[0].cards[0] };
 };
 
-test("LANES: four lanes with their titles and empty copy", () => {
+test("LANES: five lanes with their titles and empty copy", () => {
   assert.deepEqual(
     LANES.map((l) => [l.key, l.title, l.empty]),
     [
@@ -45,6 +45,7 @@ test("LANES: four lanes with their titles and empty copy", () => {
       ["working", "CreditScout working", "Nothing running. An investigation runs here while its casefile is open."],
       ["decision", "Awaiting your decision", "Nothing waiting for you."],
       ["decided", "Decided", "Nothing decided this quarter yet."],
+      ["also", "Also in the book", "Nothing else on the book."],
     ],
   );
   assert.equal(PIPELINE_REFRESH_MS, 5000);
@@ -94,10 +95,18 @@ test("lane mapping: decided -> decided; open only with a casefile", () => {
   assert.equal(without.card.action, null);
 });
 
-test("compliant and not_tested appear in no lane; all four lanes still exist", () => {
-  const lanes = pipelineLanes([row({ status: "compliant" }), row({ facilityId: "F2", status: "not_tested" })]);
-  assert.deepEqual(lanes.map((l) => l.key), ["investigate", "working", "decision", "decided"]);
-  for (const l of lanes) assert.deepEqual(l.cards, []);
+test("compliant and not_tested land in the also lane, with no action and no other lane touched", () => {
+  const lanes = pipelineLanes([
+    row({ facilityId: "F7", status: "compliant", casefileId: null, exceptionId: null, exceptionStatus: null }),
+    row({ facilityId: "F9", status: "not_tested", ours: null, theirs: null, casefileId: null, exceptionId: null, exceptionStatus: null }),
+  ]);
+  assert.deepEqual(lanes.map((l) => l.key), ["investigate", "working", "decision", "decided", "also"]);
+  for (const l of lanes.filter((l) => l.key !== "also")) assert.deepEqual(l.cards, []);
+  const also = lanes.find((l) => l.key === "also").cards;
+  assert.deepEqual(also.map((c) => [c.facilityId, c.status, c.action, c.recommendationLabel, c.note]), [
+    ["F7", "compliant", null, null, null],
+    ["F9", "not_tested", null, null, null],
+  ]);
 });
 
 test("card carries the row's figures and ids", () => {

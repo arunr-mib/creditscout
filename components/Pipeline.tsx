@@ -4,13 +4,13 @@ import { pipelineLanes } from "./pipelineModel";
 type Lanes = ReturnType<typeof pipelineLanes>;
 
 /**
- * The four-lane deal pipeline. Four columns from `lg` up, two at `md` (the rail takes width there), one below.
+ * The five-lane deal pipeline. Five columns from `lg` up, two at `md` (the rail takes width there), one below.
  * The lanes and their cards are decided by `pipelineModel`; this only draws them.
  * The working lane takes the agent's sky surface — it is the agent's lane.
  */
 export function Pipeline({ lanes }: { lanes: Lanes }) {
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
       {lanes.map((lane) => (
         <section
           key={lane.key}
