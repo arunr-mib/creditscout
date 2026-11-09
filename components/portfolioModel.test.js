@@ -277,7 +277,38 @@ test("queueCounts: tested is a ratio of the book, and terms-approval counts loan
     total: 5,
     termsApprovalNeeded: 2,
     untested: 2,
+    compliant: 0,
+    breaches: 2,
   });
+});
+
+test("queueCounts: breaches covers every open-work status but excludes a decided breach", () => {
+  // investigating, investigation_paused and awaiting_docs are all open work and
+  // must count. The decided row would read below_minimum under testResultOf
+  // (1.08 < 1.25) -- it is still a breach in substance -- but it has already
+  // been through a human decision, so it must not count toward `breaches`.
+  const rows = [
+    { ours: 1.12, required: 1.25, status: "investigating", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "investigation_paused", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "awaiting_docs", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.08, required: 1.25, status: "decided", recommendation: null, hasApprovedTerms: true },
+  ];
+  assert.equal(queueCounts(rows).breaches, 3);
+});
+
+test("queueCounts: compliant counts only compliant rows", () => {
+  const rows = [
+    { ours: 1.5, required: 1.25, status: "compliant", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.6, required: 1.25, status: "compliant", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "breach_investigate", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "in_review", recommendation: "resolve", hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "investigating", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "investigation_paused", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.12, required: 1.25, status: "awaiting_docs", recommendation: null, hasApprovedTerms: true },
+    { ours: 1.08, required: 1.25, status: "decided", recommendation: null, hasApprovedTerms: true },
+    { ours: null, required: null, status: "not_tested", recommendation: null, hasApprovedTerms: false },
+  ];
+  assert.equal(queueCounts(rows).compliant, 2);
 });
 
 test("queueCounts: an open breach with no casefile is COUNTED — the band used to omit it", () => {

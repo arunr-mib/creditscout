@@ -411,6 +411,21 @@ export function reviewStatusOf(
 }
 
 /**
+ * A loan reads as a "breach" for the queue's pill count while it is still
+ * someone's open work — raised, under investigation (running, paused, or
+ * waiting on documents) or sitting in review. A `decided` breach has already
+ * been through a human decision; counting it again here would double-count
+ * work that is finished, so it is deliberately left out.
+ */
+const OPEN_BREACH_STATUSES: readonly PortfolioStatus[] = [
+  "breach_investigate",
+  "in_review",
+  "investigating",
+  "investigation_paused",
+  "awaiting_docs",
+];
+
+/**
  * Queue-level counts. `tested` is "3 of 5" — loans with a result this period.
  *
  * `awaitingInvestigation` exists because the summary band was under-reporting
@@ -427,6 +442,8 @@ export function queueCounts(rows: readonly PortfolioRow[]): {
   total: number;
   termsApprovalNeeded: number;
   untested: number;
+  compliant: number;
+  breaches: number;
 } {
   return {
     readyForReview: rows.filter((r) => r.status === "in_review").length,
@@ -436,5 +453,7 @@ export function queueCounts(rows: readonly PortfolioRow[]): {
     total: rows.length,
     termsApprovalNeeded: rows.filter((r) => !r.hasApprovedTerms).length,
     untested: rows.filter((r) => testResultOf(r) === "not_tested").length,
+    compliant: rows.filter((r) => r.status === "compliant").length,
+    breaches: rows.filter((r) => OPEN_BREACH_STATUSES.includes(r.status)).length,
   };
 }
