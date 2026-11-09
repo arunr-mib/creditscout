@@ -1,23 +1,16 @@
 "use client";
 
-import { BreachIcon, ComplianceIcon, TermsIcon } from "./queueIcons";
-import { QUEUE_FILTERS, type QueueFilter } from "./queueFilterModel";
+import { AllLoansIcon, BreachIcon, ComplianceIcon, NeedsReviewIcon, TermsIcon } from "./queueIcons";
+import { COUNT_KEY, QUEUE_FILTERS, type QueueFilter } from "./queueFilterModel";
 import type { queueCounts } from "./portfolioModel";
 
 type Counts = ReturnType<typeof queueCounts>;
 type Lens = "table" | "kanban";
 
-/** Which `queueCounts()` field feeds each pill's count. */
-const COUNT_KEY: Record<QueueFilter, keyof Counts> = {
-  all: "total",
-  needs_review: "readyForReview",
-  breaches: "breaches",
-  compliant: "compliant",
-  terms: "termsApprovalNeeded",
-};
-
-/** "All loans" and "Needs review" stay unmarked: the word alone is the filter. */
+/** Every pill gets an icon, matching the approved mockup. */
 const FILTER_ICON: Partial<Record<QueueFilter, (props: { className?: string }) => React.JSX.Element>> = {
+  all: AllLoansIcon,
+  needs_review: NeedsReviewIcon,
   breaches: BreachIcon,
   compliant: ComplianceIcon,
   terms: TermsIcon,

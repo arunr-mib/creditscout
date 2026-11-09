@@ -4,7 +4,7 @@
  * and ordered.
  */
 
-import type { PortfolioRow, PortfolioStatus } from "./portfolioModel.ts";
+import { OPEN_BREACH_STATUSES, type PortfolioRow, type queueCounts } from "./portfolioModel.ts";
 
 export type QueueFilter = "all" | "needs_review" | "breaches" | "compliant" | "terms";
 
@@ -17,18 +17,14 @@ export const QUEUE_FILTERS: readonly { key: QueueFilter; label: string }[] = [
   { key: "terms", label: "Terms approval" },
 ];
 
-/**
- * Same open-work set `queueCounts().breaches` counts: an open breach,
- * anything mid-investigation, or sitting in review. A `decided` breach has
- * already been through a human decision and does not belong here.
- */
-const OPEN_BREACH_STATUSES: readonly PortfolioStatus[] = [
-  "breach_investigate",
-  "in_review",
-  "investigating",
-  "investigation_paused",
-  "awaiting_docs",
-];
+/** Which `queueCounts()` field feeds each pill's count. */
+export const COUNT_KEY: Record<QueueFilter, keyof ReturnType<typeof queueCounts>> = {
+  all: "total",
+  needs_review: "readyForReview",
+  breaches: "breaches",
+  compliant: "compliant",
+  terms: "termsApprovalNeeded",
+};
 
 /**
  * The pill filter, then the search box, in that order. `"all"` applies no
@@ -77,9 +73,16 @@ export function headroomOf(ours: number | null, required: number | null): Headro
   return { text: `${sign}${Math.abs(diff).toFixed(2)}x`, tone };
 }
 
-/** Missing headroom sorts after every computed figure, worst first. */
+/**
+ * Missing headroom sorts after every computed figure, worst first. Rounded
+ * the same way `headroomOf` rounds for display, so two loans with different
+ * minimums that happen to DISPLAY the same headroom compare as equal here too
+ * — otherwise the drift tie-break below never fires for them, because the raw
+ * floating-point difference is almost never exactly equal even when the
+ * rounded, displayed figure is.
+ */
 const headroomValue = (row: Pick<PortfolioRow, "ours" | "required">): number =>
-  row.ours == null || row.required == null ? Infinity : row.ours - row.required;
+  row.ours == null || row.required == null ? Infinity : Math.round((row.ours - row.required) * 100) / 100;
 
 /**
  * The queue's default order: the loan most worth looking at first. Worst
@@ -99,8 +102,11 @@ export function sortByRisk(rows: PortfolioRow[], drift: Map<string, boolean>): P
     const db = drift.get(b.facilityId) ? -1 : 1;
     if (da !== db) return da - db;
 
-    const gapA = Math.abs((a.theirs ?? 0) - (a.ours ?? 0));
-    const gapB = Math.abs((b.theirs ?? 0) - (b.ours ?? 0));
+    // A missing reported or computed figure has no real gap to report — never
+    // defaulted to zero, which would otherwise manufacture a large, meaningless
+    // "gap" against whichever real number the row does have.
+    const gapA = a.theirs == null || a.ours == null ? 0 : Math.abs(a.theirs - a.ours);
+    const gapB = b.theirs == null || b.ours == null ? 0 : Math.abs(b.theirs - b.ours);
     return gapB - gapA;
   });
 }

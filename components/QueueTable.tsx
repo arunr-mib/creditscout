@@ -56,11 +56,6 @@ const REVIEW_TONE: Record<string, string> = {
   muted: "text-text-muted",
 };
 
-const DETAIL_TONE: Record<string, string> = {
-  "Recommendation: Resolve": "text-success",
-  "Recommendation: Escalate": "text-danger",
-};
-
 const HEADROOM_TONE: Record<"pos" | "neg", string> = {
   pos: "text-success",
   neg: "text-danger",
@@ -148,9 +143,7 @@ export function QueueTable({
                 </td>
                 <td className="px-3 py-3">
                   <p className={`text-body ${REVIEW_TONE[review.tone]}`}>{review.label}</p>
-                  {review.detail && (
-                    <p className={`text-label ${DETAIL_TONE[review.detail] ?? "text-text-muted"}`}>{review.detail}</p>
-                  )}
+                  {review.detail && <p className="text-label text-text-secondary">{review.detail}</p>}
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   {/* One width for the column whichever component renders the

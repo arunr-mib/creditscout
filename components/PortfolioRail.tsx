@@ -235,7 +235,10 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
                     <Icon className="h-4 w-4" />
                   </span>
                 ) : (
-                  <span aria-hidden="true" className="h-6 w-6 rounded-full ring-1 ring-text-muted" />
+                  <span
+                    aria-hidden="true"
+                    className={`h-6 w-6 rounded-full ring-1 ${isSelected ? "ring-brand-on-3" : "ring-text-muted"}`}
+                  />
                 )}
               </Link>
             );

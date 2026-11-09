@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { QUEUE_FILTERS, applyQueueFilter, headroomOf, sortByRisk } from "./queueFilterModel.ts";
+import { COUNT_KEY, QUEUE_FILTERS, applyQueueFilter, headroomOf, sortByRisk } from "./queueFilterModel.ts";
+import { queueCounts } from "./portfolioModel.ts";
 
 // ------------------------------------------------------------ QUEUE_FILTERS
 
@@ -92,12 +93,60 @@ test("sortByRisk: worst headroom first, tied headroom broken by drift, missing f
   assert.deepEqual(idsOf(sorted), ["f-north", "f-coastal", "f-harbor", "f-peats", "f-testqq"]);
 });
 
+test("sortByRisk: drift tie-break fires even when two loans have different minimums, as long as their displayed headroom is the same", () => {
+  // Both round to the same displayed headroom (-0.13x) but have different
+  // `required` minimums, so their RAW floating-point differences are not
+  // exactly equal (one is -0.1299999999999999, the other -0.13000000000000012
+  // — verified in node). Before the fix, `headroomValue` used the raw,
+  // unrounded difference, so the comparator saw these as different headrooms
+  // and never reached the drift tie-break below — the drift-true loan lost
+  // its priority purely to float noise. After the fix, both round to -0.13
+  // and the drift tie-break decides, correctly putting the declining loan first.
+  const driftTrue = { facilityId: "f-drift-true", borrower: "Drift Co", status: "breach_investigate", ours: 1.12, required: 1.25, theirs: 1.12 };
+  const driftFalse = { facilityId: "f-drift-false", borrower: "Steady Co", status: "breach_investigate", ours: 1.22, required: 1.35, theirs: 1.22 };
+  const drift = new Map([
+    ["f-drift-true", true],
+    ["f-drift-false", false],
+  ]);
+
+  const sorted = sortByRisk([driftTrue, driftFalse], drift);
+  assert.deepEqual(idsOf(sorted), ["f-drift-true", "f-drift-false"]);
+});
+
 test("sortByRisk: does not mutate its input array", () => {
   const a = { facilityId: "a", borrower: "A", status: "compliant", ours: 1.5, required: 1.1, theirs: 1.5 };
-  const b = { facilityId: "b", borrower: "B", status: "breach_investicate", ours: 1.0, required: 1.25, theirs: 1.0 };
+  const b = { facilityId: "b", borrower: "B", status: "breach_investigate", ours: 1.0, required: 1.25, theirs: 1.0 };
   const input = [a, b];
   const before = idsOf(input);
   const result = sortByRisk(input, new Map());
   assert.deepEqual(idsOf(input), before, "the input array's order must be unchanged");
   assert.notEqual(result, input, "a new array must be returned");
+});
+
+// ----------------------------------- pill counts agree with filter results
+
+test("queueCounts and applyQueueFilter agree on every pill's row count — the two must never drift apart", () => {
+  // One row of every PortfolioStatus, including both approved- and
+  // unapproved-terms variants of "not_tested" (the two reach different
+  // `reviewStatusOf` labels but the same status), so every branch of both
+  // `queueCounts()` and `applyQueueFilter()` is exercised.
+  const rows = [
+    { facilityId: "s-breach", borrower: "Breach Co", status: "breach_investigate", hasApprovedTerms: true, ours: 1.1, required: 1.25, theirs: 1.1 },
+    { facilityId: "s-review", borrower: "Review Co", status: "in_review", hasApprovedTerms: true, ours: 1.1, required: 1.25, theirs: 1.1 },
+    { facilityId: "s-investigating", borrower: "Investigating Co", status: "investigating", hasApprovedTerms: true, ours: 1.1, required: 1.25, theirs: 1.1 },
+    { facilityId: "s-paused", borrower: "Paused Co", status: "investigation_paused", hasApprovedTerms: true, ours: 1.1, required: 1.25, theirs: 1.1 },
+    { facilityId: "s-awaiting", borrower: "Awaiting Co", status: "awaiting_docs", hasApprovedTerms: true, ours: 1.1, required: 1.25, theirs: 1.1 },
+    { facilityId: "s-decided", borrower: "Decided Co", status: "decided", hasApprovedTerms: true, ours: 1.08, required: 1.25, theirs: 1.08 },
+    { facilityId: "s-compliant", borrower: "Compliant Co", status: "compliant", hasApprovedTerms: true, ours: 1.3, required: 1.1, theirs: 1.3 },
+    { facilityId: "s-not-tested", borrower: "Not Tested Co", status: "not_tested", hasApprovedTerms: true, ours: null, required: null, theirs: null },
+    { facilityId: "s-no-terms", borrower: "No Terms Co", status: "not_tested", hasApprovedTerms: false, ours: null, required: null, theirs: null },
+  ];
+  const counts = queueCounts(rows);
+  for (const { key } of QUEUE_FILTERS) {
+    assert.equal(
+      applyQueueFilter(rows, key, "").length,
+      counts[COUNT_KEY[key]],
+      `filter "${key}" row count must match queueCounts()["${COUNT_KEY[key]}"]`,
+    );
+  }
 });

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pipeline } from "./Pipeline";
 import { PipelineAutoRefresh } from "./PipelineAutoRefresh";
-import { hasRunningInvestigation, latestSteps, pipelineLanes, traceStepCount } from "./pipelineModel";
+import { latestSteps, pipelineLanes, traceStepCount } from "./pipelineModel";
 import { QueueFilterBar } from "./QueueFilterBar";
 import { QueueTable } from "./QueueTable";
 import { applyQueueFilter, sortByRisk, type QueueFilter } from "./queueFilterModel";
@@ -47,8 +47,15 @@ export function ExceptionsQueue({
   // otherwise picking "Breaches" would make every other pill's count read 0.
   const counts = useMemo(() => queueCounts(rows), [rows]);
 
+  // Auto-refresh must track every running investigation in the portfolio, not
+  // just the ones a filter or lens happens to be showing right now — otherwise
+  // an "Investigating" row that scrolls off the current filter, or sits behind
+  // the default table view, stops polling even though it is still running.
+  const anyWorking = rows.some((r) => r.status === "investigating");
+
   return (
     <div className="space-y-4">
+      <PipelineAutoRefresh active={anyWorking} />
       <QueueFilterBar
         counts={counts}
         active={filter}
@@ -77,13 +84,6 @@ function KanbanLens({ rows, traceByCasefile }: { rows: PortfolioRow[]; traceByCa
   const steps = new Map([...traceByCasefile].map(([id, trace]) => [id, latestSteps(trace)] as const));
   const stepCounts = new Map([...traceByCasefile].map(([id, trace]) => [id, traceStepCount(trace)] as const));
   const lanes = pipelineLanes(rows, steps, stepCounts);
-  // Only a running investigation changes on its own; a paused one waits for a person.
-  const anyWorking = hasRunningInvestigation(lanes);
 
-  return (
-    <>
-      <Pipeline lanes={lanes} />
-      <PipelineAutoRefresh active={anyWorking} />
-    </>
-  );
+  return <Pipeline lanes={lanes} />;
 }

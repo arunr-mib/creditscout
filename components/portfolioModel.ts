@@ -406,7 +406,7 @@ export function reviewStatusOf(
     case "not_tested":
       return row.hasApprovedTerms
         ? { label: "Not tested", detail: null, tone: "muted" }
-        : { label: "Terms approval needed", detail: null, tone: "code" };
+        : { label: "Terms approval needed", detail: null, tone: "human" };
   }
 }
 
@@ -417,7 +417,7 @@ export function reviewStatusOf(
  * been through a human decision; counting it again here would double-count
  * work that is finished, so it is deliberately left out.
  */
-const OPEN_BREACH_STATUSES: readonly PortfolioStatus[] = [
+export const OPEN_BREACH_STATUSES: readonly PortfolioStatus[] = [
   "breach_investigate",
   "in_review",
   "investigating",
