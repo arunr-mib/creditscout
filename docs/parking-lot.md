@@ -79,6 +79,7 @@ Cut to protect the demo build. Ordered by what I'd restore first.
 | 4.10 | 🟡 **Memory and guardrail trace beats** (C and B) as first-class trace annotations — the "seen similar" lesson and the guardrail downgrade shown *inside* the orchestration arc, not only on the casefile. | Beat A (orchestration) was the pitch priority and is built; memory and the guardrail are already visible on the casefile and the review screen. |
 | 4.11 | 🟡 **Onboard the five synthetic borrowers into the eval** — the harness skips a loan that is not in the database; onboarding Vantage Print Works live turns its breach into a fifth investigated case. | Deliberate: the packages stay un-seeded so onboarding genuinely creates the loan in the demo. |
 | 4.12 | ⚪ **Citation hit rate** — add an `expected_key_citation` column to the oracle (owner-signed) so the metric can be measured; today it reads "—". | Not load-bearing for the gate; needs the owner to name the clause per case. |
+| 4.13 | 🟡 **Keyboard-first triage on the Exceptions queue** (`J`/`K` move selection, `Enter` open, `E`/`V` decide, `U` re-run, `Z` undo ~5s, `?` shortcut sheet) | Owner's call, 2026-11-08, when the table redesign (`docs/superpowers/specs/2026-11-08-queue-redesign-design.md` §4.6) shipped. The UX research backs it well and it stays the natural next step once the table exists, but deciding a case still means clicking a button in `ReviewActions` for this round — no key listener, no undo mechanism, no auto-advance were built. |
 
 ---
 

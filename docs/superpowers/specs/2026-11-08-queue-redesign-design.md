@@ -147,7 +147,14 @@ Pills, directly above the table, each a count from the existing
 | Needs review | `counts.readyForReview` (status `in_review`) |
 | Breaches | `counts.awaitingInvestigation` **+** `in_review` **+** `investigating` **+** `investigation_paused` **+** `awaiting_docs` — every *open* exception. **Decided breaches are excluded, owner's call 2026-11-08** — a decided loan belongs under Decided (reachable via All loans), not under a pill that reads as "still needs something." This is a deliberate departure from the research's own prototype, which counts a decided breach under Breaches too; the owner reviewed that difference and chose to exclude it. |
 | In compliance | **new**: `rows.filter(r => r.status === "compliant").length` — `queueCounts` does not expose this yet; add it the same way `termsApprovalNeeded` already exists, with a test. |
-| Untested | `counts.untested` |
+| Terms approval | `counts.termsApprovalNeeded` |
+
+**Corrected 2026-11-09, researching the plan for this document** — the row
+above read "Untested | `counts.untested`" in an earlier draft, from before
+the pill was finalized in the mockup as "Terms approval." The mockup
+(`docs/design-mockups/2026-11-08-queue-redesign/`), the rail's own existing
+`RailDot` naming (`"terms"`, already in `railModel.ts`), and the owner's own
+recorded decision all agree on "Terms approval"; the table row now matches.
 
 **Resolved 2026-11-08 — the owner's "icons, not dots" idea lives here, not in
 a separate rail.** Each pill carries a small meaning-bearing icon beside its
