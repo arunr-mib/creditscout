@@ -59,7 +59,7 @@ export function RecommendationCard({
   /** What the recommendation rests on, as one line: citations · calculations · terms vN. */
   basisLine?: string | null;
   /** The facts that frame the recommendation. Any may be absent. */
-  facts?: { testResult: string | null; termsUsed?: string | null; reportingPeriod?: string | null };
+  facts?: { testResult: string | null; reportingPeriod?: string | null };
   /** What is still open, and where to read it. Null when nothing is. */
   outstanding?: { label: string; href: string } | null;
 }) {
@@ -94,19 +94,16 @@ export function RecommendationCard({
           </div>
         </div>
 
-        {/* The three facts that used to live in the header's own DSCR figures
+        {/* The two facts that used to live in the header's own DSCR figures
             (owner's call, 2026-11-10: those were removed in favour of this
-            one compact row, now the card's only facts strip). */}
-        {(facts?.testResult || facts?.termsUsed || facts?.reportingPeriod) && (
+            compact row, now the card's only facts strip). */}
+        {(facts?.testResult || facts?.reportingPeriod) && (
           <dl className="flex flex-wrap items-start gap-6">
             <Fact label="Test result" value={facts.testResult} />
-            <Fact label="Terms used" value={facts.termsUsed} />
             <Fact label="Reporting period" value={facts.reportingPeriod} />
           </dl>
         )}
       </div>
-
-      {summary && <p className="border-t border-border-strong px-6 py-2 text-body text-text">{summary}</p>}
 
       {/* One footer: what is still open, and the two ways in. Amber is spent
           here and nowhere else on this screen. */}
@@ -121,7 +118,7 @@ export function RecommendationCard({
                 aria-expanded={open}
                 className="text-label text-text-secondary underline-offset-2 hover:text-text hover:underline"
               >
-                {open ? "Hide the agent’s reasoning" : overridden ? "Read the validation history" : "Read the agent’s reasoning"}{" "}
+                {open ? "Hide the agent’s reasoning" : "Read the agent’s reasoning"}{" "}
                 <span aria-hidden="true">{open ? "⌃" : "›"}</span>
               </button>
             )}
@@ -133,6 +130,8 @@ export function RecommendationCard({
           </span>
         </div>
       )}
+
+      {summary && <p className="border-t border-border-strong px-6 py-2 text-body text-text">{summary}</p>}
 
       {open && explanation && (
         <div className="border-t border-border-strong px-6 py-4">

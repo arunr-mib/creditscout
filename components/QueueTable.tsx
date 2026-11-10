@@ -143,7 +143,15 @@ export function QueueTable({
                 </td>
                 <td className="px-3 py-3">
                   <p className={`text-body ${REVIEW_TONE[review.tone]}`}>{review.label}</p>
-                  {review.detail && <p className="text-label text-text-secondary">{review.detail}</p>}
+                  {/* Only "Resolve" stays neutral: green would claim a resolution
+                      that has not happened. "Escalate" in danger ink is not that
+                      trap — it is not claiming a recorded outcome, it is flagging
+                      urgency, same as every other danger-toned mark on this row. */}
+                  {review.detail && (
+                    <p className={`text-label ${review.detail === "Recommendation: Escalate" ? "text-danger" : "text-text-secondary"}`}>
+                      {review.detail}
+                    </p>
+                  )}
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   {/* One width for the column whichever component renders the

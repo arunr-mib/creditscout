@@ -147,7 +147,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           basisLine={basisLine}
           facts={{
             testResult: summary.governing?.passes === false ? "Outside covenant limit" : summary.governing?.passes === true ? "Within covenant limit" : null,
-            termsUsed: view.termsVersion != null ? `Approved v${view.termsVersion}` : null,
             reportingPeriod: view.period,
           }}
           outstanding={outstanding ? { label: outstanding.label, href: "#outstanding" } : null}
@@ -164,7 +163,19 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       {mode === "not_ready" && <NotReady status={view.status} />}
 
       {mode === "active" && (
-        <ReviewActions casefileId={view.casefileId} suggestedTag={view.suggestedTag} humanReviewRequired={view.humanReviewRequired} recommendation={view.recommendation} borrower={view.borrower} period={view.period} />
+        <ReviewActions
+          casefileId={view.casefileId}
+          suggestedTag={view.suggestedTag}
+          humanReviewRequired={view.humanReviewRequired}
+          recommendation={view.recommendation}
+          borrower={view.borrower}
+          period={view.period}
+          headerAction={
+            SUPERSEDABLE_STATUSES.includes(view.status) ? (
+              <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
+            ) : undefined
+          }
+        />
       )}
       {mode === "read_only" && (
         <Decided
@@ -174,7 +185,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           exceptionStatus={view.exceptionStatus}
         />
       )}
-      {SUPERSEDABLE_STATUSES.includes(view.status) && (
+      {/* The active case's re-run control now lives in the decision card's own
+          header (owner's call, 2026-11-10), not as a separate button here. */}
+      {mode !== "active" && SUPERSEDABLE_STATUSES.includes(view.status) && (
         <ReinvestigateButton exceptionId={view.exceptionId} awaitingDocs={view.status === "awaiting_docs"} />
       )}
       {/* A failed investigation has no action bar and never held the live slot,

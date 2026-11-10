@@ -223,8 +223,8 @@ export function CasefileFindings({
         )}
       </section>
 
-      {/* ------------------------------------ supporting evidence + attention */}
-      <div className="min-w-0 space-y-4">
+      {/* ------------------------------------------------- supporting evidence */}
+      <div className="min-w-0">
         {documents.length > 0 && (
           <section aria-label="Supporting evidence" className="rounded-xl border border-border-strong bg-surface shadow-card">
             <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Supporting evidence</h2>
@@ -285,13 +285,18 @@ export function CasefileFindings({
             )}
           </section>
         )}
+      </div>
 
-        <section
-          id="outstanding"
-          aria-label="Outstanding review items"
-          className="scroll-mt-4 rounded-xl border border-border-strong bg-surface shadow-card"
-        >
-          <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Outstanding review items</h2>
+      {/* Its own full-width row, not stacked under Supporting evidence: that
+          stack routinely ran taller than Investigation findings beside it,
+          leaving the shorter column trailing off into uneven empty space. A
+          punch-list of what's still open reads fine as a footer strip. */}
+      <section
+        id="outstanding"
+        aria-label="Outstanding review items"
+        className="scroll-mt-4 rounded-xl border border-border-strong bg-surface shadow-card lg:col-span-3"
+      >
+        <h2 className="px-6 pb-3 pt-4 text-section font-bold text-text">Outstanding review items</h2>
           <div className="space-y-3 px-6 pb-4">
             {unboarded.length === 0 && notes.length === 0 && missingEvidence.length === 0 && (
               <p className="text-body text-text-muted">Nothing is outstanding on this casefile.</p>
@@ -352,8 +357,7 @@ export function CasefileFindings({
               </div>
             )}
           </div>
-        </section>
-      </div>
+      </section>
     </div>
   );
 }

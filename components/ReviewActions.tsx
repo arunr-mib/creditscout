@@ -31,8 +31,10 @@ export function ReviewActions(props: {
   /** Context for the override dialog, so the analyst sees what they decide against. */
   borrower?: string | null;
   period?: string | null;
+  /** Rendered at the top-right of this card's header — the re-run control, when this casefile can offer one. */
+  headerAction?: React.ReactNode;
 }) {
-  const { casefileId, suggestedTag, humanReviewRequired, recommendation, borrower, period } = props;
+  const { casefileId, suggestedTag, humanReviewRequired, recommendation, borrower, period, headerAction } = props;
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState(false);
   const [outcome, setOutcome] = useState<ReviewOutcome | null>(null);
@@ -58,11 +60,14 @@ export function ReviewActions(props: {
   // like a standing prompt to decide.
   return (
     <section aria-label="Review the recommendation" className="rounded-xl border border-border-strong bg-surface p-4 shadow-card">
-      <div className="mb-3 space-y-1">
-        <h2 className="font-brand text-section font-extrabold text-text">Record your decision</h2>
-        {/* One line, not three. The instruction to read the findings first is
-            said once, on the recommendation card. */}
-        <p className="text-body text-text-secondary">Your decision and rationale will be saved to the casefile.</p>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="font-brand text-section font-extrabold text-text">Record your decision</h2>
+          {/* One line, not three. The instruction to read the findings first is
+              said once, on the recommendation card. */}
+          <p className="text-body text-text-secondary">Your decision and rationale will be saved to the casefile.</p>
+        </div>
+        {headerAction}
       </div>
 
       {outcome && !dialog && <OutcomeNote outcome={outcome} />}
