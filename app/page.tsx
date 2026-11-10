@@ -29,7 +29,7 @@ export default async function Home() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-prose space-y-1">
             <p className="text-label text-text-muted">Covenant monitoring · {targetLabel}</p>
-            <h1 className="text-title text-text">Exceptions</h1>
+            <h1 className="text-title text-text">Credit Analysis Queue</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {/* The period this runs is in the eyebrow above, so the button names
