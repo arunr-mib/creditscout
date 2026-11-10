@@ -51,10 +51,10 @@ harness changed** — this is the analyst-facing surface only.
 - "Policy-directed recommendation" (not "CreditScout recommends") is correct, not a bug, whenever a code guardrail overrode the agent's own draft answer — the eyebrow states who is actually responsible for the recommendation shown.
 - The `calc_id` provenance citation under a DSCR figure, and the kanban's "computed by code" badge, are intentionally retained elsewhere even though the casefile header's copy was removed — they're the product's visible proof that a number traces to a logged calculation, not decorative chrome.
 
-**Still open — two owner calls from the plan's final review, not yet decided:**
+**Resolved 2026-11-10 — both owner calls from the plan's final review:**
 
-- Whether a *decided* breach should rank above open exceptions in the risk sort (today it does, by raw headroom, same as everything else — a deliberate, tested choice during the build, but in tension with how a risk-sorted triage queue reads).
-- Which direction the final sort tie-break (`|reported − computed|`) should favor — the original research flagged this explicitly as needing confirmation before shipping and it was never resolved either way.
+- A *decided* breach now sorts in its own bucket: after every open exception, but ahead of compliant/untested rows — it was a real problem and still outranks a clean loan, but it no longer competes with active, undecided work for the top of the queue. `sortByRisk`'s `bucketOf` in `components/queueFilterModel.ts`.
+- The reported-vs-computed gap tie-break keeps its original direction: the bigger the discrepancy, the higher it ranks (read as "probably a dispute, worth a second look," not "probably a data error"). No code change — confirmed as-is.
 
 **Next (owner)**
 

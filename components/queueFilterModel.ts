@@ -85,15 +85,30 @@ const headroomValue = (row: Pick<PortfolioRow, "ours" | "required">): number =>
   row.ours == null || row.required == null ? Infinity : Math.round((row.ours - row.required) * 100) / 100;
 
 /**
- * The queue's default order: the loan most worth looking at first. Worst
- * headroom leads; at equal headroom a declining loan (drift) outranks a
- * single bad quarter; the final tie-break is the larger gap between what the
- * borrower reported and what we computed — the bigger the discrepancy, the
- * more worth a second look. Loans with no figure at all sort last of all.
- * Returns a new array; `rows` is never mutated.
+ * Owner's call, 2026-11-10: a decided breach is finished work, so it must not
+ * outrank an open exception still waiting on someone — but it was a real
+ * problem, worse than a loan that never breached at all, so it still outranks
+ * compliant/untested rows. Three buckets, open exceptions first.
+ */
+const bucketOf = (row: Pick<PortfolioRow, "status">): number =>
+  OPEN_BREACH_STATUSES.includes(row.status) ? 0 : row.status === "decided" ? 1 : 2;
+
+/**
+ * The queue's default order: the loan most worth looking at first, bucketed
+ * open exceptions → decided → everything else (§ owner's call above), and
+ * within each bucket: worst headroom leads; at equal headroom a declining
+ * loan (drift) outranks a single bad quarter; the final tie-break is the
+ * larger gap between what the borrower reported and what we computed — the
+ * bigger the discrepancy, the more worth a second look. Loans with no figure
+ * at all sort last of their bucket. Returns a new array; `rows` is never
+ * mutated.
  */
 export function sortByRisk(rows: PortfolioRow[], drift: Map<string, boolean>): PortfolioRow[] {
   return [...rows].sort((a, b) => {
+    const ba = bucketOf(a);
+    const bb = bucketOf(b);
+    if (ba !== bb) return ba - bb;
+
     const ha = headroomValue(a);
     const hb = headroomValue(b);
     if (ha !== hb) return ha - hb;

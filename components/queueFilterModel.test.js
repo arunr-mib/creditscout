@@ -76,7 +76,7 @@ test("headroomOf: null when either figure is missing", () => {
 
 // -------------------------------------------------------------- sortByRisk
 
-test("sortByRisk: worst headroom first, tied headroom broken by drift, missing figures last — the real book's shape", () => {
+test("sortByRisk: worst headroom first within a bucket, tied headroom broken by drift, missing figures last — the real book's shape", () => {
   const northgate = { facilityId: "f-north", borrower: "Northgate Foods", status: "decided", ours: 1.08, required: 1.25, theirs: 1.31 };
   const coastal = { facilityId: "f-coastal", borrower: "Coastal Marine", status: "breach_investigate", ours: 1.12, required: 1.25, theirs: 1.12 };
   const harbor = { facilityId: "f-harbor", borrower: "Harbor Logistics", status: "in_review", ours: 1.12, required: 1.25, theirs: 1.12 };
@@ -89,8 +89,24 @@ test("sortByRisk: worst headroom first, tied headroom broken by drift, missing f
     ["f-harbor", false],
   ]);
 
+  // Open exceptions bucket first (Coastal/Harbor, worse raw headroom than
+  // Northgate's displayed -0.17x notwithstanding — a decided breach never
+  // outranks open work, owner's call 2026-11-10), decided second, then
+  // compliant/untested last.
   const sorted = sortByRisk(input, drift);
-  assert.deepEqual(idsOf(sorted), ["f-north", "f-coastal", "f-harbor", "f-peats", "f-testqq"]);
+  assert.deepEqual(idsOf(sorted), ["f-coastal", "f-harbor", "f-north", "f-peats", "f-testqq"]);
+});
+
+test("sortByRisk: a decided breach outranks compliant/untested rows even though it's behind every open exception", () => {
+  const decided = { facilityId: "f-decided", borrower: "Decided Co", status: "decided", ours: 1.3, required: 1.4, theirs: 1.3 };
+  const open = { facilityId: "f-open", borrower: "Open Co", status: "breach_investigate", ours: 0.5, required: 1.4, theirs: 0.5 };
+  const compliant = { facilityId: "f-compliant", borrower: "Compliant Co", status: "compliant", ours: 1.5, required: 1.1, theirs: 1.5 };
+
+  // Decided's own headroom (-0.10) is far better than open's (-0.90), so a
+  // pure headroom sort would rank decided ahead of open — the bucket must
+  // override that.
+  const sorted = sortByRisk([compliant, decided, open], new Map());
+  assert.deepEqual(idsOf(sorted), ["f-open", "f-decided", "f-compliant"]);
 });
 
 test("sortByRisk: drift tie-break fires even when two loans have different minimums, as long as their displayed headroom is the same", () => {
