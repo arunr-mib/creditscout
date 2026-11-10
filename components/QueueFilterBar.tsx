@@ -1,39 +1,20 @@
 "use client";
 
-import { AllLoansIcon, BreachIcon, ComplianceIcon, NeedsReviewIcon, TermsIcon } from "./queueIcons";
-import { COUNT_KEY, QUEUE_FILTERS, type QueueFilter } from "./queueFilterModel";
-import type { queueCounts } from "./portfolioModel";
-
-type Counts = ReturnType<typeof queueCounts>;
 type Lens = "table" | "kanban";
 
-/** Every pill gets an icon, matching the approved mockup. */
-const FILTER_ICON: Partial<Record<QueueFilter, (props: { className?: string }) => React.JSX.Element>> = {
-  all: AllLoansIcon,
-  needs_review: NeedsReviewIcon,
-  breaches: BreachIcon,
-  compliant: ComplianceIcon,
-  terms: TermsIcon,
-};
-
 /**
- * The Exceptions queue's filter bar: five status pills, a borrower search box,
- * and the table/kanban lens toggle. Purely presentational — every click goes
- * back up to `ExceptionsQueue`, which owns `filter`/`query`/`lens` state and
- * does the actual filtering (`queueFilterModel`). No data shaping here.
+ * The Exceptions queue's search box and table/kanban lens toggle. The five
+ * status filters moved into the portfolio rail (owner's call, 2026-11-09) —
+ * this keeps only the two controls that don't belong in a left-nav list:
+ * free-text search and the view switch. Purely presentational — every click
+ * goes back up to `ExceptionsQueue`, which owns `query`/`lens` state.
  */
 export function QueueFilterBar({
-  counts,
-  active,
-  onFilter,
   query,
   onQuery,
   lens,
   onLens,
 }: {
-  counts: Counts;
-  active: QueueFilter;
-  onFilter: (f: QueueFilter) => void;
   query: string;
   onQuery: (q: string) => void;
   lens: Lens;
@@ -41,36 +22,6 @@ export function QueueFilterBar({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Filter loans">
-        {QUEUE_FILTERS.map((f) => {
-          const Icon = FILTER_ICON[f.key];
-          const isActive = f.key === active;
-          return (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => onFilter(f.key)}
-              aria-pressed={isActive}
-              className={`flex items-center gap-2 rounded-full px-3 py-1 text-body transition-colors duration-fast ${
-                isActive
-                  ? "bg-mint text-text"
-                  : "border border-border-strong text-text-secondary hover:border-text hover:text-text"
-              }`}
-            >
-              {Icon && <Icon className="h-4 w-4" />}
-              <span>{f.label}</span>
-              <span
-                className={`rounded-full px-1 text-badge tabular-nums ${
-                  isActive ? "bg-text/10 text-text" : "bg-surface-raised text-text-muted"
-                }`}
-              >
-                {counts[COUNT_KEY[f.key]]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       <label className="min-w-0 flex-1">
         <span className="sr-only">Search borrowers</span>
         <input

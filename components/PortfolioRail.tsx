@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { PortfolioRow } from "./portfolioModel";
-import { BreachIcon, ComplianceIcon, DecidedIcon, TermsIcon } from "./queueIcons";
+import { queueCounts, type PortfolioRow } from "./portfolioModel";
+import { AllLoansIcon, BreachIcon, ComplianceIcon, DecidedIcon, NeedsReviewIcon, TermsIcon } from "./queueIcons";
+import { COUNT_KEY, QUEUE_FILTERS, type QueueFilter } from "./queueFilterModel";
 import {
   RAIL_PREF_KEY,
   isRailToggleKey,
@@ -52,6 +53,28 @@ const STRIP_TINT: Partial<Record<RailDot, string>> = {
   terms: "bg-human-bg text-human",
 };
 
+// The Exceptions page's rail mode (owner's call, 2026-11-09): the five
+// status filters replace the per-loan list here, not just sit above it —
+// picking one narrows the table/kanban body via `?filter=`. Icons match the
+// filter bar's own (now-retired) pill icons exactly.
+const QUEUE_FILTER_ICON: Record<QueueFilter, (props: { className?: string }) => React.JSX.Element> = {
+  all: AllLoansIcon,
+  needs_review: NeedsReviewIcon,
+  breaches: BreachIcon,
+  compliant: ComplianceIcon,
+  terms: TermsIcon,
+};
+// "All loans" and "Needs review" aren't a status, so they stay neutral; the
+// other three reuse the exact tints the collapsed per-loan strip already
+// uses for the same colours (terms is slate/human, never amber).
+const QUEUE_FILTER_TINT: Record<QueueFilter, string> = {
+  all: "border border-border-strong bg-surface-raised text-text-muted",
+  needs_review: "border border-border-strong bg-surface-raised text-text-muted",
+  breaches: "bg-danger-bg text-danger",
+  compliant: "bg-success-bg text-success",
+  terms: "bg-human-bg text-human",
+};
+
 const FILTER_TAB = /^\/(documents|terms)(\/|$)/;
 
 function storage(): Storage | null {
@@ -71,9 +94,14 @@ function writePref(collapsed: boolean): void {
 }
 
 /**
- * The portfolio rail: every loan with its status and DSCR, one click to its
- * casefile or setup. Collapsible to a strip of status dots; `[` toggles it and
- * the choice is remembered. Below `md` the rail is always the strip.
+ * The portfolio rail. On the Exceptions queue (`/` exactly), it shows the
+ * five status filters instead of the loan list — picking one narrows the
+ * table/kanban body via `?filter=` (owner's call, 2026-11-09: these replace
+ * the loan list rather than sit above it). Everywhere else — casefiles,
+ * Documents, Covenant terms — it's still every loan with its status and
+ * DSCR, one click to its casefile or setup. Collapsible to an icon strip;
+ * `[` toggles it and the choice is remembered. Below `md` the rail is always
+ * the strip.
  */
 export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; periodLabel: string }) {
   const pathname = usePathname();
@@ -119,6 +147,15 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
   const selected = selectedFacility(pathname, searchParams.get("loan"), rows);
   const loanCount = `${rows.length} ${rows.length === 1 ? "loan" : "loans"}`;
 
+  // Strict equality, not `activeTab` — a casefile page also belongs to the
+  // Exceptions tab, but it must keep the per-loan list (with that casefile's
+  // loan highlighted) so a sibling loan is still one click away. Only the
+  // exact queue page switches the rail to filter categories.
+  const isExceptions = pathname === "/";
+  const rawFilter = searchParams.get("filter");
+  const activeFilter: QueueFilter = QUEUE_FILTERS.some((f) => f.key === rawFilter) ? (rawFilter as QueueFilter) : "all";
+  const counts = isExceptions ? queueCounts(rows) : null;
+
   const toggleButton = (
     <button
       type="button"
@@ -151,53 +188,89 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
           </div>
 
           <ul className="flex flex-col gap-1 px-2 pb-2">
-            {filterPath && (
-              <li>
-                <Link
-                  href={filterPath}
-                  aria-current={selected === null ? "true" : undefined}
-                  className={`block rounded-xl px-3 py-2 text-body transition-colors duration-fast ${
-                    selected === null ? "bg-brand font-semibold text-brand-on" : "text-text hover:bg-surface"
-                  }`}
-                >
-                  All loans
-                </Link>
-              </li>
-            )}
-            {items.map((item) => {
-              const isSelected = item.facilityId === selected;
-              return (
-                <li key={item.facilityId}>
-                  <Link
-                    href={item.href}
-                    aria-current={isSelected ? "true" : undefined}
-                    className={`block rounded-xl px-3 py-2 transition-colors duration-fast ${
-                      isSelected ? "bg-brand text-brand-on" : "text-text hover:bg-surface"
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className={`h-2 w-2 shrink-0 rounded-full ${(isSelected ? DOT_SELECTED : DOT)[item.dot]}`}
-                      />
-                      <span className="min-w-0 flex-1 truncate text-body font-semibold" title={item.borrower}>
-                        {item.borrower}
-                      </span>
-                      <span
-                        className={`shrink-0 text-num tabular-nums ${
-                          item.belowMinimum ? (isSelected ? "text-brand-danger" : "text-danger") : ""
+            {isExceptions && counts
+              ? QUEUE_FILTERS.map((f) => {
+                  const Icon = QUEUE_FILTER_ICON[f.key];
+                  const isActive = f.key === activeFilter;
+                  const href = f.key === "all" ? "/" : `/?filter=${f.key}`;
+                  return (
+                    <li key={f.key}>
+                      <Link
+                        href={href}
+                        aria-current={isActive ? "true" : undefined}
+                        className={`flex items-center gap-2 rounded-xl px-3 py-2 text-body transition-colors duration-fast ${
+                          isActive ? "bg-brand font-semibold text-brand-on" : "text-text hover:bg-surface"
                         }`}
                       >
-                        {item.dscrText}
-                      </span>
-                    </span>
-                    <span className={`block truncate pl-4 text-label ${isSelected ? "text-brand-on-3" : "text-text-muted"}`}>
-                      {item.subline}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${QUEUE_FILTER_TINT[f.key]}`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">{f.label}</span>
+                        <span
+                          className={`shrink-0 rounded-full px-1 text-badge tabular-nums ${
+                            isActive ? "bg-brand-on/10 text-brand-on" : "bg-surface-raised text-text-muted"
+                          }`}
+                        >
+                          {counts[COUNT_KEY[f.key]]}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })
+              : (
+                <>
+                  {filterPath && (
+                    <li>
+                      <Link
+                        href={filterPath}
+                        aria-current={selected === null ? "true" : undefined}
+                        className={`block rounded-xl px-3 py-2 text-body transition-colors duration-fast ${
+                          selected === null ? "bg-brand font-semibold text-brand-on" : "text-text hover:bg-surface"
+                        }`}
+                      >
+                        All loans
+                      </Link>
+                    </li>
+                  )}
+                  {items.map((item) => {
+                    const isSelected = item.facilityId === selected;
+                    return (
+                      <li key={item.facilityId}>
+                        <Link
+                          href={item.href}
+                          aria-current={isSelected ? "true" : undefined}
+                          className={`block rounded-xl px-3 py-2 transition-colors duration-fast ${
+                            isSelected ? "bg-brand text-brand-on" : "text-text hover:bg-surface"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden="true"
+                              className={`h-2 w-2 shrink-0 rounded-full ${(isSelected ? DOT_SELECTED : DOT)[item.dot]}`}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-body font-semibold" title={item.borrower}>
+                              {item.borrower}
+                            </span>
+                            <span
+                              className={`shrink-0 text-num tabular-nums ${
+                                item.belowMinimum ? (isSelected ? "text-brand-danger" : "text-danger") : ""
+                              }`}
+                            >
+                              {item.dscrText}
+                            </span>
+                          </span>
+                          <span className={`block truncate pl-4 text-label ${isSelected ? "text-brand-on-3" : "text-text-muted"}`}>
+                            {item.subline}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </>
+              )}
           </ul>
 
           <div className="mt-2 border-t border-border px-2 py-2">
@@ -213,36 +286,62 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
         {/* Collapsed strip: meaning-bearing status icons, not colour dots. Shown whenever collapsed, and always below md. */}
         <div className={collapsed ? "flex flex-col items-center gap-1 py-2" : "flex flex-col items-center gap-1 py-2 md:hidden"}>
           {toggleButton}
-          {items.map((item) => {
-            const isSelected = item.facilityId === selected;
-            const Icon = STRIP_ICON[item.dot];
-            return (
-              <Link
-                key={item.facilityId}
-                href={item.href}
-                title={`${item.borrower} · ${item.dscrText} · ${item.subline}`}
-                aria-label={`${item.borrower}, ${item.dscrText}, ${item.subline}`}
-                aria-current={isSelected ? "true" : undefined}
-                className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-fast ${
-                  isSelected ? "bg-brand" : "hover:bg-surface"
-                }`}
-              >
-                {Icon ? (
-                  <span
-                    aria-hidden="true"
-                    className={`flex h-6 w-6 items-center justify-center rounded-md ${STRIP_TINT[item.dot]}`}
+          {isExceptions && counts
+            ? QUEUE_FILTERS.map((f) => {
+                const Icon = QUEUE_FILTER_ICON[f.key];
+                const isActive = f.key === activeFilter;
+                const href = f.key === "all" ? "/" : `/?filter=${f.key}`;
+                const count = counts[COUNT_KEY[f.key]];
+                return (
+                  <Link
+                    key={f.key}
+                    href={href}
+                    title={`${f.label} · ${count}`}
+                    aria-label={`${f.label}, ${count} loans`}
+                    aria-current={isActive ? "true" : undefined}
+                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-fast ${
+                      isActive ? "bg-brand" : "hover:bg-surface"
+                    }`}
                   >
-                    <Icon className="h-4 w-4" />
-                  </span>
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className={`h-6 w-6 rounded-full ring-1 ${isSelected ? "ring-brand-on-3" : "ring-text-muted"}`}
-                  />
-                )}
-              </Link>
-            );
-          })}
+                    <span
+                      aria-hidden="true"
+                      className={`flex h-6 w-6 items-center justify-center rounded-md ${QUEUE_FILTER_TINT[f.key]}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                  </Link>
+                );
+              })
+            : items.map((item) => {
+                const isSelected = item.facilityId === selected;
+                const Icon = STRIP_ICON[item.dot];
+                return (
+                  <Link
+                    key={item.facilityId}
+                    href={item.href}
+                    title={`${item.borrower} · ${item.dscrText} · ${item.subline}`}
+                    aria-label={`${item.borrower}, ${item.dscrText}, ${item.subline}`}
+                    aria-current={isSelected ? "true" : undefined}
+                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors duration-fast ${
+                      isSelected ? "bg-brand" : "hover:bg-surface"
+                    }`}
+                  >
+                    {Icon ? (
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-6 w-6 items-center justify-center rounded-md ${STRIP_TINT[item.dot]}`}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </span>
+                    ) : (
+                      <span
+                        aria-hidden="true"
+                        className={`h-6 w-6 rounded-full ring-1 ${isSelected ? "ring-brand-on-3" : "ring-text-muted"}`}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
         </div>
       </div>
     </aside>

@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { Pipeline } from "./Pipeline";
 import { PipelineAutoRefresh } from "./PipelineAutoRefresh";
 import { latestSteps, pipelineLanes, traceStepCount } from "./pipelineModel";
 import { QueueFilterBar } from "./QueueFilterBar";
 import { QueueTable } from "./QueueTable";
-import { applyQueueFilter, sortByRisk, type QueueFilter } from "./queueFilterModel";
-import { queueCounts, type PortfolioRow } from "./portfolioModel";
+import { QUEUE_FILTERS, applyQueueFilter, sortByRisk, type QueueFilter } from "./queueFilterModel";
+import type { PortfolioRow } from "./portfolioModel";
 
 type Lens = "table" | "kanban";
 
@@ -16,10 +17,12 @@ type Lens = "table" | "kanban";
  * as either the table lens or the kanban lens — same rows either way, never two
  * different views of two different data sets.
  *
- * Owns the filter pill, search box and lens choice as local state; no URL sync
- * (not required by the spec, and a page reload is not expected to restore it).
- * The actual filtering/sorting logic lives in `queueFilterModel` — this
- * component only wires it to the two lenses.
+ * The status filter lives in the portfolio rail now, as `?filter=` on the URL
+ * (owner's call, 2026-11-09) — this component only reads it, so a rail click
+ * and this table stay in sync across the layout boundary. Search text and the
+ * lens choice stay local state, same as before. The actual filtering/sorting
+ * logic lives in `queueFilterModel` — this component only wires it to the two
+ * lenses.
  */
 export function ExceptionsQueue({
   rows,
@@ -34,7 +37,9 @@ export function ExceptionsQueue({
   targetLabel: string;
   traceByCasefile: Map<string, unknown>;
 }) {
-  const [filter, setFilter] = useState<QueueFilter>("all");
+  const searchParams = useSearchParams();
+  const rawFilter = searchParams.get("filter");
+  const filter: QueueFilter = QUEUE_FILTERS.some((f) => f.key === rawFilter) ? (rawFilter as QueueFilter) : "all";
   const [query, setQuery] = useState("");
   const [lens, setLens] = useState<Lens>("table");
 
@@ -42,10 +47,6 @@ export function ExceptionsQueue({
   // from this same `sorted` array, never from the raw `rows` prop.
   const filtered = applyQueueFilter(rows, filter, query);
   const sorted = sortByRisk(filtered, drift);
-
-  // The pill counts describe the whole portfolio, not the current filter —
-  // otherwise picking "Breaches" would make every other pill's count read 0.
-  const counts = useMemo(() => queueCounts(rows), [rows]);
 
   // Auto-refresh must track every running investigation in the portfolio, not
   // just the ones a filter or lens happens to be showing right now — otherwise
@@ -56,15 +57,7 @@ export function ExceptionsQueue({
   return (
     <div className="space-y-4">
       <PipelineAutoRefresh active={anyWorking} />
-      <QueueFilterBar
-        counts={counts}
-        active={filter}
-        onFilter={setFilter}
-        query={query}
-        onQuery={setQuery}
-        lens={lens}
-        onLens={setLens}
-      />
+      <QueueFilterBar query={query} onQuery={setQuery} lens={lens} onLens={setLens} />
 
       {lens === "table" ? (
         <QueueTable rows={sorted} targetPeriod={targetPeriod} targetLabel={targetLabel} />
