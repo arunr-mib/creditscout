@@ -105,12 +105,14 @@ export function RecommendationCard({
         )}
       </div>
 
-      {/* One footer: what is still open, and the two ways in. Amber is spent
-          here and nowhere else on this screen. */}
-      {(outstanding || explanation) && (
+      {/* One row, not two: the summary and the two ways in share a line now
+          (owner's call, 2026-11-10 — the card read as three stacked bands
+          when the links sat on their own row above the summary). Amber is
+          spent here and nowhere else on this screen. */}
+      {(summary || outstanding || explanation) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-strong px-6 py-2">
-          <span />
-          <span className="flex flex-wrap items-center gap-6">
+          {summary ? <p className="text-body text-text">{summary}</p> : <span />}
+          <span className="flex shrink-0 flex-wrap items-center gap-6">
             {explanation && (
               <button
                 type="button"
@@ -130,8 +132,6 @@ export function RecommendationCard({
           </span>
         </div>
       )}
-
-      {summary && <p className="border-t border-border-strong px-6 py-2 text-body text-text">{summary}</p>}
 
       {open && explanation && (
         <div className="border-t border-border-strong px-6 py-4">

@@ -1,4 +1,4 @@
-import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
+import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
@@ -93,9 +93,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // from the notes and the calculation log; never written by the model.
   const basis = decisionBasis(summary, view.notes, view.draftRecommendation, view.notes.length, view.amendments);
   const outstanding = outstandingSummary(view.amendments, view.notes);
-  // The state, in the analyst's words. Never the raw column value: `superseded`
-  // and `failed` fell through to it and the screen spoke the database's words.
-  const state = statusHeadline(view.status);
   const basisLine = [
     `${view.claims.filter((c) => c.cited).length} citation${view.claims.filter((c) => c.cited).length === 1 ? "" : "s"}`,
     `${view.sections.length} calculation${view.sections.length === 1 ? "" : "s"}`,
@@ -110,20 +107,9 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
       <header className="space-y-3">
         <div className="space-y-1">
           {/* A way back to the pipeline: the casefile is reached FROM a
-              board of loans, and an analyst needs the way back. */}
-          <nav aria-label="Breadcrumb" className="text-label text-text-muted">
-            <Link href="/" className="underline-offset-2 hover:text-text hover:underline">
-              <span aria-hidden="true">← </span>Pipeline
-            </Link>
-            <span aria-hidden="true" className="mx-2">/</span>
-            <span className="text-text-secondary">{view.borrower}</span>
-          </nav>
-          {/* The identity line carries the state. Green is for a verified pass,
-              so the state is words, not a coloured status object. */}
-          <p className="text-label uppercase tracking-wider text-text-muted">
-            {view.period}
-            {view.termsVersion != null && ` · Terms v${view.termsVersion}`} · {state}
-          </p>
+              board of loans, and an analyst needs the way back — moved onto
+              the "Exceptions" tab in the top nav now (owner's call,
+              2026-11-10: this page starts clean at the borrower name). */}
           <h1 className="font-brand text-title text-text">{view.borrower}</h1>
           {/* Memory is agent provenance, not a status: the agent tag. Renders
               nothing when no prior case informed this run. */}
