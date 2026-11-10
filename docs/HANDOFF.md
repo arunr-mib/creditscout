@@ -1,18 +1,67 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14, with a 2026-11-07 redesign entry at the top
-**Repo:** `arunr-mib/creditscout` (private) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14, with a 2026-11-07 redesign entry and a 2026-11-10 queue-redesign entry at the top
+**Repo:** `arunr-mib/creditscout` (public as of 2026-11-10) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
-**Start at §0.0.** It is the current state and the next actions. §1–§5 are the
-design reasoning (still true), §8–§9 are the gotchas and lessons (still true),
-and §0.1–§0.6 are the 2026-10-08 build-out record, still accurate on the agent,
-the evals and the data.
+**Start at §0.B.** It is the most current state. §0.A and §0.0 below it are
+each still-true records of their own moment; §1–§5 are the design reasoning
+(still true), §8–§9 are the gotchas and lessons (still true), and §0.1–§0.6
+are the 2026-10-08 build-out record, still accurate on the agent, the evals
+and the data.
 
 ---
 
 ## 0. Current state — 2026-10-14 — START HERE
+
+### 0.B Queue redesign + casefile UI pass — 2026-11-08 to 2026-11-10 (UI only)
+
+The Exceptions home screen (renamed **Credit Analysis Queue** on-page; every
+nav tab, breadcrumb and internal reference still says "Exceptions") moved
+from a kanban-only board to a dense, risk-sorted table by default, with
+kanban kept as a toggle over the same rows. Built subagent-driven from
+`docs/superpowers/specs/2026-11-08-queue-redesign-design.md` and
+`docs/superpowers/plans/2026-11-08-queue-redesign.md`, then taken through two
+further rounds of owner review directly against a live Preview. **Nothing
+about the agent, the calculator, the guardrails, the schema or the eval
+harness changed** — this is the analyst-facing surface only.
+
+| What | State |
+|---|---|
+| Where it is | Branch `arunr-mib/creditscout`, commits `5bb2b44`..`fede842` |
+| **Production** | **Unchanged** — still runs the 2026-11-07 Forest look. Waits on an explicit `vercel --prod`, the owner's call |
+| **Preview** | **Live**, auto-updating on every push via Vercel's git integration: `https://creditscout-nrb7-git-arunr-mib-f7de81-arun-rajendirans-projects.vercel.app` — bookmark this one, not a one-off `vercel deploy` URL, which goes stale the moment a newer deploy lands |
+| Spec | `docs/superpowers/specs/2026-11-08-queue-redesign-design.md` |
+| Plan | `docs/superpowers/plans/2026-11-08-queue-redesign.md` |
+
+**What changed for the analyst**
+
+- **Table is the default view.** Risk-sorted — worst headroom (`computed − required`, labelled "Variance") first, a declining-DSCR tie-break second, then by how far the borrower's own reported figure strays from the computed one. Kanban is one click away via a Table/Kanban toggle, same filtered rows either way.
+- **The five status filters live in the portfolio rail**, not the table body — a left-nav list of All loans/Needs review/Breaches/In compliance/Terms approval with icons and counts, driven by `?filter=` on the URL so the rail and the table stay in sync across the layout boundary. This applies only on the Exceptions page itself; Documents, Covenant terms, and casefile pages keep the rail's original per-loan list.
+- **Kanban gained a fifth lane**, "Also in the book," so compliant and untested loans stop silently vanishing from the board — the deal pipeline used to hide 4 of 7 loans.
+- **The casefile's recommendation card is leaner.** The Computed/Reported/Minimum DSCR header strip (and its `calc_id` citation badge) is gone — the page goes straight from the borrower name into the recommendation. The card's own facts row carries Test result and Reporting period instead. Decision buttons read "Approve" / "Override" / "Hold for borrower documents," no mandatory-signoff caption beneath them; the re-run control moved into that same card's header.
+- **Findings layout rebalanced.** Investigation findings and Supporting evidence sit side by side; Outstanding review items is its own full-width row below both, not stacked under Supporting evidence where it used to run far taller than the findings column beside it.
+- **Filter-category icons redrawn** — lighter stroke, consistent circle/rounded-square containers, replacing a first pass that read as a generic default icon set.
+- **Covenant terms**: the version-history link sits inline next to the borrower name now, not on its own line below it.
+
+**Decided during the build** (state these as settled)
+
+- `Escalate` keeps `danger` (red) ink in the table's status column; `Resolve` stays neutral. The project's color rule bars *green* from claiming an unrecorded resolution — it says nothing against red flagging urgency, which is what danger ink already means everywhere else on that row.
+- "Policy-directed recommendation" (not "CreditScout recommends") is correct, not a bug, whenever a code guardrail overrode the agent's own draft answer — the eyebrow states who is actually responsible for the recommendation shown.
+- The `calc_id` provenance citation under a DSCR figure, and the kanban's "computed by code" badge, are intentionally retained elsewhere even though the casefile header's copy was removed — they're the product's visible proof that a number traces to a logged calculation, not decorative chrome.
+
+**Still open — two owner calls from the plan's final review, not yet decided:**
+
+- Whether a *decided* breach should rank above open exceptions in the risk sort (today it does, by raw headroom, same as everything else — a deliberate, tested choice during the build, but in tension with how a risk-sorted triage queue reads).
+- Which direction the final sort tie-break (`|reported − computed|`) should favor — the original research flagged this explicitly as needing confirmation before shipping and it was never resolved either way.
+
+**Next (owner)**
+
+- Decide the two open sort-order questions above, if either matters before more people see this.
+- `vercel --prod` when ready — Preview has had two full rounds of owner review plus a fresh `npm test`/`tsc`/`npm run build` pass, all clean.
+
+---
 
 ### 0.A Forest redesign — 2026-11-07 (UI only)
 
