@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 
 import { NOT_BOARDED_TOOLTIP, TERMS_PENDING, TERMS_STATUS_LABEL, countPendingUpdates, longDate, summariseTerms } from "@/lib/terms-labels";
 
@@ -73,8 +75,12 @@ export function TermsList({ cards }: { cards: TermsCard[] }) {
 /**
  * One loan, one row. The version history and the terms themselves open
  * underneath, so the detail is reachable without being imposed on everyone.
+ * The toggle itself sits inline next to the name — it used to be its own
+ * full-width row below, which read as a second line per loan instead of a
+ * small, secondary affordance beside the name it belongs to.
  */
 function TermsRow({ card }: { card: TermsCard }) {
+  const [open, setOpen] = useState(false);
   const setupHref = `/facilities/${card.facilityId}/covenant-setup`;
   const approved = card.versions.find((v) => v.version === card.approvedVersion) ?? null;
   const proposed = card.versions.find((v) => v.status === "proposed") ?? null;
@@ -82,7 +88,19 @@ function TermsRow({ card }: { card: TermsCard }) {
   return (
     <>
       <tr className="border-t border-border align-middle">
-        <td className="px-4 py-3 text-body text-text">{card.borrower}</td>
+        <td className="px-4 py-3 text-body text-text">
+          <span className="flex flex-wrap items-baseline gap-x-2">
+            {card.borrower}
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="text-label text-text-muted underline decoration-border-strong underline-offset-2 hover:text-text hover:decoration-text"
+            >
+              History
+            </button>
+          </span>
+        </td>
         <td className="px-4 py-3 text-num tabular-nums text-text-secondary">
           {card.approvedVersion != null ? `v${card.approvedVersion}` : <span className="font-sans text-text-muted">None approved</span>}
         </td>
@@ -113,18 +131,13 @@ function TermsRow({ card }: { card: TermsCard }) {
           </Link>
         </td>
       </tr>
-      <tr className="border-t border-border">
-        <td colSpan={5} className="px-4 pb-3">
-          <details>
-            <summary className="cursor-pointer list-none text-label text-text underline decoration-border-strong underline-offset-2 hover:decoration-text marker:content-['']">
-              Version history and terms
-            </summary>
-            <div className="mt-2">
-              <Card card={card} bare />
-            </div>
-          </details>
-        </td>
-      </tr>
+      {open && (
+        <tr className="border-t border-border">
+          <td colSpan={5} className="px-4 pb-3">
+            <Card card={card} bare />
+          </td>
+        </tr>
+      )}
     </>
   );
 }
