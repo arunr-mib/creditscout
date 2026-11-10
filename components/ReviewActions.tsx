@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { reviewCasefile } from "@/app/casefiles/actions";
 import type { ReviewOutcome } from "@/lib/review-action";
-import { humanReviewNotice, type OverrideDraft } from "./casefileModel";
+import type { OverrideDraft } from "./casefileModel";
 import { OverrideDialog } from "./OverrideDialog";
 
 /** The recommendation as one word, for the dialog's context line. */
@@ -15,30 +15,14 @@ const RECOMMENDATION_WORD: Record<string, string> = {
 };
 
 /**
- * design.md 12.11. Approve (primary), Override and Request docs (secondary),
- * `gap-3`, pinned to the bottom. The agent recommends and never resolves
- * itself, so `require_human_review` sits beside the buttons as a locked fact,
- * not a dismissible hint.
+ * design.md 12.11. Approve (primary), Override and Hold for borrower
+ * documents (secondary), `gap-3`, pinned to the bottom.
  *
  * What the screen says after a click keys off the OUTCOME, not off a bare 200:
  * only `decided` means a decision was recorded. `already_reviewed` (someone got
  * there first, or a retry) is not an error: the page re-reads and shows the
  * recorded decision read-only.
  */
-/**
- * The primary label says, in an analyst's words, what accepting the
- * recommendation actually records (review 5) — not the internal outcome token.
- * An `escalate` is "Record escalation", not "Approve escalate": nobody approves
- * an escalation, they record one. Falls back to a bare "Approve" for an
- * unrecognised outcome rather than inventing a verb for it.
- */
-const APPROVE_LABEL: Record<string, string> = {
-  resolve: "Approve exception resolution",
-  escalate: "Record escalation",
-  request: "Hold for borrower documents",
-  abstain: "Record abstention",
-};
-
 export function ReviewActions(props: {
   casefileId: string;
   suggestedTag: string | null;
@@ -49,7 +33,6 @@ export function ReviewActions(props: {
   period?: string | null;
 }) {
   const { casefileId, suggestedTag, humanReviewRequired, recommendation, borrower, period } = props;
-  const approveLabel = (recommendation && APPROVE_LABEL[recommendation]) || "Approve";
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState(false);
   const [outcome, setOutcome] = useState<ReviewOutcome | null>(null);
@@ -70,17 +53,11 @@ export function ReviewActions(props: {
   const dialogError = outcome && (outcome.kind === "refused" || outcome.kind === "failed" || outcome.kind === "not_found") ? outcome.message : null;
   const button = "rounded-lg border px-4 py-2 text-body font-medium leading-5 disabled:cursor-not-allowed disabled:opacity-40";
 
-  // The wording follows the ACTUAL policy value, never a hard-coded "mandatory".
-  const notice = humanReviewNotice(humanReviewRequired);
-
   // An ordinary section, not a pinned bar. Pinned, it sat over the evidence the
   // decision is supposed to rest on, and followed the analyst down the page
   // like a standing prompt to decide.
   return (
     <section aria-label="Review the recommendation" className="rounded-xl border border-border-strong bg-surface p-4 shadow-card">
-      {/* The raw policy key was leaking into the analyst's view. The fact it
-          states still holds — `humanReviewNotice` reads the ACTUAL policy
-          value, never a hard-coded "mandatory" — it is just said in words. */}
       <div className="mb-3 space-y-1">
         <h2 className="font-brand text-section font-extrabold text-text">Record your decision</h2>
         {/* One line, not three. The instruction to read the findings first is
@@ -95,10 +72,10 @@ export function ReviewActions(props: {
             recommendation never looks like the normal path. */}
       <div className="flex flex-wrap items-center gap-4">
         <button type="button" disabled={pending} onClick={() => send("approve")} className={`${button} border-transparent bg-mint text-text hover:bg-mint-hover`}>
-          {pending ? "Sending…" : approveLabel}
+          {pending ? "Sending…" : "Approve"}
         </button>
         <button type="button" disabled={pending} onClick={() => { setOutcome(null); setDialog(true); }} className={`${button} border-border-strong bg-surface text-text hover:bg-surface-raised`}>
-          Record a different decision
+          Override
         </button>
         {/* NOT "Request documents": this records a state, it sends nothing. The
             label must not imply a message went out (review 5). */}
@@ -112,8 +89,6 @@ export function ReviewActions(props: {
           Hold for borrower documents
         </button>
       </div>
-
-      <p className="mt-3 text-label text-text-muted">{notice.text}</p>
 
       <OverrideDialog
         open={dialog}

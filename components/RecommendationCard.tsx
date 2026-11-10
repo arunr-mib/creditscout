@@ -59,7 +59,7 @@ export function RecommendationCard({
   /** What the recommendation rests on, as one line: citations · calculations · terms vN. */
   basisLine?: string | null;
   /** The facts that frame the recommendation. Any may be absent. */
-  facts?: { testResult: string | null };
+  facts?: { testResult: string | null; termsUsed?: string | null; reportingPeriod?: string | null };
   /** What is still open, and where to read it. Null when nothing is. */
   outstanding?: { label: string; href: string } | null;
 }) {
@@ -94,11 +94,14 @@ export function RecommendationCard({
           </div>
         </div>
 
-        {/* What the test said. The terms and the period are in the header's
-            identity line and in the basis line, and are not repeated here. */}
-        {facts?.testResult && (
+        {/* The three facts that used to live in the header's own DSCR figures
+            (owner's call, 2026-11-10: those were removed in favour of this
+            one compact row, now the card's only facts strip). */}
+        {(facts?.testResult || facts?.termsUsed || facts?.reportingPeriod) && (
           <dl className="flex flex-wrap items-start gap-6">
             <Fact label="Test result" value={facts.testResult} />
+            <Fact label="Terms used" value={facts.termsUsed} />
+            <Fact label="Reporting period" value={facts.reportingPeriod} />
           </dl>
         )}
       </div>

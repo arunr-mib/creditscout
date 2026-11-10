@@ -1,6 +1,5 @@
-import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, formatFigure, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
+import { type AmendmentStatus, type CalcSection, type ClaimView, type Notice, OUTCOME_LABEL, decidedHeadline, decisionBasis, exceptionNeedsClosing, investigationSummary, isRecommendation, outstandingSummary, recommendationOverridden, reviewMode, statusHeadline, tagLabel } from "./casefileModel";
 import type { LiveTraceView } from "./traceModel";
-import { CalcBadge } from "./CalcValue";
 import { CasefileFindings } from "./CasefileFindings";
 import { RecommendationCard } from "./RecommendationCard";
 import { FinishClosing } from "./FinishClosing";
@@ -97,13 +96,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
   // The state, in the analyst's words. Never the raw column value: `superseded`
   // and `failed` fell through to it and the screen spoke the database's words.
   const state = statusHeadline(view.status);
-  const { computed, reported, required } = view.figures;
-  const below = computed != null && required != null && computed < required;
-  // The amber marker names the calculation behind the computed figure, but only
-  // when the first logged calculation IS that figure — never a calc_id that
-  // merely sits nearby.
-  const initial = summary.initial;
-  const provenance = computed != null && initial?.dscr != null && Math.round(initial.dscr * 100) === Math.round(computed * 100) ? initial.calcId : null;
   const basisLine = [
     `${view.claims.filter((c) => c.cited).length} citation${view.claims.filter((c) => c.cited).length === 1 ? "" : "s"}`,
     `${view.sections.length} calculation${view.sections.length === 1 ? "" : "s"}`,
@@ -141,13 +133,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
             </p>
           )}
         </div>
-        <dl className="grid gap-4 sm:grid-cols-3">
-          <HeaderFigure label="Computed DSCR" value={computed} tone={below ? "text-danger" : "text-text"}>
-            {provenance && <CalcBadge calcId={provenance} />}
-          </HeaderFigure>
-          <HeaderFigure label="Borrower reported" value={reported} tone="text-text" />
-          <HeaderFigure label="Minimum" value={required} tone="text-text" />
-        </dl>
       </header>
 
       {/* ------------------------------------------------- the recommendation */}
@@ -162,6 +147,8 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
           basisLine={basisLine}
           facts={{
             testResult: summary.governing?.passes === false ? "Outside covenant limit" : summary.governing?.passes === true ? "Within covenant limit" : null,
+            termsUsed: view.termsVersion != null ? `Approved v${view.termsVersion}` : null,
+            reportingPeriod: view.period,
           }}
           outstanding={outstanding ? { label: outstanding.label, href: "#outstanding" } : null}
         />
@@ -220,27 +207,6 @@ export function CasefileView({ view }: { view: CasefileViewModel }) {
         />
       )}
     </article>
-  );
-}
-
-/** One of the three header figures: label over a large tabular number, "—" when the log holds none (never 0). */
-function HeaderFigure({
-  label,
-  value,
-  tone,
-  children,
-}: {
-  label: string;
-  value: number | null;
-  tone: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-px">
-      <dt className="text-label text-text-muted">{label}</dt>
-      <dd className={`text-figure tabular-nums ${tone}`}>{value != null ? `${formatFigure(value, "ratio")}x` : "—"}</dd>
-      {children && <dd>{children}</dd>}
-    </div>
   );
 }
 
