@@ -109,19 +109,7 @@ export function RecommendationCard({
           here and nowhere else on this screen. */}
       {(outstanding || explanation) && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-strong px-6 py-2">
-          {outstanding ? (
-            <p className="flex items-center gap-3 text-body text-text">
-              <span
-                aria-hidden="true"
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-code text-badge text-surface"
-              >
-                !
-              </span>
-              Outstanding review: {outstanding.label}
-            </p>
-          ) : (
-            <span />
-          )}
+          <span />
           <span className="flex flex-wrap items-center gap-6">
             {explanation && (
               <button
