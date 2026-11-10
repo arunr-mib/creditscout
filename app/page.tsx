@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExceptionsQueue } from "@/components/ExceptionsQueue";
 import { RunTestButton } from "@/components/RunTestButton";
 import { UploadPackage, type UploadFacility } from "@/components/UploadPackage";
+import { demoUser } from "@/lib/auth/gate";
 import { loadPortfolio } from "@/lib/portfolio-data";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function Home() {
   const { rows, facilities, targetPeriod, targetLabel, counts, traceByCasefile, drift } = await loadPortfolio();
 
   const uploadFacilities: UploadFacility[] = facilities.map((f) => ({ id: f.id, borrower_name: f.borrower_name }));
+  const firstName = demoUser().name.split(" ")[0];
 
   return (
     <div className="space-y-8">
@@ -38,7 +40,7 @@ export default async function Home() {
           </div>
         </div>
         <p className="max-w-prose text-body text-text-secondary">
-          Monitor covenant tests, investigate exceptions, and review recommendations with the evidence at hand.
+          Welcome {firstName}. Time to monitor covenant tests, investigate exceptions, and review recommendations with the evidence at hand.
         </p>
 
         <SummaryStrip

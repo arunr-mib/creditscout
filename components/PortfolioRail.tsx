@@ -145,7 +145,6 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
   const filterPath = (FILTER_TAB.exec(pathname)?.[0].replace(/\/$/, "") ?? null) as "/documents" | "/terms" | null;
   const items = railItems(rows, filterPath ? { filterPath } : undefined);
   const selected = selectedFacility(pathname, searchParams.get("loan"), rows);
-  const loanCount = `${rows.length} ${rows.length === 1 ? "loan" : "loans"}`;
 
   // Strict equality, not `activeTab` — a casefile page also belongs to the
   // Exceptions tab, but it must keep the per-loan list (with that casefile's
@@ -182,7 +181,6 @@ export function PortfolioRail({ rows, periodLabel }: { rows: PortfolioRow[]; per
           <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-4">
             <div className="min-w-0">
               <p className="truncate text-label uppercase text-text-muted">Portfolio · {periodLabel}</p>
-              <p className="text-label uppercase text-text-muted">{loanCount}</p>
             </div>
             {toggleButton}
           </div>
