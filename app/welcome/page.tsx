@@ -193,7 +193,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
         <section aria-labelledby="closing-heading" className="mt-16 border-t border-night-border pt-12">
           <h2 id="closing-heading" className="text-section text-night-text">Put the exception in context.</h2>
           <p className="mt-3 max-w-prose text-body text-night-secondary">
-            Explore a synthetic credit case — from the covenant test to the evidence behind the recommendation.
+            Explore a synthetic credit case: from the covenant test to the evidence behind the recommendation.
           </p>
           <Link
             href={signInHref}
@@ -211,7 +211,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             CreditScout supports covenant investigation. It does not make credit decisions.
           </p>
           <p className="pt-2 text-label text-night-muted">
-            Synthetic data only — every document is marked &ldquo;SYNTHETIC — FOR DEMONSTRATION&rdquo;. No real bank
+            Synthetic data only. Every document is marked &ldquo;SYNTHETIC — FOR DEMONSTRATION&rdquo;. No real bank
             data.
           </p>
         </footer>
@@ -255,7 +255,7 @@ function CasefilePreview() {
       <div className="space-y-3 border-t border-night-border-strong px-6 py-4">
         <p className="max-w-prose text-body text-night-secondary">
           Amendment No. 2 permits a fuel-hedging add-back capped at $800,000. It is on file and effective for this
-          period — but the approved terms do not yet reflect it. A person decides which governs.
+          period, but the approved terms do not yet reflect it. A person decides which governs.
         </p>
         <div className="flex flex-wrap gap-2">
           <Chip>CA §7.11(a)</Chip>
