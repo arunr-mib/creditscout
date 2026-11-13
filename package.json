@@ -2,6 +2,7 @@
   "name": "creditscout",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "description": "Covenant exception investigation agent \u2014 DSCR decision support",
   "type": "module",
   "engines": {

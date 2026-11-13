@@ -1,11 +1,11 @@
 # CreditScout — Handoff
 
 **For:** whoever picks this up next, human or agent, with no prior context.
-**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14, with a 2026-11-07 redesign entry and a 2026-11-10 queue-redesign entry at the top
+**Written:** 2026-10-02 · **Rewritten against current state:** 2026-10-05 · **Updated:** 2026-10-06, 2026-10-08 · **Current-state handoff (§0):** 2026-10-14, with a 2026-11-07 redesign entry, a 2026-11-10 queue-redesign entry and a 2026-11-13 live-eval entry at the top
 **Repo:** `arunr-mib/creditscout` (public as of 2026-11-10) — `git@github.com:arunr-mib/creditscout.git` · **Live:** `https://credit-scout.vercel.app`
 **Owner:** Arun Rajendiran (product, credit domain, all credentials, all sign-offs)
 
-**Start at §0.B.** It is the most current state. §0.A and §0.0 below it are
+**Start at §0.C** (the 2026-11-13 live eval, the current numbers), then **§0.B**, the most current UI state. §0.A and §0.0 below it are
 each still-true records of their own moment; §1–§5 are the design reasoning
 (still true), §8–§9 are the gotchas and lessons (still true), and §0.1–§0.6
 are the 2026-10-08 build-out record, still accurate on the agent, the evals
@@ -14,6 +14,93 @@ and the data.
 ---
 
 ## 0. Current state — 2026-10-14 — START HERE
+
+### 0.C Live eval re-measure, 2026-11-13 (supersedes §0.6 and §0.6a numbers)
+
+The re-measure after the provenance fix (7.9, `chunksForCalcProvenance`, commit
+`1794d76`). Code at commit `46f368c`; orchestrator `gpt-4.1-mini`, specialists
+`gpt-5-mini`. **Quote these numbers, not October's.** Report, CSV and log in
+`evals/out/` (`report.md`, `results.csv`, `attempt2-eval-live.log`, gitignored).
+
+**Attempt 1 (incomplete, no `eval_runs` row).** Cold `eval-20261113T091531Z-cold`
+scored **5/5, avg 6.3 steps**. The warm pass `eval-20261113T091938Z-warm` was
+lost to a network failure, so the harness wrote no `eval_runs` row for either.
+It left behind **6 tests, 4 exceptions and 4 casefiles** under those two run
+ids, including warm casefile `31854396-4dd0-4b19-a65e-662d2d3aaecf` stuck at
+`investigating`. All left alone, not cleaned up.
+
+**Attempt 2 (complete, both passes recorded as `eval_runs` rows).** Cold
+`eval-20261113T161940Z-cold`, warm `eval-20261113T162519Z-warm`.
+
+| Metric | Target | Cold | Warm |
+|---|---|---|---|
+| Calculation accuracy | 100% | **100%** (12/12) | **100%** (12/12) |
+| False resolves | 0 | **0** | **0** |
+| Outcome accuracy | ≥ 85% | **60%** (3/5) | **80%** (4/5) |
+| Avg steps / investigated case | visible reduction | 8.7 | 7.3 |
+| Citation hit rate, groundedness, correct abstain / request | | not measured | not measured |
+
+| Case | Expected | Cold | Warm |
+|---|---|---|---|
+| F1-2026Q2 Harbor | resolve | escalate, 7 steps, miss | abstain, 7 steps, miss |
+| F3-2026Q2 Northgate | escalate | escalate, 7 steps, pass | escalate, 7 steps, pass |
+| F5-2025Q4 | compliant | code only, pass | code only, pass |
+| F5-2026Q1 | variance logged | code only, pass | code only, pass |
+| F5-2026Q2 Coastal | resolve | abstain, 12 steps (the cap), miss | resolve, 8 steps, pass |
+
+- **Every miss was cautious** (escalate or abstain where the key says resolve).
+  No loan in breach was waved through. Neither pass met the 85% target.
+- **5 counted per pass** (3 investigated, 2 code only); the 5 onboarding cases
+  skipped as "not in the database".
+- **Noise dominates.** Two cold passes on identical input the same day scored
+  100% and 60%; October also swung (§0.6a). One case is 20 points, so
+  run-to-run variance is larger than any cold/warm difference. Smoke test, not
+  a benchmark.
+- **Why it missed** (read from the stored casefile traces, 2026-11-13):
+  - **F1 cold** (casefile `14dce14b`, escalate, expected resolve): found
+    Amendment No. 2's restructuring add-back (cap $500,000) but called the
+    calculator with 500,000 as the restructuring amount. Refused: "Fin Q2 2026
+    §2 states 620000 on its 'Restructuring charges' line, not 500000" (the
+    tool takes the document's figure and applies the cap itself). No retry with
+    620,000; fell back to the boarded-terms 1.12 and escalated, tagging
+    `true_breach`.
+  - **F1 warm** (casefile `6ff3e27f`, abstain, expected resolve): same wrong
+    input, sent twice, refused twice. Then answered resolve stating DSCR 1.28
+    and a `calc_id` never logged for the case. The guardrail flagged the
+    unknown `calc_id` and untraceable figures (620000, 1.28) and replaced it
+    with abstain: right verdict, unverified route, correctly blocked.
+  - **F5-2026Q2 cold** (casefile `077a393a`, abstain, expected resolve): sent
+    figures that did not match the Q2 2026 financials, then Q1 2026 figures;
+    both refused ("is from Financials Q1 2026, not the test period's
+    Financials Q2 2026"). First valid calculation at step 11, 12-step cap hit
+    before answering, so policy forced abstain.
+  - **The key is not the problem.** The earlier same-day cold pass (1.28 for
+    Harbor) and Coastal warm (1.30) passed the right figures and reached the
+    signed answers. The misses are model tool-input errors that vary run to run.
+  - **What worked:** in all three misses the calculator refused figures that
+    did not match the source and the guardrail blocked an unverified resolve,
+    so errors surfaced as cautious outcomes, not false resolves.
+  - **Memory detail:** warm F1 is the first case in the pass and had no lessons
+    to load; warm Coastal loaded 2 lessons before resolving in 8 steps.
+    Consistent with memory helping; one case cannot show it.
+  - **Next fixes (planned, not done):** make the calculator's refusal message
+    and tool description say explicitly to pass the document's figure and let
+    the tool apply the cap; stop the agent repeating an identical refused call;
+    filter financials retrieval to the test period; then re-measure.
+- **Memory decision (owner's rule: memory stays in the pitch only with its
+  measured number).** Warm beat cold here on outcome (80% vs 60%) and steps
+  (7.3 vs 8.7); October run 2 went the other way (60%/60%, 7.0 vs 8.0 steps).
+  Memory stays a v1 feature; the docs state the Nov 13 numbers and say the
+  effect is not established. Do not write "memory shortens investigations".
+- **Drift to resolve:** §0.6 says ZHATSAPP *is* in the database (no approved
+  terms in force), but both 2026-11-13 passes report "Zhatsapp Inc is not in
+  the database". Not investigated. `scripts/reset-demo.mjs` removes loans
+  outside the seeded six, which may explain it; unverified.
+- **Path to a benchmark:** onboard the five skipped borrowers so all ten signed
+  cases count; grow the signed set to 100+; repeat each case several times and
+  report a range; run `npm run eval:groundedness` (billable).
+
+---
 
 ### 0.B Queue redesign + casefile UI pass — 2026-11-08 to 2026-11-10 (UI only)
 
@@ -287,8 +374,9 @@ all three model deployments responded.
 
 ### 0.6a Live eval — THREE runs, and the number is noisy (2026-10-08)
 
+**Superseded by §0.C (2026-11-13) for current numbers.** Kept as the October record.
 Read this before quoting an outcome-accuracy figure. §0.6 below is runs 1–2 and
-is kept for the fix-verdict evidence; this is the current picture.
+is kept for the fix-verdict evidence; this was the current picture until §0.C.
 
 | Run | What changed | Cold | Warm | Avg steps |
 |---|---|---|---|---|
@@ -385,6 +473,8 @@ reduction from memory" is **not supported by two runs** — do not assert it.
 
 **Ranked remaining blockers, by how often they actually bit:**
 
+> **Re-measured live 2026-11-13: see §0.C.**
+>
 > **7.9 was fixed 2026-10-13** (`chunksForCalcProvenance`, commit `1794d76`) — the
 > figures we hand the agent in its brief are now in the evidence the guardrail
 > checks against. **Not yet re-measured in a live eval**, so every number in
