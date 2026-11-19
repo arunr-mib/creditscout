@@ -6,7 +6,7 @@ import { TopBar } from "@/components/TopBar";
 import { loadNavData } from "@/lib/nav-data";
 import { loadPortfolio } from "@/lib/portfolio-data";
 import { contourDataUri } from "@/lib/ui/contours";
-import { LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
+import { ARCHITECTURE_PATH, LANDING_PATH, LOGIN_PATH, demoUser } from "@/lib/auth/gate";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // The landing and login pages render full-bleed, without the app nav. The
   // pathname arrives from middleware as `x-pathname`.
   const pathname = (await headers()).get("x-pathname") ?? "";
-  const bare = pathname === LANDING_PATH || pathname === LOGIN_PATH;
+  const bare = pathname === LANDING_PATH || pathname === LOGIN_PATH || pathname === ARCHITECTURE_PATH;
 
   if (bare) {
     return (

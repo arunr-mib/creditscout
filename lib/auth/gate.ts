@@ -15,6 +15,8 @@
 export const AUTH_COOKIE = "cs_demo_session";
 export const LANDING_PATH = "/welcome";
 export const LOGIN_PATH = "/login";
+/** The public system-architecture page. Static, reads no data. */
+export const ARCHITECTURE_PATH = "/architecture";
 
 /** Dev defaults so `npm run dev` works with no setup; production sets real values. */
 const DEFAULT_USERNAME = "analyst";
@@ -85,7 +87,7 @@ export const AGENT_API_PATHS: readonly string[] = [
  * the product nothing.
  */
 export function isPublicPath(pathname: string): boolean {
-  if (pathname === LANDING_PATH || pathname === LOGIN_PATH) return true;
+  if (pathname === LANDING_PATH || pathname === LOGIN_PATH || pathname === ARCHITECTURE_PATH) return true;
   if (AGENT_API_PATHS.includes(pathname)) return true;
   // The tab icon. `app/icon.svg` is served from the app route tree, not from
   // _next/static, so the matcher's asset exemptions miss it and the gate

@@ -55,6 +55,9 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
               <a href="#oversight" className="text-body text-night-secondary transition-colors duration-fast hover:text-night-text">
                 Evidence &amp; oversight
               </a>
+              <Link href="/architecture" className="text-body text-night-secondary transition-colors duration-fast hover:text-night-text">
+                Architecture
+              </Link>
             </nav>
           </div>
           {/* shrink-0: flex children may shrink below their content width, and
