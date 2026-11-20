@@ -338,14 +338,26 @@ function Knowledge() {
               <h3 className="text-card font-bold text-text">{d.title}</h3>
               <p className="mt-px max-w-prose text-label text-text-secondary">{d.detail}</p>
             </div>
-            <a
-              href={d.file}
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0 text-body text-text underline decoration-border-strong hover:decoration-text underline-offset-2"
-            >
-              Open full size <span aria-hidden="true">→</span>
-            </a>
+            <div className="flex shrink-0 flex-wrap items-baseline gap-4">
+              {/* The architecture diagram's long-form companion: the public
+                  /architecture page (stage by stage, worked example, roadmap). */}
+              {d.id === "architecture" && (
+                <a
+                  href="/architecture"
+                  className="text-body text-text underline decoration-border-strong hover:decoration-text underline-offset-2"
+                >
+                  Read the full architecture <span aria-hidden="true">→</span>
+                </a>
+              )}
+              <a
+                href={d.file}
+                target="_blank"
+                rel="noreferrer"
+                className="text-body text-text underline decoration-border-strong hover:decoration-text underline-offset-2"
+              >
+                Open full size <span aria-hidden="true">→</span>
+              </a>
+            </div>
           </header>
           <div className="overflow-x-auto p-4">
             {/* A plain <img>: the SVG is a static build artifact with no
