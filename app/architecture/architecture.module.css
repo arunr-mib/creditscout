@@ -100,7 +100,6 @@
 /* --------------------------------------------------------------- guardrail */
 .rule { background: var(--forest-900); color: var(--forest-on-2); border-radius: 12px; padding: 24px; margin-bottom: 16px; }
 .ruleText { color: var(--forest-on); font-size: 22px; line-height: 1.35; font-weight: 650; margin: 0 0 8px; }
-.pillar { border-top: 3px solid var(--forest-700); }
 
 /* ---------------------------------------------------------- worked example */
 .example { display: grid; gap: 16px; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
@@ -126,7 +125,7 @@
 .citation { position: sticky; top: 16px; }
 .citationDoc { color: var(--text); font-weight: 650; margin: 0; }
 .citationSec { font-size: 13px; color: var(--text-3); margin: 2px 0 12px; }
-.quote { margin: 0; padding: 12px 14px; border-left: 3px solid var(--forest-700); background: var(--raised); border-radius: 0 6px 6px 0; color: var(--text); }
+.quote { margin: 0; padding: 12px 14px; background: var(--raised); border: 1px solid var(--border); border-radius: 6px; color: var(--text); }
 .hint { font-size: 14px; color: var(--text-3); margin: 0; }
 .formula { margin: 16px 0 0; font-size: 15px; }
 

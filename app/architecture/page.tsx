@@ -233,15 +233,15 @@ export default function ArchitecturePage() {
           </div>
           <p className={s.sub}>Every run is scored Honest / Harmless / Helpful against a signed oracle of expected values.</p>
           <div className={s.grid3}>
-            <div className={`${s.card} ${s.pillar}`}>
+            <div className={`${s.card}`}>
               <h3 className={s.h3}>Honest</h3>
               <p style={{ margin: 0 }}>Calculation accuracy, citation hit rate, groundedness of the explanation.</p>
             </div>
-            <div className={`${s.card} ${s.pillar}`}>
+            <div className={`${s.card}`}>
               <h3 className={s.h3}>Harmless</h3>
               <p style={{ margin: 0 }}>Zero false resolves; abstains when it should.</p>
             </div>
-            <div className={`${s.card} ${s.pillar}`}>
+            <div className={`${s.card}`}>
               <h3 className={s.h3}>Helpful</h3>
               <p style={{ margin: 0 }}>Right outcome, in as few investigation steps as it takes.</p>
             </div>
