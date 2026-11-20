@@ -33,6 +33,17 @@ const STAGES = [
   { n: 4, name: "Guardrails", line: "Every number traced, or it abstains." },
 ];
 
+/** Stage by stage: what each does, and the promise it keeps. Today-true only; stage 6 says what is next. */
+const DETAILS: { n: number; name: string; agent?: boolean; roadmap?: boolean; does: string; promise: string; doesLabel?: string; promiseLabel?: string }[] = [
+  { n: 1, name: "Intake", does: "Agreement, amendments and financials come in as documents.", promise: "Nothing summarised away. Every figure links to its document and clause." },
+  { n: 2, name: "Enrichment and verification", does: "Extracts figures; checks floors, definitions, add-backs and caps.", promise: "Only analyst-approved terms govern a test. An unverifiable figure is flagged, not smoothed over." },
+  { n: 3, name: "Agentic decisioning", agent: true, does: "Works out which covenant, test, inputs and amendment apply.", promise: "Calls tools for every lookup and calculation. Never does arithmetic in prose." },
+  { n: 4, name: "Guardrails", does: "Checks every figure in the explanation.", promise: "Each traces to a logged calculation or a verbatim quote, or the recommendation abstains." },
+  { n: 5, name: "Human review", does: "Full-width casefile: breach, line-by-line calculation, citations, recommendation.", promise: "The analyst decides: Approve, Override (with a reason), or Hold for borrower documents." },
+  { n: 6, name: "Write-back", roadmap: true, doesLabel: "Today", promiseLabel: "Next", does: "Decision, reasoning, citations and trace stay in the casefile. A re-run keeps history.", promise: "Write back to the bank’s system of record, with a trail an examiner can replay." },
+  { n: 7, name: "Learning loop", does: "Every decision, above all every override, becomes a lesson for the next similar case.", promise: "The signed oracle is never rewritten by it, so the system can’t grade its own homework." },
+];
+
 export default function ArchitecturePage() {
   return (
     <div className={s.page}>
@@ -44,6 +55,7 @@ export default function ArchitecturePage() {
             </Link>
             <div className={s.topLinks}>
               <a href="#flow">Flow</a>
+              <a href="#stages">Stages</a>
               <a href="#example">Example</a>
               <a href="#security">Security</a>
               <a href="#roadmap">Roadmap</a>
@@ -128,6 +140,38 @@ export default function ArchitecturePage() {
               <strong className={s.stageName}>Learning loop</strong> — each decision becomes a lesson for the next
               similar case. The signed oracle that scores runs is never rewritten by it.
             </div>
+          </div>
+        </section>
+
+        {/* ---------------------------------------------- stage by stage */}
+        <section id="stages" className={s.section} aria-labelledby="stages-h">
+          <h2 id="stages-h" className={s.h2}>Stage by stage</h2>
+          <div className={s.stageTable} role="table" aria-label="What each stage does and guarantees">
+            <div className={s.stageHeadRow} role="row">
+              <span role="columnheader">Stage</span>
+              <span role="columnheader">What it does</span>
+              <span role="columnheader">What it guarantees</span>
+            </div>
+            {DETAILS.map((d) => (
+              <div key={d.n} className={s.stageRow} role="row">
+                <div className={s.stageCellName} role="rowheader">
+                  <span className={s.stageNum}>{d.n}</span>
+                  <span>
+                    <span className={s.stageName}>{d.name}</span>
+                    {d.agent && <span className={s.agentTag}>Agent</span>}
+                    {d.roadmap && <Roadmap />}
+                  </span>
+                </div>
+                <p className={s.stageCell} role="cell">
+                  {d.doesLabel && <span className={s.cellLabel}>{d.doesLabel}: </span>}
+                  {d.does}
+                </p>
+                <p className={`${s.stageCell} ${s.stagePromise}`} role="cell">
+                  {d.promiseLabel && <span className={s.cellLabel}>{d.promiseLabel}: </span>}
+                  {d.promise}
+                </p>
+              </div>
+            ))}
           </div>
         </section>
 
