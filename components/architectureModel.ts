@@ -122,7 +122,7 @@ export const CITATIONS: Record<string, Citation> = {
 
 /** A figure that came from CreditScout's own calculator rather than a document. */
 export const CALCULATION_SOURCE =
-  "CreditScout calculator (calc/dscr.js): deterministic code, logged per run, rounded half-up to two decimals. The model never produces this number.";
+  "CreditScout's calculator: deterministic, logged, rounded half-up to two decimals. Never the model.";
 
 export interface CalcLine {
   label: string;

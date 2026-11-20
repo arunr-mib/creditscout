@@ -69,13 +69,13 @@ export function WorkedExample() {
       <div>
         <div className={s.headline}>
           <div className={s.stat}>
-            <p className={s.statLabel}>Computed DSCR, terms as boarded</p>
+            <p className={s.statLabel}>Computed, as boarded</p>
             <p className={`${s.statValue} ${s.statFail} ${s.num}`}>
               <Fig source="calc">{fmtRatio(EXAMPLE.computedAsTested)}</Fig>
             </p>
           </div>
           <div className={s.stat}>
-            <p className={s.statLabel}>Minimum required</p>
+            <p className={s.statLabel}>Minimum</p>
             <p className={`${s.statValue} ${s.num}`}>
               <Fig source="floor">{fmtRatio(EXAMPLE.floor)}</Fig>
             </p>
@@ -87,7 +87,7 @@ export function WorkedExample() {
             </p>
           </div>
           <div className={s.stat}>
-            <p className={s.statLabel}>Borrower reported</p>
+            <p className={s.statLabel}>Reported</p>
             <p className={`${s.statValue} ${s.num}`}>
               <Fig source="reported">{fmtRatio(EXAMPLE.reported)}</Fig>
             </p>
@@ -145,18 +145,16 @@ export function WorkedExample() {
 
           <p className={`${s.formula} ${s.num}`}>
             As boarded: {fmtMillions(EXAMPLE.numeratorAsTested)} / {fmtMillions(EXAMPLE.denominator)} ={" "}
-            <strong>{fmtRatio(EXAMPLE.computedAsTested)}</strong> — below the{" "}
-            {fmtRatio(EXAMPLE.floor)} minimum, so the test fails.
+            <strong>{fmtRatio(EXAMPLE.computedAsTested)}</strong>, below {fmtRatio(EXAMPLE.floor)}.
             <br />
             With Amendment No. 2: {fmtMillions(EXAMPLE.numeratorWithAmendment)} / {fmtMillions(EXAMPLE.denominator)} ={" "}
-            <strong>{fmtRatio(EXAMPLE.computedWithAmendment)}</strong> — which reconciles to the borrower&rsquo;s
-            reported {fmtRatio(EXAMPLE.reported)}.
+            <strong>{fmtRatio(EXAMPLE.computedWithAmendment)}</strong>, matching the reported figure.
           </p>
         </div>
       </div>
 
       <aside ref={panel} id="citation-panel" className={`${s.card} ${s.citation}`} aria-live="polite">
-        <p className={s.statLabel}>Where this number comes from</p>
+        <p className={s.statLabel}>Source</p>
         {cite ? (
           <>
             <p className={s.citationDoc}>{cite.document}</p>
@@ -164,27 +162,23 @@ export function WorkedExample() {
             <blockquote className={s.quote}>{cite.quote}</blockquote>
             {selected === "fuelCap" && (
               <p className={s.hint} style={{ marginTop: 12 }}>
-                {CITATIONS.amendmentEffective.quote}. It is on file but has not been boarded into the approved
-                terms, which is why the test as run still fails.
+                {CITATIONS.amendmentEffective.quote}. On file, not yet boarded.
               </p>
             )}
           </>
         ) : (
           <>
             <p className={s.citationDoc}>Logged calculation</p>
-            <p className={s.citationSec}>No document — computed by code</p>
+            <p className={s.citationSec}>Computed by code</p>
             <blockquote className={s.quote}>{CALCULATION_SOURCE}</blockquote>
             <p className={s.hint} style={{ marginTop: 12 }}>
-              Definition it applies — {CITATIONS.definition.document}, {CITATIONS.definition.section}:
+              Applies the definition in {CITATIONS.definition.document}:
             </p>
             <blockquote className={s.quote} style={{ marginTop: 8 }}>
               {CITATIONS.definition.quote}
             </blockquote>
           </>
         )}
-        <p className={s.hint} style={{ marginTop: 16 }}>
-          Select any underlined figure to see its source.
-        </p>
       </aside>
     </div>
   );
