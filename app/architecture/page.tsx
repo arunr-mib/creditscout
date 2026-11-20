@@ -23,7 +23,7 @@ function Confirm({ children }: { children: React.ReactNode }) {
 }
 
 const STAGES = [
-  { n: 1, name: "Intake", line: "Parse and index loan documents. Every page keeps its source." },
+  { n: 1, name: "Intake", line: "Parse and index loan documents. Every passage keeps its source." },
   { n: 2, name: "Enrichment and verification", line: "Extract figures and check them against the agreement." },
   { n: 3, name: "Agentic decisioning", line: "The orchestrator picks tools and runs the covenant test.", agent: true },
   { n: 4, name: "Guardrails", line: "Every number traced, or the system abstains." },
@@ -44,6 +44,7 @@ export default function ArchitecturePage() {
               <a href="#example">Worked example</a>
               <a href="#planes">Data and control</a>
               <a href="#security">Security</a>
+              <a href="#roadmap">Roadmap</a>
               <a href="#integrations">Integrations</a>
               <Link href="/login">Enter the workspace</Link>
             </div>
@@ -51,7 +52,7 @@ export default function ArchitecturePage() {
           <div className={s.hero}>
             <p className={s.eyebrow}>System architecture</p>
             <h1 className={s.h1}>
-              Intake → enrichment and verification → agentic decisioning → human review → write-back.
+              Intake → enrichment and verification → agentic decisioning → guardrails → human review.
             </h1>
             <p className={s.lede}>
               CreditScout investigates commercial loan covenant breaches with cited tools and a learning loop.
@@ -114,14 +115,14 @@ export default function ArchitecturePage() {
 
             <div className={s.lane}>
               <div className={s.laneHead}>
-                <p className={s.laneTitle}>System of record</p>
+                <p className={s.laneTitle}>System of record <span className={s.status}>Roadmap</span></p>
                 <p className={s.laneNote}>The bank&rsquo;s own platform</p>
               </div>
               <ol className={s.stages} start={6}>
                 <li className={s.stage}>
                   <span className={s.stageNum}>6</span>
                   <span className={s.stageName}>Write-back</span>
-                  <p className={s.stageLine}>Decision, reasoning and audit trail go back to where the loan lives.</p>
+                  <p className={s.stageLine}>Not built yet. Decision, reasoning and audit trail would go back to where the loan lives.</p>
                 </li>
               </ol>
             </div>
@@ -144,7 +145,7 @@ export default function ArchitecturePage() {
                 <h3 className={s.h3}>Intake</h3>
                 <p>
                   The loan agreement, amendments and borrower financials come in as documents. Nothing is summarised
-                  away: each figure keeps a link to the exact page and clause it came from.
+                  away: each figure keeps a link to the exact document and clause it came from.
                 </p>
               </div>
             </li>
@@ -196,12 +197,12 @@ export default function ArchitecturePage() {
             <li>
               <span className={s.stageNum}>6</span>
               <div>
-                <h3 className={s.h3}>Write-back and audit trail</h3>
+                <h3 className={s.h3}>Write-back and audit trail <span className={s.status}>Roadmap</span></h3>
                 <p>
                   Today, the decision, the reasoning, every citation and the full investigation trace are kept in
                   CreditScout&rsquo;s casefile record; a re-run keeps the earlier casefile as history rather than
                   overwriting it. Writing back to the bank&rsquo;s system of record, with an immutable audit trail an
-                  examiner can replay, is the target. <Confirm>is write-back in progress or roadmap?</Confirm>
+                  examiner can replay, is on the roadmap.
                 </p>
               </div>
             </li>
@@ -231,7 +232,7 @@ export default function ArchitecturePage() {
               figure does not.
             </p>
           </div>
-          <p className={s.sub}>Every run is scored Honest / Harmless / Helpful against a signed oracle of expected values.</p>
+          <p className={s.sub}>Evaluation runs are scored Honest / Harmless / Helpful against a signed oracle of expected values.</p>
           <div className={s.grid3}>
             <div className={`${s.card}`}>
               <h3 className={s.h3}>Honest</h3>
@@ -262,67 +263,92 @@ export default function ArchitecturePage() {
         </section>
 
         {/* ------------------------------------------- data vs control plane */}
+        {/* Only what is true of the build today. Anything planned lives in the
+            roadmap section below, never in these cards. */}
         <section id="planes" className={s.section} aria-labelledby="planes-h">
           <h2 id="planes-h" className={s.h2}>Data plane and control plane</h2>
-          <p className={s.sub}>
-            The design a bank deployment commits to. The public demo is a single tenant holding synthetic data only.
-          </p>
+          <p className={s.sub}>As built today: a single-tenant demo holding synthetic data only.</p>
           <div className={s.grid2}>
             <div className={s.card}>
               <h3 className={s.h3}>Data plane</h3>
               <p style={{ margin: 0 }}>Documents, extracted figures, calculations and decisions.</p>
               <ul className={s.list}>
-                <li>Per-customer segregation.</li>
-                <li>Encryption in transit and at rest.</li>
-                <li>
-                  Retention and deletion policy: <Confirm>policy to state</Confirm>
-                </li>
+                <li>Every extracted figure keeps a link to the document and clause it came from.</li>
+                <li>Covenant terms are versioned and analyst-approved; an amendment adds a new version, never overwrites.</li>
+                <li>Encryption in transit and at rest, as provided by the hosting platforms.</li>
               </ul>
             </div>
             <div className={s.card}>
               <h3 className={s.h3}>Control plane</h3>
-              <p style={{ margin: 0 }}>Orchestration, tool calls, guardrail checks and the audit log.</p>
+              <p style={{ margin: 0 }}>Orchestration, tool calls, guardrail checks and the investigation trace.</p>
               <ul className={s.list}>
                 <li>It routes, checks and records.</li>
                 <li>Nothing in the control plane invents a figure.</li>
               </ul>
             </div>
           </div>
-          <div className={s.card} style={{ marginTop: 16 }}>
-            <h3 className={s.h3}>Tenancy boundary</h3>
-            <p style={{ margin: 0 }}>One customer&rsquo;s data never crosses into another customer&rsquo;s run.</p>
-          </div>
         </section>
 
         {/* -------------------------------------------------------- security */}
         <section id="security" className={s.section} aria-labelledby="sec-h">
           <h2 id="sec-h" className={s.h2}>Security tenet</h2>
+          <p className={s.sub}>What the current build enforces. Certifications and bank-grade controls are on the roadmap below.</p>
+          <div className={s.grid2}>
+            <div className={s.card}>
+              <h3 className={s.h3}>Access and secrets</h3>
+              <ul className={s.list}>
+                <li>The analyst workspace sits behind sign-in.</li>
+                <li>The agent&rsquo;s tool endpoints require a shared key the browser never sees.</li>
+                <li>The database enforces row-level security; the browser&rsquo;s key can only read.</li>
+                <li>The write key stays on the server.</li>
+                <li>Service keys live in environment variables, never committed to the code.</li>
+                <li>Synthetic data only. No real bank data.</li>
+              </ul>
+            </div>
+            <div className={s.card}>
+              <h3 className={s.h3}>Model governance</h3>
+              <ul className={s.list}>
+                <li>The model never produces a number; an untraced figure forces the recommendation to abstain.</li>
+                <li>A person makes every decision; the system only recommends.</li>
+                <li>Evaluation runs are scored against an owner-signed set of expected values.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* --------------------------------------------------------- roadmap */}
+        <section id="roadmap" className={s.section} aria-labelledby="roadmap-h">
+          <h2 id="roadmap-h" className={s.h2}>Future roadmap</h2>
+          <p className={s.sub}>Not in the current build. What a bank deployment would add.</p>
           <div className={s.grid3}>
             <div className={s.card}>
-              <h3 className={s.h3}>Certifications (planned, in order)</h3>
+              <h3 className={s.h3}>Certifications, in order</h3>
               <ol className={s.list}>
                 <li>SOC 2 Type II</li>
                 <li>ISO 27001</li>
                 <li>PCI DSS, only if card data is ever touched</li>
               </ol>
               <p style={{ margin: "8px 0 0" }}>
-                GLBA / FTC Safeguards Rule is the compliance frame for consumer financial data.
+                GLBA / FTC Safeguards Rule, if consumer financial data is ever handled.
               </p>
             </div>
             <div className={s.card}>
-              <h3 className={s.h3}>Key management</h3>
+              <h3 className={s.h3}>Data and keys</h3>
               <ul className={s.list}>
-                <li>KMS-backed envelope encryption</li>
-                <li>Per-customer keys, rotated automatically</li>
-                <li>Secrets never hardcoded</li>
-                <li>Audit trail on key usage</li>
+                <li>Per-customer data segregation: one customer&rsquo;s data never crosses into another customer&rsquo;s run.</li>
+                <li>KMS-backed envelope encryption with per-customer keys, rotated automatically.</li>
+                <li>Audit trail on key usage.</li>
+                <li>
+                  Stated retention and deletion policy. <Confirm>policy to state</Confirm>
+                </li>
+                <li>Write-back to the bank&rsquo;s system of record, with an immutable audit trail an examiner can replay.</li>
               </ul>
             </div>
             <div className={s.card}>
-              <h3 className={s.h3}>Model governance</h3>
+              <h3 className={s.h3}>Model risk and fair lending</h3>
               <ul className={s.list}>
                 <li>SR 11-7 discipline (now SR 26-2 since Apr 2026): independent validation, documented methodology and limitations, ongoing monitoring.</li>
-                <li>Every decision carries an adverse-action-ready explanation.</li>
+                <li>An adverse-action-ready explanation on every decision.</li>
                 <li>Fair-lending disparate-impact testing during development, not at the end.</li>
                 <li>EU AI Act: creditworthiness assessment is high-risk, so risk management, data governance, documentation, human oversight and post-market monitoring apply.</li>
               </ul>
@@ -332,9 +358,10 @@ export default function ArchitecturePage() {
 
         {/* ---------------------------------------------------- integrations */}
         <section id="integrations" className={s.section} aria-labelledby="int-h">
-          <h2 id="int-h" className={s.h2}>Integrate, don&rsquo;t replace</h2>
+          <h2 id="int-h" className={s.h2}>Integrate, don&rsquo;t replace <span className={s.status}>Roadmap</span></h2>
           <p className={s.sub}>
-            CreditScout is a modular layer on top of the buyer&rsquo;s system of record. No rip-and-replace.
+            No integrations are built today: the demo works from uploaded documents. The plan is a modular layer on top
+            of the buyer&rsquo;s system of record, with no rip-and-replace.
           </p>
           <div className={`${s.card} ${s.tableWrap}`}>
             <table className={s.intTable}>
@@ -352,17 +379,17 @@ export default function ArchitecturePage() {
                     nCino Commercial and Small Business Solutions (its Mortgage MCP lets institutions plug in their own
                     external AI agents), ICE Encompass, Blend, MeridianLink, Fiserv
                   </td>
-                  <td><Confirm>live / in progress / roadmap, per platform</Confirm></td>
+                  <td>Not built yet</td>
                 </tr>
                 <tr>
                   <td>Insurance</td>
                   <td>Guidewire, Duck Creek, Sapiens</td>
-                  <td><Confirm>live / in progress / roadmap, per platform</Confirm></td>
+                  <td>Not built yet</td>
                 </tr>
                 <tr>
                   <td>Credit data</td>
                   <td>Equifax, Experian, TransUnion, plus verification providers</td>
-                  <td><Confirm>live / in progress / roadmap, per platform</Confirm></td>
+                  <td>Not built yet</td>
                 </tr>
               </tbody>
             </table>
@@ -387,14 +414,18 @@ export default function ArchitecturePage() {
 
         {/* ---------------------------------------------- backward simulation */}
         <section className={s.section} aria-labelledby="sim-h">
-          <h2 id="sim-h" className={s.h2}>Backward simulations</h2>
+          <h2 id="sim-h" className={s.h2}>Backward simulations <span className={s.status}>Roadmap</span></h2>
+          <p className={s.sub}>
+            An offer, not yet run on a bank&rsquo;s book. Today the same evaluation harness scores CreditScout against an
+            owner-signed set of synthetic cases.
+          </p>
           <blockquote className={s.quote} style={{ marginBottom: 16 }}>
             Connect us to your historical book. We run blind on cases your team already decided, and show you where we
             agree, where we would have caught more risk or moved faster, our explanation for every decision, and our
             disparate-impact numbers.
           </blockquote>
           <div className={s.card}>
-            <h3 className={s.h3}>What we report</h3>
+            <h3 className={s.h3}>What it would report</h3>
             <ul className={s.list}>
               <li>Agreement rate with your team&rsquo;s decisions</li>
               <li>Lift: risk caught and time saved</li>
@@ -420,9 +451,6 @@ export default function ArchitecturePage() {
               <li>
                 <strong>Stack:</strong> which pieces are CreditScout&rsquo;s and which belong to other projects.{" "}
                 <Confirm>stack</Confirm>
-              </li>
-              <li>
-                <strong>Integrations:</strong> live, in progress, or roadmap, for each platform above.
               </li>
             </ul>
           </div>
