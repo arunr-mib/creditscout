@@ -35,7 +35,7 @@ export const CITATIONS: Record<string, Citation> = {
     id: "definition",
     document: "Credit Agreement",
     file: "agreement.txt",
-    section: "Definitions — Debt Service Coverage Ratio",
+    section: "Definitions: Debt Service Coverage Ratio",
     quote:
       "\"Debt Service Coverage Ratio\" means, for any period, the ratio of (i) Consolidated EBITDA for that period, plus any add-back permitted by Section 7.11, minus Unfinanced Capital Expenditures and cash taxes paid during that period, to (ii) Debt Service for that period.",
   },

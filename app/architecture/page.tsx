@@ -137,7 +137,7 @@ export default function ArchitecturePage() {
 
             <div className={s.loop}>
               <span className={s.stageNum}>7</span>
-              <strong className={s.stageName}>Learning loop</strong> — each decision becomes a lesson for the next
+              <strong className={s.stageName}>Learning loop:</strong> each decision becomes a lesson for the next
               similar case. The signed oracle that scores runs is never rewritten by it.
             </div>
           </div>
